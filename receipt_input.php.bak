@@ -1,0 +1,340 @@
+<?php
+require_once('./dbconnect.php');
+require_once('./functions.php');
+session_cache_limiter('none');
+session_start();
+
+// ユーザーIDとユーザータイプを取得
+$uid = $_SESSION['user_id'];
+$utype = 0;
+if (isset($_GET['utype'])) {
+    $utype = $_GET['utype'];
+    $_SESSION['utype'] = $utype;
+} elseif (isset($_SESSION['utype'])) {
+    $utype = $_SESSION['utype'];
+}
+
+// URLパラメータに入力日付があれば日付関連の初期値にセット
+$initday = date('Y-m-d');
+if (isset($_GET['initday'])) {
+    $initday = $_GET['initday'];
+}
+$_SESSION['initday'] = $initday;
+
+// フォーム送信後の処理
+if (!empty($_POST)) {
+    // エラーがなければ次のページへ
+    if (!isset($error)) {
+        $_SESSION['join'] = $_POST;
+        $url = "receipt_check.php?initday=" . $initday;
+        header("Location:" . $url);
+        exit();
+    }
+}
+
+// 「乾杯ドリンク」商品のIDを取得
+$pdo = connect();
+$stmt = $pdo->prepare("SELECT item_id FROM item_mst WHERE item_name = '乾杯ドリンク'");
+$stmt->execute();
+$kanpai_item_id = $stmt->fetchColumn();
+
+// 全ての商品情報を取得してJSON形式で出力
+$all_items = item_get_all();
+$all_items_json = json_encode($all_items);
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0">
+    <title>伝票登録</title>
+    <link href="https://unpkg.com/sanitize.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/receipt_input.css?v=2">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        .select2-container {
+            width: 300px !important;
+        }
+        .select2-results__option {
+            font-size: 12px;
+        }
+        .select2-container--default .select2-selection--single {
+            height: 28px;
+        }
+        select {
+            height: 28px;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <form action="" method="POST">
+            <h2>伝票基本情報登録</h2>
+            <br>
+            <table>
+                <tbody>
+                    <tr>
+                        <th><label for="shop_id">店舗コード</label></th>
+                        <td>
+                            <?php if ($_SESSION['utype'] == 3) { ?>
+                                コレクト
+                            <?php } elseif ($_SESSION['utype'] == 1024) { ?>
+                                <select name="shop_id" id="shop_id">
+                                    <option value="1">ソルシエール</option>
+                                </select>
+                            <?php } else { ?>
+                                <select name="shop_id" id="shop_id">
+                                    <option value="2">レーヴェス</select>
+                            <?php } ?>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><label for="sheet_no">座席番号</label></th>
+                        <td><input id="sheet_no" type="text" name="sheet_no"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="receipt_day">伝票集計日付</label></th>
+                        <td><input id="receipt_day" type="date" name="receipt_day" value="<?php echo htmlspecialchars($initday, ENT_QUOTES); ?>"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="check-in_date">入店日付</label></th>
+                        <td><input id="check-in_date" type="date" name="in_date" value="<?php echo htmlspecialchars($initday, ENT_QUOTES); ?>"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="check-in_time">入店時間</label></th>
+                        <td><input id="check-in_time" type="time" name="in_time"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="check-out_date">退店日付</label></th>
+                        <td><input id="check-out_date" type="date" name="out_date"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="check-out_time">退店時間</label></th>
+                        <td><input id="check-out_time" type="time" name="out_time"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="customer_name">顧客名</label></th>
+                        <td><input id="customer_name" type="text" name="customer_name"></td>
+                    </tr>
+                    <tr>
+                        <th><label for="issuer_id">伝票起票者</label></th>
+                        <td>
+                            <input id="issuer_id" type="hidden" name="issuer_id">
+                            <select name="issuer_name" id="issuer_name">
+                                <option value="" selected></option>
+                                <?php
+                                    $all_casts = cast_get_all(0);
+                                    foreach ($all_casts as $row) {
+                                ?>
+                                    <option value="<?php echo htmlspecialchars($row["cast_id"], ENT_QUOTES); ?>">
+                                        <?php echo htmlspecialchars($row["cast_name"], ENT_QUOTES); ?>
+                                    </option>
+                                <?php
+                                    }
+                                ?>
+                            </select>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <label for="p_type">支払い方法</label>
+            <select name="p_type" id="p_type">
+                <?php
+                    $pdo = connect();
+                    $stmt = $pdo->prepare("SELECT * FROM payment_mst ORDER BY payment_type");
+                    $stmt->execute();
+                    $all_payments = $stmt->fetchAll();
+                    foreach ($all_payments as $row) {
+                ?>
+                    <option value="<?php echo htmlspecialchars($row["payment_type"], ENT_QUOTES); ?>">
+                        <?php echo htmlspecialchars($row["payment_name"], ENT_QUOTES); ?>
+                    </option>
+                <?php
+                    }
+                ?>
+            </select>
+            <br>
+            <hr>
+            
+            <h2>伝票明細登録</h2>
+            <table>
+                <tbody>
+                    <tr>
+                        <th>商品名</th>
+                        <th>キャスト</th>
+                        <th>数量</th>
+                        <th><button type="button" id="set-quantity-one-btn">数量1</button></th>
+                    </tr>
+                    <?php for ($i = 1; $i <= 11; $i++) { ?>
+                    <tr>
+                        <td>
+                            <select name="item_name<?= $i; ?>" id="item_name<?= $i; ?>" class="item-select2">
+                                <option value="" selected></option>
+                                <?php
+                                    foreach ($all_items as $row) {
+                                ?>
+                                <option value="<?php echo htmlspecialchars($row["item_id"], ENT_QUOTES); ?>" data-category-id="<?= htmlspecialchars($row["category"], ENT_QUOTES); ?>">
+                                    <?php echo htmlspecialchars($row["item_name"], ENT_QUOTES); ?>
+                                </option>
+                                <?php } ?>
+                            </select>
+                        </td>
+                        <td>
+                            <select name="cast_name<?= $i; ?>" id="cast_name<?= $i; ?>">
+                                <option value="" selected></option>
+                                <?php
+                                    $all_casts = cast_get_all(0);
+                                    foreach ($all_casts as $row) {
+                                ?>
+                                <option value="<?php echo htmlspecialchars($row["cast_id"], ENT_QUOTES); ?>">
+                                    <?php echo htmlspecialchars($row["cast_name"], ENT_QUOTES); ?>
+                                </option>
+                                <?php } ?>
+                            </select>
+                        </td>
+                        <td>
+                            <select name="suu<?= $i; ?>" id="suu<?= $i; ?>">
+                                <option value="" selected disabled></option>
+                                <?php for ($v = 0; $v <= 30; $v++) { ?>
+                                <option value="<?php echo htmlspecialchars($v, ENT_QUOTES); ?>">
+                                    <?php echo htmlspecialchars($v, ENT_QUOTES); ?>
+                                </option>
+                                <?php } ?>
+                            </select>
+                        </td>
+                        <td class="button-cell">
+                            <?php if ($i > 1) { ?>
+                                <button type="button" class="copy-above-btn">&#x2191;</button>
+                            <?php } ?>
+                            <button type="button" class="set-kanpai-btn" data-item-id="<?= htmlspecialchars($kanpai_item_id, ENT_QUOTES); ?>">乾杯</button>
+                            <button type="button" class="category-filter-btn" data-category-id="all">全部</button>
+                            <button type="button" class="category-filter-btn" data-category-id="1">通常</button>
+                            <button type="button" class="category-filter-btn" data-category-id="2">シャンパン</button>
+                            <button type="button" class="category-filter-btn" data-category-id="3">フード</button>
+                            <button type="button" class="category-filter-btn" data-category-id="7">遠隔</button>
+                        </td>
+                    </tr>
+                    <?php } ?>
+                </tbody>
+            </table>
+            
+            <table>
+                <tbody>
+                    <tr>
+                        <th>割引きなど調整額</th>
+                        <td>
+                            <input id="adjust_price" name="adjust_price" value="0" autocomplete="off">
+                        </td>
+                        <td>※割引は-で入力</td>
+                    </tr>
+                </tbody>
+            </table>
+            <hr>
+            
+            <div class="control">
+                <button type="submit" class="btn">確認する</button>
+                <a href="index.php">メニューへ</a>
+            </div>
+        </form>
+        <br>
+    </div>
+    
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+    const ALL_ITEMS = <?= $all_items_json; ?>;
+
+    function updateItemDropdown(row, categoryId) {
+        const itemSelect = row.find('select[name^="item_name"]');
+        
+        if (itemSelect.data('select2')) {
+            itemSelect.select2('destroy');
+        }
+
+        itemSelect.empty();
+        itemSelect.append('<option value="" selected></option>');
+
+        const filteredItems = ALL_ITEMS.filter(item => {
+            const itemCategory = parseInt(item.category, 10);
+            return categoryId === 'all' || itemCategory === categoryId;
+        });
+
+        filteredItems.forEach(item => {
+            itemSelect.append(`<option value="${item.item_id}" data-category-id="${item.category}">${item.item_name}</option>`);
+        });
+
+        if (filteredItems.length === 1) {
+            itemSelect.val(filteredItems[0].item_id).trigger('change');
+        }
+
+        itemSelect.select2({
+            width: 'resolve',
+            language: {
+                noResults: function() {
+                    return "結果が見つかりません";
+                }
+            }
+        });
+    }
+
+    $(document).ready(function() {
+        $('table tbody tr:has(select[name^="item_name"])').each(function() {
+            updateItemDropdown($(this), 'all');
+        });
+
+        $(document).on('click', '.set-kanpai-btn', function() {
+            const kanpaiId = $(this).data('itemId');
+            const currentRow = $(this).closest('tr');
+            
+            const itemSelect = currentRow.find('select[name^="item_name"]');
+            
+            if (itemSelect.find(`option[value='${kanpaiId}']`).length) {
+                itemSelect.val(kanpaiId).trigger('change');
+            } else {
+                updateItemDropdown(currentRow, 'all');
+                itemSelect.val(kanpaiId).trigger('change');
+            }
+        });
+
+        $(document).on('click', '.category-filter-btn', function() {
+            const categoryId = $(this).data('categoryId');
+            const currentRow = $(this).closest('tr');
+            
+            const filterId = categoryId === 'all' ? 'all' : parseInt(categoryId, 10);
+            updateItemDropdown(currentRow, filterId);
+        });
+        
+        $('#set-quantity-one-btn').on('click', function() {
+            $('table tbody tr').each(function() {
+                var row = $(this);
+                var itemSelect = row.find('select[name^="item_name"]');
+                
+                if (itemSelect.val() !== '' && itemSelect.val() !== null) {
+                    var quantitySelect = row.find('select[name^="suu"]');
+                    quantitySelect.val('1').trigger('change');
+                }
+            });
+        });
+
+        $(document).on('click', '.copy-above-btn', function() {
+            var currentRow = $(this).closest('tr');
+            var aboveRow = currentRow.prev('tr');
+
+            if (aboveRow.length) {
+                var itemValue = aboveRow.find('select[name^="item_name"]').val();
+                var castValue = aboveRow.find('select[name^="cast_name"]').val();
+                var suuValue = aboveRow.find('select[name^="suu"]').val();
+
+                updateItemDropdown(currentRow, 'all');
+                currentRow.find('select[name^="item_name"]').val(itemValue).trigger('change');
+                currentRow.find('select[name^="cast_name"]').val(castValue).trigger('change');
+                currentRow.find('select[name^="suu"]').val(suuValue).trigger('change');
+            }
+        });
+    });
+    </script>
+</body>
+</html>

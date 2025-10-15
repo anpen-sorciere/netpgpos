@@ -1,0 +1,427 @@
+<?php
+// PHPエラーレポートを有効にする
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+require_once 'dbconnect.php'; // データベース接続ファイルを読み込む
+require_once 'functions.php'; // 共通関数ファイルを読み込む
+
+// 不要なヘッダーをPHP側で定義
+$unnecessary_headers = [
+    '氏(請求先)', '名(請求先)', '郵便番号(請求先)', '都道府県(請求先)', '住所(請求先)', '住所2(請求先)', '電話番号(請求先)', 'メールアドレス(請求先)',
+    '代引き手数料', '配送時間帯', '注文メモ', '調整金額', '特典', '税率', '送料', '支払い方法', '購入元', '配送日',
+    '郵便番号(配送先)', '都道府県(配送先)', '住所(配送先)', '住所2(配送先)', '電話番号(配送先)'
+];
+
+// PHP配列をJavaScriptで使えるようにJSONに変換
+$unnecessary_headers_json = json_encode($unnecessary_headers);
+?>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSVアップローダー</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .error-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #f44336; /* 赤色 */
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .error-bar-close {
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 0 10px;
+            border: none;
+            background: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- 画面上部に固定されるエラー表示バー -->
+    <div id="error-bar" class="error-bar" style="display: none;">
+        <span id="error-message-text"></span>
+        <button class="error-bar-close" onclick="document.getElementById('error-bar').style.display='none';">&times;</button>
+    </div>
+
+    <div class="container">
+        <h1>CSVアップロード</h1>
+        <div class="control-panel">
+            <div class="form-section">
+                <h2>コントロールパネル</h2>
+                <div class="radio-group">
+                    <label><input type="radio" name="store" value="1" required> ソルシエール</label>
+                    <label><input type="radio" name="store" value="2"> レーヴェス</label>
+                </div>
+                <input type="file" id="csvFile" accept=".csv">
+            </div>
+            <div class="button-group">
+                <button id="upload-button">CSVを読み込む</button>
+                <button id="register-button" style="display: none;">データベースに登録</button>
+            </div>
+        </div>
+        <div class="message-container">
+            <div id="statusMessage"></div>
+        </div>
+        <div id="loading" style="display: none;">処理中...</div>
+        <div id="csv-table-container">
+            <!-- CSVデータがここに表示されます -->
+        </div>
+
+        <div id="unregistered-container" class="unregistered-section" style="display: none;">
+            <h3>登録失敗データの手動入力</h3>
+            <div id="unregistered-table-container"></div>
+            <div class="manual-buttons">
+                <button id="manual-register-button">入力内容で登録</button>
+                <button id="manual-cancel-button">キャンセルして次へ</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const csvFile = document.getElementById('csvFile');
+            const uploadButton = document.getElementById('upload-button');
+            const registerButton = document.getElementById('register-button');
+            const manualRegisterButton = document.getElementById('manual-register-button');
+            const manualCancelButton = document.getElementById('manual-cancel-button');
+            const tableContainer = document.getElementById('csv-table-container');
+            const unregisteredContainer = document.getElementById('unregistered-container');
+            const unregisteredTableContainer = document.getElementById('unregistered-table-container');
+            const loading = document.getElementById('loading');
+            const statusMessage = document.getElementById('statusMessage');
+            const errorBar = document.getElementById('error-bar');
+            const errorMessageText = document.getElementById('error-message-text');
+            const storeRadios = document.getElementsByName('store');
+
+            // PHPから不要なヘッダーのリストを取得
+            const unnecessaryHeaders = <?php echo $unnecessary_headers_json; ?>;
+            const removeItems = [
+                '商品オプション「お客様名」',
+                '商品オプション「キャスト名」',
+                '商品オプション「フレーバー」',
+                '商品オプション「リッチオムライス組み合わせ」',
+                '商品オプション「ご来店年月日と時間」',
+                '商品オプション「丼サイズ」'
+            ];
+
+            let originalData = [];
+            let headers = [];
+            let customerMap = {};
+            let castMap = {};
+            let failedRows = [];
+
+            function displayMessage(message, isError = false) {
+                statusMessage.textContent = message;
+                statusMessage.className = isError ? 'error-message' : 'success-message';
+                statusMessage.style.display = 'block';
+
+                // 新しいエラーバーの表示
+                if (isError) {
+                    errorMessageText.textContent = message;
+                    errorBar.style.display = 'flex';
+                    setTimeout(() => {
+                        errorBar.style.display = 'none';
+                    }, 5000); // 5秒後に自動的に消える
+                } else {
+                    errorBar.style.display = 'none';
+                }
+            }
+
+            uploadButton.addEventListener('click', () => {
+                const file = csvFile.files[0];
+                let selectedStore = null;
+
+                for (const radio of storeRadios) {
+                    if (radio.checked) {
+                        selectedStore = radio.value;
+                        break;
+                    }
+                }
+
+                if (!selectedStore) {
+                    displayMessage('店舗を選択してください。', true);
+                    return;
+                }
+
+                if (!file) {
+                    displayMessage('CSVファイルを選択してください。', true);
+                    return;
+                }
+
+                loading.style.display = 'block';
+                statusMessage.style.display = 'none';
+                tableContainer.innerHTML = '';
+                unregisteredContainer.style.display = 'none';
+                registerButton.style.display = 'none';
+                failedRows = [];
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const text = e.target.result;
+                    processCSV(text);
+                    loading.style.display = 'none';
+                };
+                reader.readAsText(file, 'Shift_JIS');
+            });
+
+            function processCSV(csvText) {
+                const lines = csvText.trim().split('\n');
+                headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+
+                const allData = lines.slice(1).map(line => {
+                    const row = {};
+                    let inQuote = false;
+                    let currentCell = '';
+                    let colIndex = 0;
+
+                    for (let i = 0; i < line.length; i++) {
+                        const char = line[i];
+                        if (char === '"') {
+                            if (i > 0 && line[i-1] === '"') {
+                                currentCell += '"';
+                            } else {
+                                inQuote = !inQuote;
+                            }
+                        } else if (char === ',' && !inQuote) {
+                            row[headers[colIndex]] = currentCell.replace(/"/g, '').trim();
+                            currentCell = '';
+                            colIndex++;
+                        } else {
+                            currentCell += char;
+                        }
+                    }
+                    row[headers[colIndex]] = currentCell.replace(/"/g, '').trim();
+                    return row;
+                });
+                
+                // ここから修正されたロジック
+                // 注文IDごとのお客様名とキャスト名を事前に抽出
+                allData.forEach(row => {
+                    const orderId = row['注文ID'];
+                    const itemName = row['商品名'];
+                    const variation = row['バリエーション'];
+
+                    if (itemName === '商品オプション「お客様名」') {
+                        customerMap[orderId] = variation;
+                    }
+                    if (itemName === '商品オプション「キャスト名」') {
+                        castMap[orderId] = variation;
+                    }
+                });
+                
+                // 不要な行をフィルタリング
+                originalData = allData.filter(row => {
+                    const itemName = row['商品名'];
+                    const castName = row['キャスト名'];
+                    return !removeItems.includes(itemName) && !(castName && castName.includes('下谷あゆ'));
+                });
+
+                // 表示用に新しいデータセットを作成
+                const displayData = originalData.map(row => {
+                    const newRow = { ...row };
+                    newRow['お客様名'] = customerMap[newRow['注文ID']] || '';
+                    newRow['キャスト名'] = castMap[newRow['注文ID']] || '';
+                    return newRow;
+                });
+
+                displayTable(displayData);
+                registerButton.style.display = 'block';
+            }
+
+            function displayTable(data, isFailed = false) {
+                const table = document.createElement('table');
+
+                // 元のヘッダーと追加したヘッダーを結合
+                const allHeaders = [...headers];
+                allHeaders.splice(allHeaders.indexOf('商品名') + 1, 0, 'お客様名', 'キャスト名');
+
+                // 不要なヘッダーをフィルタリングして表示用ヘッダーを作成
+                const filteredHeaders = allHeaders.filter(header => !unnecessaryHeaders.includes(header)).map(header => {
+                    if (header === '氏(配送先)') return '氏';
+                    if (header === '名(配送先)') return '名';
+                    return header;
+                });
+
+                const thead = table.createTHead();
+                const headerRow = thead.insertRow();
+                filteredHeaders.forEach(header => {
+                    const th = document.createElement('th');
+                    th.textContent = header;
+                    headerRow.appendChild(th);
+                });
+
+                const tbody = table.createTBody();
+                let lastOrderId = null;
+                let isOdd = true;
+
+                data.forEach(row => {
+                    const orderId = row['注文ID'];
+                    const itemName = row['商品名'];
+
+                    if (orderId !== lastOrderId) {
+                        isOdd = !isOdd;
+                        lastOrderId = orderId;
+                    }
+
+                    const newRow = tbody.insertRow();
+                    newRow.className = isOdd ? 'highlight-odd' : 'highlight-even';
+
+                    if (!itemName.includes('商品オプション')) {
+                        newRow.classList.add('bold-row');
+                    }
+
+                    filteredHeaders.forEach(header => {
+                        const td = newRow.insertCell();
+                        const cellData = row[header] || ''; // すでに成形されたデータを使用
+
+                        // 手動入力が必要なセルにinputタグを挿入
+                        if (isFailed) {
+                            if (header === '商品名' && row.unregisteredItemId) {
+                                const input = document.createElement('input');
+                                input.type = 'text';
+                                input.className = 'manual-input';
+                                input.placeholder = '商品名を入力';
+                                input.value = cellData;
+                                td.appendChild(input);
+                            } else if (header === 'キャスト名' && row.unregisteredCastId) {
+                                const input = document.createElement('input');
+                                input.type = 'text';
+                                input.className = 'manual-input';
+                                input.placeholder = 'キャスト名を入力';
+                                input.value = cellData;
+                                td.appendChild(input);
+                            } else {
+                                td.textContent = cellData;
+                            }
+                        } else {
+                            td.textContent = cellData;
+                        }
+                    });
+                });
+
+                if (isFailed) {
+                    unregisteredTableContainer.innerHTML = '';
+                    unregisteredTableContainer.appendChild(table);
+                } else {
+                    tableContainer.innerHTML = '';
+                    tableContainer.appendChild(table);
+                }
+            }
+
+            function sendDataToRegister(data, storeId) {
+                return fetch('base_sales_register.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        store_id: storeId,
+                        data: data
+                    })
+                });
+            }
+
+            registerButton.addEventListener('click', () => {
+                loading.style.display = 'block';
+                statusMessage.style.display = 'none';
+
+                const selectedStore = document.querySelector('input[name="store"]:checked').value;
+
+                sendDataToRegister(originalData, selectedStore)
+                    .then(response => response.json())
+                    .then(data => {
+                        loading.style.display = 'none';
+                        if (data.status === 'success') {
+                            displayMessage(`データを正常に登録しました。登録件数: ${data.registered_count}件`);
+                            registerButton.style.display = 'none';
+                            tableContainer.innerHTML = '';
+                        } else if (data.status === 'partial_success') {
+                            displayMessage(`一部のデータを登録しました。成功件数: ${data.registered_count}件、失敗件数: ${data.failed_data.length}件。`, true);
+                            failedRows = data.failed_data;
+                            displayTable(failedRows, true);
+                            unregisteredContainer.style.display = 'block';
+                        } else {
+                            displayMessage(`登録に失敗しました: ${data.message}`, true);
+                        }
+                    })
+                    .catch(error => {
+                        loading.style.display = 'none';
+                        displayMessage(`通信エラーが発生しました: ${error}`, true);
+                    });
+            });
+
+            manualRegisterButton.addEventListener('click', () => {
+                const manualInputs = unregisteredTableContainer.querySelectorAll('.manual-input');
+                const dataToRegister = [];
+
+                failedRows.forEach((row, rowIndex) => {
+                    const newRow = { ...row };
+
+                    if (row.unregisteredItemId) {
+                        const itemInput = manualInputs[rowIndex * 2];
+                        if (itemInput) {
+                            newRow['商品名'] = itemInput.value;
+                        }
+                    }
+
+                    if (row.unregisteredCastId) {
+                        const castInput = manualInputs[rowIndex * 2 + (row.unregisteredItemId ? 1 : 0)];
+                        if (castInput) {
+                            newRow['キャスト名'] = castInput.value;
+                        }
+                    }
+
+                    dataToRegister.push(newRow);
+                });
+
+                const selectedStore = document.querySelector('input[name="store"]:checked').value;
+
+                loading.style.display = 'block';
+                statusMessage.style.display = 'none';
+
+                sendDataToRegister(dataToRegister, selectedStore)
+                    .then(response => response.json())
+                    .then(data => {
+                        loading.style.display = 'none';
+                        if (data.status === 'success') {
+                            displayMessage(`手動入力データを正常に登録しました。登録件数: ${data.registered_count}件`);
+                            unregisteredContainer.style.display = 'none';
+                            tableContainer.innerHTML = '';
+                            registerButton.style.display = 'none';
+                        } else {
+                            displayMessage(`手動入力データの登録に失敗しました: ${data.message}`, true);
+                        }
+                    })
+                    .catch(error => {
+                        loading.style.display = 'none';
+                        displayMessage(`通信エラーが発生しました: ${error}`, true);
+                    });
+            });
+
+            manualCancelButton.addEventListener('click', () => {
+                unregisteredContainer.style.display = 'none';
+                tableContainer.innerHTML = '';
+                registerButton.style.display = 'none';
+                displayMessage('手動登録をキャンセルしました。', true);
+            });
+        });
+    </script>
+</body>
+</html>

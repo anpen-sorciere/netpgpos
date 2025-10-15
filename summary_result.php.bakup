@@ -1,0 +1,121 @@
+<?php
+require("./dbconnect.php");
+session_start();
+
+
+?>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0">
+    <title>売上データ確認画面</title>
+    <link href="https://use.fontawesome.com/releases/v5.6.1/css/all.css" rel="stylesheet">
+    <link href="https://unpkg.com/sanitize.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+	    <div class="content">
+	    </div>
+	    <?php
+		    $ymd = explode('-', $_SESSION['join']['c_month']);
+		    $eymd = explode('-', $_SESSION['join']['ec_month']);
+		    $utype = $_SESSION['utype'];
+		?>
+	    集計年月<?=htmlspecialchars($ymd[0])?>年<?=htmlspecialchars($ymd[1])?>月<?=htmlspecialchars($ymd[2])?>日～<?=htmlspecialchars($eymd[0])?>年<?=htmlspecialchars($eymd[1])?>月<?=htmlspecialchars($eymd[2])?>日
+	    <br>
+       	支払い方法：<?=htmlspecialchars($_SESSION['join']['p_type'])?>
+	    <?php
+	    	if($_SESSION['join']['p_type'] == 0) {
+	    ?>
+	    		全部
+	    <?php
+	    	}else {
+			    $pdo=connect();
+			    $stmt = $pdo->prepare("SELECT * FROM payment_mst WHERE payment_type = ?");
+			    $stmt->execute(array($_SESSION['join']['p_type']));
+			    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+		?>
+				<?=htmlspecialchars($row['payment_name'])?>
+		<?php
+			}
+		?>
+		
+	    <table><tbody>
+	    <tr><th>売上日付</th><th>商品ID</th><th>商品名</th><th>数量</th><th>金額</th><th>キャストID</th><th>キャスト名</th></tr>
+		<?php
+			$goukei = 0;	//合計金額
+		    if($utype == 1024) $shop_id = 1;
+		    elseif($utype == 3) $shop_id = 3;
+		    else $shop_id = 2;
+		    $db=connect();
+		    $stmh = $db->prepare("SELECT * FROM receipt_detail_tbl where shop_id = ? AND receipt_day BETWEEN ? and ? ORDER BY receipt_day,receipt_detail_id");
+		    $startymd = $ymd[0].$ymd[1].$ymd[2];
+		    $endymd = $eymd[0].$eymd[1].$eymd[2];
+		    $stmh->execute(array($shop_id,$startymd,$endymd));
+		    $receipt_id_old = 0;
+		    while($row = $stmh->fetch(PDO::FETCH_ASSOC)){
+		    	if($row['item_id'] == 0) {continue;}
+			    $stmh2 = $db->prepare("SELECT payment_type FROM receipt_tbl where shop_id = ? and receipt_id = ?");
+			    $stmh2->execute(array($shop_id,$row['receipt_id']));
+			    $row2 = $stmh2->fetch(PDO::FETCH_ASSOC);
+			    if($_SESSION['join']['p_type'] > 0) {
+				    if($row2['payment_type'] != $_SESSION['join']['p_type']) {continue;}
+				}
+		    	//レシートIDを前行と比べ違っていれば別レシートになるので一行空白
+		    	if($receipt_id_old == 0) {
+		    		//始めてなので改行無し
+		    		$receipt_id_old = $row['receipt_id'];
+		    	}
+	    		if($receipt_id_old != $row['receipt_id']) {
+	    			//違ったので改行
+	    			$receipt_id_old = $row['receipt_id'];
+	    ?>
+	    			<tr>
+				        <td><?=htmlspecialchars("　")?></td>
+	    			</tr>
+	    <?php
+		    	}
+		?>
+		    <tr>
+		        <td><?=htmlspecialchars($row['receipt_day'])?></td>
+		        <td align="center"><?=htmlspecialchars($row['item_id'])?></td>
+		        <?php
+		        	//ここで商品IDから商品データ取得
+		        	if($row['item_id'] > 0) {
+			        	$row2 = item_get($row['item_id']); 
+				?>
+						<td><?=htmlspecialchars($row2['item_name'])?></td>
+		        <?php }else{ ?>
+		        		<td></td>
+		        <?php } ?>
+				<?php
+					//数量と単価から売上金額計算
+					$syoukei = $row['quantity'] * $row2['price'];
+					$goukei = $goukei + $syoukei;
+				?>
+		        <td align="center"><?=htmlspecialchars($row['quantity'])?></td>
+		        <td align="center"><?=htmlspecialchars($syoukei)?></td>
+		        <?php
+		        	if($row['cast_id'] > 0) {
+			        	$cast_data = cast_get($row['cast_id']); 
+		        ?>
+				        <td align="center"><?=htmlspecialchars($row['cast_id'])?></td>
+				        <td><?=htmlspecialchars($cast_data['cast_name'])?></td>
+		        <?php }else{ ?>
+		        		<td></td>
+		        		<td></td>
+		        <?php } ?>
+		    </tr>
+		<?php
+		    }
+		    $db = null;
+		?>
+		</tbody></table>
+		合計金額 <?=htmlspecialchars($goukei)?>
+        <div class="control">
+			<a href="summary.php">戻る</a>
+			<a href="index.php">メニューへ</a>
+        </div>
+</body>
+</html>

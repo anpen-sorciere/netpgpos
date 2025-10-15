@@ -1,0 +1,412 @@
+<?php
+// エラーログを有効にし、エラーログファイルのパスを指定
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/log/error.log');
+
+require("./dbconnect.php");
+require("./functions.php");
+
+session_start();
+$uid = $_SESSION['user_id'];
+$utype = 0;
+if(isset($_GET['utype'])) { 
+    $utype = $_GET['utype'];
+    $_SESSION['utype'] = $utype;
+} elseif(isset($_SESSION['utype'])) {
+    $utype = $_SESSION['utype'];
+}
+
+// セッションデータがなければエラー
+if (!isset($_SESSION['join']['c_day']) || !isset($_SESSION['join']['cast_id'])) {
+    header("Location: daily_wage_summary.php");
+    exit();
+}
+
+$ymd = explode('-', $_SESSION['join']['c_day']);
+$c_day_format = $ymd[0] . $ymd[1] . $ymd[2];
+$shop_info = get_shop_info($utype);
+$shop_id = $shop_info['id'];
+$shop_name = $shop_info['name'];
+$cast_id = $_SESSION['join']['cast_id'];
+$cast_name = $_SESSION['join']['cast_name'];
+
+$pdo = connect();
+$summary_data = [];
+$total_all_casts_wages = 0;
+
+// 全員表示の場合
+if ($cast_id == '0') {
+    // 勤務または売上バックのあるキャストIDをすべて取得
+    $stmh_cast_ids = $pdo->prepare("
+        SELECT cast_id FROM timecard_tbl WHERE shop_id = ? AND in_ymd = ?
+        UNION
+        SELECT cast_id FROM receipt_detail_tbl WHERE shop_id = ? AND receipt_day = ? AND cast_id > 0
+    ");
+    $stmh_cast_ids->execute(array($shop_id, $c_day_format, $shop_id, $c_day_format));
+    $relevant_cast_ids = $stmh_cast_ids->fetchAll(PDO::FETCH_COLUMN, 0);
+    $relevant_cast_ids = array_unique($relevant_cast_ids);
+    
+    $all_summary = [];
+    
+    foreach ($relevant_cast_ids as $current_cast_id) {
+        $cast_data_row = cast_get($pdo, $current_cast_id);
+        if (!$cast_data_row) continue; // キャストデータが見つからない場合はスキップ
+
+        $cast_summary = [
+            'cast_name' => $cast_data_row['cast_name'],
+            'hourly_wage_total' => 0,
+            'back_wage_total' => 0,
+            'total_wage' => 0
+        ];
+
+        // 勤務時間・時給の計算
+        $stmh_timecard = $pdo->prepare("SELECT * FROM timecard_tbl WHERE cast_id = ? AND shop_id = ? AND in_ymd = ?");
+        $stmh_timecard->execute(array($current_cast_id, $shop_id, $c_day_format));
+        $timecard_data = $stmh_timecard->fetchAll(PDO::FETCH_ASSOC);
+
+        if ($timecard_data) {
+            $times = calculate_working_hours($timecard_data);
+            $pay_data = pay_get($pdo, $current_cast_id, $ymd[0], $ymd[1]);
+            $hourly_wage = $pay_data['pay_amount'] ?? 0;
+            $jikyu_kingaku = ceil($hourly_wage * ($times['work_time_minutes'] / 60));
+            $cast_summary['hourly_wage_total'] = $jikyu_kingaku;
+        }
+
+        // 売上バックデータの取得
+        $stmh_receipt = $pdo->prepare("
+            SELECT SUM(im.back_price * rd.quantity) AS total_back_wage
+            FROM receipt_detail_tbl AS rd
+            JOIN item_mst AS im ON rd.item_id = im.item_id
+            WHERE rd.shop_id = ? AND rd.cast_id = ? AND rd.receipt_day = ? AND im.back_price > 0
+        ");
+        $stmh_receipt->execute(array($shop_id, $current_cast_id, $c_day_format));
+        $back_data = $stmh_receipt->fetch(PDO::FETCH_ASSOC);
+        
+        $cast_summary['back_wage_total'] = intval($back_data['total_back_wage']);
+        $cast_summary['total_wage'] = $cast_summary['hourly_wage_total'] + $cast_summary['back_wage_total'];
+        $total_all_casts_wages += $cast_summary['total_wage'];
+        
+        $all_summary[] = $cast_summary;
+    }
+
+} else {
+    // 個別キャストの場合
+    // 勤務時間・時給の計算
+    $stmh_timecard = $pdo->prepare("SELECT * FROM timecard_tbl WHERE cast_id = ? AND shop_id = ? AND in_ymd = ?");
+    $stmh_timecard->execute(array($cast_id, $shop_id, $c_day_format));
+    $timecard_data = $stmh_timecard->fetchAll(PDO::FETCH_ASSOC);
+
+    $work_time_minutes = 0;
+    $break_time_minutes = 0;
+    $hourly_wage = 0;
+    $hourly_wage_flg = 0;
+    $jikyu_kingaku = 0;
+
+    if ($timecard_data) {
+        $times = calculate_working_hours($timecard_data);
+        $work_time_minutes = $times['work_time_minutes'];
+        $break_time_minutes = $times['break_time_minutes'];
+
+        $pay_data = pay_get($pdo, $cast_id, $ymd[0], $ymd[1]);
+        $hourly_wage = $pay_data['pay_amount'] ?? 0;
+        $hourly_wage_flg = $pay_data['pay_flg'] ?? 0;
+        $jikyu_kingaku = ceil($hourly_wage * ($work_time_minutes / 60));
+    }
+    
+    // 売上バックデータの取得
+    $stmh_receipt = $pdo->prepare("
+        SELECT 
+            rd.item_id, 
+            SUM(rd.quantity) AS total_quantity, 
+            im.item_name,
+            im.back_price
+        FROM 
+            receipt_detail_tbl AS rd
+        JOIN 
+            item_mst AS im ON rd.item_id = im.item_id
+        WHERE 
+            rd.shop_id = ? AND rd.cast_id = ? AND rd.receipt_day = ? AND im.back_price > 0
+        GROUP BY 
+            rd.item_id
+        ORDER BY 
+            rd.item_id
+    ");
+    $stmh_receipt->execute(array($shop_id, $cast_id, $c_day_format));
+    $summary_data = $stmh_receipt->fetchAll(PDO::FETCH_ASSOC);
+    $total_back_wage = 0;
+    foreach($summary_data as $item) {
+        $total_back_wage += $item['total_quantity'] * $item['back_price'];
+    }
+    $total_all_casts_wages = $jikyu_kingaku + $total_back_wage;
+}
+
+// PDOオブジェクトを破棄
+$pdo = null;
+?>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0">
+    <title>日当集計データ確認画面</title>
+    <link href="https://use.fontawesome.com/releases/v5.6.1/css/all.css" rel="stylesheet">
+    <link href="https://unpkg.com/sanitize.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .print_only { display: none; }
+        @media print {
+            .no_print { display: none; }
+            .print_only { display: block; }
+        }
+        table { border-collapse: collapse; width: 100%; margin-top: 15px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .right-align { text-align: right; }
+        .center-align { text-align: center; }
+        .highlight { font-weight: bold; }
+        
+        /* 交互に色を変えるスタイル (色覚異常対応) */
+        .even-row { background-color: #e0f2f7; } /* 明るい青緑 */
+        .odd-row { background-color: #ffffff; } /* 白 */
+        
+        /* 印刷時のスタイル */
+        @media print {
+            .even-row { background-color: #f0f0f0 !important; } /* 印刷用は濃いグレーで */
+            .odd-row { background-color: #ffffff !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <div class="no_print">
+            <h1>日当集計データ</h1>
+            <p>
+                集計年月：<?php echo htmlspecialchars($ymd[0])?>年<?php echo htmlspecialchars($ymd[1])?>月<?php echo htmlspecialchars($ymd[2])?>日<br>
+                店舗：<?php echo htmlspecialchars($shop_name); ?><br>
+                キャスト：<?php echo htmlspecialchars($cast_name); ?>
+            </p>
+            <hr>
+            
+            <?php if ($cast_id == '0'): ?>
+                <h2>キャスト別 日当サマリー</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>キャスト名</th>
+                            <th class="right-align">時給金額</th>
+                            <th class="right-align">バック金額</th>
+                            <th class="right-align">合計総計金額</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php 
+                        $i = 0;
+                        foreach ($all_summary as $cast_data): 
+                            $row_class = ($i % 2 == 0) ? 'even-row' : 'odd-row';
+                        ?>
+                        <tr class="<?php echo $row_class; ?>">
+                            <td><?php echo htmlspecialchars($cast_data['cast_name']); ?></td>
+                            <td class="right-align"><?php echo number_format($cast_data['hourly_wage_total']); ?></td>
+                            <td class="right-align"><?php echo number_format($cast_data['back_wage_total']); ?></td>
+                            <td class="right-align highlight"><?php echo number_format($cast_data['total_wage']); ?></td>
+                        </tr>
+                        <?php 
+                            $i++;
+                        endforeach; 
+                        ?>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" class="right-align highlight">全キャスト合計総計</td>
+                            <td class="right-align highlight"><?php echo number_format($total_all_casts_wages); ?></td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+            <?php else: ?>
+                <h2>キャスト情報</h2>
+                <table>
+                    <tbody>
+                        <tr>
+                            <th>勤務時間</th>
+                            <td><?php echo floor($work_time_minutes / 60) . '時間' . ($work_time_minutes % 60) . '分'; ?></td>
+                            <th>休憩時間</th>
+                            <td><?php echo floor($break_time_minutes / 60) . '時間' . ($break_time_minutes % 60) . '分'; ?></td>
+                        </tr>
+                        <tr>
+                            <th>時給</th>
+                            <td><?php echo number_format($hourly_wage); ?>円 (<?php echo ($hourly_wage_flg == 1) ? '仮' : '確定'; ?>)</td>
+                            <th>時給金額</th>
+                            <td><?php echo number_format($jikyu_kingaku); ?>円</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h2>売上バック明細</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="center-align">日付</th>
+                            <th class="center-align">キャスト</th>
+                            <th class="center-align">商品ID</th>
+                            <th>商品名</th>
+                            <th class="right-align">数量</th>
+                            <th class="right-align">バック金額</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $total_back_wage = 0;
+                        $i = 0;
+                        foreach ($summary_data as $row) {
+                            $back_amount = $row['total_quantity'] * $row['back_price'];
+                            $total_back_wage += $back_amount;
+                            $row_class = ($i % 2 == 0) ? 'even-row' : 'odd-row';
+                            echo '<tr class="' . $row_class . '">';
+                            echo '<td class="center-align">' . htmlspecialchars($ymd[0] . '/' . $ymd[1] . '/' . $ymd[2]) . '</td>';
+                            echo '<td class="center-align">' . htmlspecialchars($cast_name) . '</td>';
+                            echo '<td class="center-align">' . htmlspecialchars($row['item_id']) . '</td>';
+                            echo '<td>' . htmlspecialchars($row['item_name']) . '</td>';
+                            echo '<td class="right-align">' . number_format($row['total_quantity']) . '</td>';
+                            echo '<td class="right-align">' . number_format($back_amount) . '</td>';
+                            echo '</tr>';
+                            $i++;
+                        }
+                        ?>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="5" class="right-align highlight">売上バック合計</td>
+                            <td class="right-align highlight"><?php echo number_format($total_back_wage); ?></td>
+                        </tr>
+                        <tr>
+                            <td colspan="5" class="right-align highlight">日当合計</td>
+                            <td class="right-align highlight"><?php echo number_format($jikyu_kingaku + $total_back_wage); ?></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            <?php endif; ?>
+
+            <div class="control">
+                <a href="daily_wage_summary.php">戻る</a>
+                <a href="index.php">メニューへ</a>
+                <input type="button" value="印刷" onclick="window.print();">
+            </div>
+        </div>
+        
+        <div class="print_only">
+            <?php if ($cast_id == '0'): ?>
+            <p>
+                <?=htmlspecialchars($ymd[0])?>年<?=htmlspecialchars($ymd[1])?>月<?=htmlspecialchars($ymd[2])?>日
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                <?=htmlspecialchars($shop_name)?>
+            </p>
+            <table border="1" cellpadding="5">
+                <thead>
+                    <tr>
+                        <th>キャスト名</th>
+                        <th class="right-align">時給金額</th>
+                        <th class="right-align">バック金額</th>
+                        <th class="right-align">合計総計金額</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php 
+                    $i = 0;
+                    foreach ($all_summary as $cast_data): 
+                        $row_class = ($i % 2 == 0) ? 'even-row' : 'odd-row';
+                    ?>
+                    <tr class="<?php echo $row_class; ?>">
+                        <td><?php echo htmlspecialchars($cast_data['cast_name']); ?></td>
+                        <td class="right-align"><?php echo number_format($cast_data['hourly_wage_total']); ?></td>
+                        <td class="right-align"><?php echo number_format($cast_data['back_wage_total']); ?></td>
+                        <td class="right-align"><?php echo number_format($cast_data['total_wage']); ?></td>
+                    </tr>
+                    <?php 
+                        $i++;
+                    endforeach; 
+                    ?>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="3" class="right-align highlight">全キャスト合計総計</td>
+                        <td class="right-align highlight"><?php echo number_format($total_all_casts_wages); ?></td>
+                    </tr>
+                </tfoot>
+            </table>
+            <?php else: ?>
+            <p>
+                <?=htmlspecialchars($ymd[0])?>年<?=htmlspecialchars($ymd[1])?>月<?=htmlspecialchars($ymd[2])?>日
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                <?=htmlspecialchars($shop_name)?>
+            </p>
+            <table border="1" cellpadding="5">
+                <tbody>
+                    <tr><th>勤務時間</th><th>休憩</th><th>キャスト名</th></tr>
+                    <tr>
+                        <td>
+                            <?php 
+                            if (!empty($timecard_data)) {
+                                $in_times = array_column($timecard_data, 'in_time');
+                                $out_times = array_column($timecard_data, 'out_time');
+                                echo htmlspecialchars(min($in_times)) . ' ～ ' . htmlspecialchars(max($out_times));
+                            }
+                            ?>
+                        </td>
+                        <td>
+                            <?php 
+                            if ($break_time_minutes > 0) {
+                                echo floor($break_time_minutes / 60) . '時間' . ($break_time_minutes % 60) . '分';
+                            }
+                            ?>
+                        </td>
+                        <td><?=htmlspecialchars($cast_name)?>　様</td>
+                    </tr>
+                </tbody>
+            </table>
+            <table border="1" cellpadding="5">
+                <tbody>
+                    <tr><th>時給</th><th>勤務時間</th><th>金額</th><th>休憩時間</th></tr>
+                    <tr>
+                        <td>
+                            <?=htmlspecialchars($hourly_wage)?>円
+                            <?php if($hourly_wage_flg == 1) echo '(仮)'; ?>
+                        </td>
+                        <td><?=floor($work_time_minutes / 60) . '時間' . ($work_time_minutes % 60) . '分'?></td>
+                        <td><?=number_format($jikyu_kingaku)?>円</td>
+                        <td><?=floor($break_time_minutes / 60) . '時間' . ($break_time_minutes % 60) . '分'?></td>
+                    </tr>
+                </tbody>
+            </table>
+            <table border="1" cellpadding="5" style="font-size: 10pt;">
+                <tbody>
+                    <tr><th class="center-align">商品名</th><th class="right-align">数量</th><th class="right-align">金額</th></tr>
+                    <?php
+                    $i = 0;
+                    foreach ($summary_data as $row) {
+                        $back_amount = $row['total_quantity'] * $row['back_price'];
+                        $row_class = ($i % 2 == 0) ? 'even-row' : 'odd-row';
+                        echo '<tr class="' . $row_class . '">';
+                        echo '<td>' . htmlspecialchars($row['item_name']) . '</td>';
+                        echo '<td class="right-align">' . number_format($row['total_quantity']) . '</td>';
+                        echo '<td class="right-align">' . number_format($back_amount) . '</td>';
+                        echo '</tr>';
+                        $i++;
+                    }
+                    ?>
+                </tbody>
+            </table>
+            <table border="1" cellpadding="5">
+                <tbody>
+                    <tr>
+                        <th>合計金額</th>
+                        <th><?php echo number_format($jikyu_kingaku + $total_back_wage); ?>円</th>
+                    </tr>
+                </tbody>
+            </table>
+            <?php endif; ?>
+        </div>
+    </div>
+</body>
+</html>
