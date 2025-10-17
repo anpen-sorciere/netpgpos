@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once('./dbconnect.php');
 require_once('./functions.php');
 header('Content-Type: application/json; charset=UTF-8');

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require("./dbconnect.php");
 require("./functions.php");
 
@@ -21,7 +21,7 @@ if (!isset($_SESSION['join']['c_day']) || !isset($_SESSION['join']['cast_id'])) 
 $ymd = explode('-', $_SESSION['join']['c_day']);
 $c_day_format = $ymd[0] . $ymd[1] . $ymd[2];
 $shop_info = get_shop_info($utype);
-$shop_id = $shop_info['id'];
+$shop_mst = $shop_info['id'];
 $shop_name = $shop_info['name'];
 $cast_id = $_SESSION['join']['cast_id'];
 $cast_name = $_SESSION['join']['cast_name'];
@@ -34,11 +34,11 @@ $total_all_casts_wages = 0;
 if ($cast_id == '0') {
     // 勤務または売上バックのあるキャストIDをすべて取得
     $stmh_cast_ids = $pdo->prepare("
-        SELECT cast_id FROM timecard_tbl WHERE shop_id = ? AND in_ymd = ?
+        SELECT cast_id FROM timecard_tbl WHERE shop_mst = ? AND in_ymd = ?
         UNION
-        SELECT cast_id FROM receipt_detail_tbl WHERE shop_id = ? AND receipt_day = ? AND cast_id > 0
+        SELECT cast_id FROM receipt_detail_tbl WHERE shop_mst = ? AND receipt_day = ? AND cast_id > 0
     ");
-    $stmh_cast_ids->execute(array($shop_id, $c_day_format, $shop_id, $c_day_format));
+    $stmh_cast_ids->execute(array($shop_mst, $c_day_format, $shop_mst, $c_day_format));
     $relevant_cast_ids = $stmh_cast_ids->fetchAll(PDO::FETCH_COLUMN, 0);
     $relevant_cast_ids = array_unique($relevant_cast_ids);
     
@@ -56,8 +56,8 @@ if ($cast_id == '0') {
         ];
 
         // 勤務時間・時給の計算
-        $stmh_timecard = $pdo->prepare("SELECT * FROM timecard_tbl WHERE cast_id = ? AND shop_id = ? AND in_ymd = ?");
-        $stmh_timecard->execute(array($current_cast_id, $shop_id, $c_day_format));
+        $stmh_timecard = $pdo->prepare("SELECT * FROM timecard_tbl WHERE cast_id = ? AND shop_mst = ? AND in_ymd = ?");
+        $stmh_timecard->execute(array($current_cast_id, $shop_mst, $c_day_format));
         $timecard_data = $stmh_timecard->fetch(PDO::FETCH_ASSOC);
 
         if ($timecard_data) {
@@ -85,9 +85,9 @@ if ($cast_id == '0') {
             SELECT SUM(im.back_price * rd.quantity) AS total_back_wage
             FROM receipt_detail_tbl AS rd
             JOIN item_mst AS im ON rd.item_id = im.item_id
-            WHERE rd.shop_id = ? AND rd.cast_id = ? AND rd.receipt_day = ? AND im.back_price > 0
+            WHERE rd.shop_mst = ? AND rd.cast_id = ? AND rd.receipt_day = ? AND im.back_price > 0
         ");
-        $stmh_receipt->execute(array($shop_id, $current_cast_id, $c_day_format));
+        $stmh_receipt->execute(array($shop_mst, $current_cast_id, $c_day_format));
         $back_data = $stmh_receipt->fetch(PDO::FETCH_ASSOC);
         
         $cast_summary['back_wage_total'] = intval($back_data['total_back_wage']);
@@ -100,8 +100,8 @@ if ($cast_id == '0') {
 } else {
     // 個別キャストの場合の既存ロジックは変更しない
     // 勤務時間・時給の計算
-    $stmh_timecard = $pdo->prepare("SELECT * FROM timecard_tbl WHERE cast_id = ? AND shop_id = ? AND in_ymd = ?");
-    $stmh_timecard->execute(array($cast_id, $shop_id, $c_day_format));
+    $stmh_timecard = $pdo->prepare("SELECT * FROM timecard_tbl WHERE cast_id = ? AND shop_mst = ? AND in_ymd = ?");
+    $stmh_timecard->execute(array($cast_id, $shop_mst, $c_day_format));
     $timecard_data = $stmh_timecard->fetch(PDO::FETCH_ASSOC);
 
     $work_time_minutes = 0;
@@ -146,13 +146,13 @@ if ($cast_id == '0') {
         JOIN 
             item_mst AS im ON rd.item_id = im.item_id
         WHERE 
-            rd.shop_id = ? AND rd.cast_id = ? AND rd.receipt_day = ? AND im.back_price > 0
+            rd.shop_mst = ? AND rd.cast_id = ? AND rd.receipt_day = ? AND im.back_price > 0
         GROUP BY 
             rd.item_id
         ORDER BY 
             rd.item_id
     ");
-    $stmh_receipt->execute(array($shop_id, $cast_id, $c_day_format));
+    $stmh_receipt->execute(array($shop_mst, $cast_id, $c_day_format));
     $summary_data = $stmh_receipt->fetchAll(PDO::FETCH_ASSOC);
     $total_back_wage = 0;
     foreach($summary_data as $item) {

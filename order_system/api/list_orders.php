@@ -5,8 +5,8 @@ error_reporting(E_ALL);
 
 header('Content-Type: application/json; charset=utf-8');
 
-require_once(__DIR__ . '/../../dbconnect.php');
-require_once(__DIR__ . '/../../functions.php');
+require_once(__DIR__ . '/../../../common/dbconnect.php');
+require_once(__DIR__ . '/../../../common/functions.php');
 
 $shop_filter = isset($_GET['shop_utype']) ? (int)$_GET['shop_utype'] : 0; // 0=全店
 $status_filter = isset($_GET['status']) ? (string)$_GET['status'] : '';    // '', 'pending', 'in_progress', 'served'

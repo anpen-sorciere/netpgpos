@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 // PHPエラーレポートを有効にする
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-require_once 'dbconnect.php';
-require_once 'functions.php';
+require_once '../common/dbconnect.php';
+require_once '../common/functions.php';
 
 header('Content-Type: application/json');
 
@@ -57,15 +57,15 @@ try {
 
                 try {
                     $stmt = $pdo->prepare("
-                        INSERT INTO base_sales_tbl (order_id, order_day, shop_id, base_item_id, cast_id, quantity, note, status, eigyo_ymd)
-                        VALUES (:order_id, :order_day, :shop_id, :base_item_id, :cast_id, :quantity, :note, :status, :eigyo_ymd)
+                        INSERT INTO base_sales_tbl (order_id, order_day, shop_mst, base_item_id, cast_id, quantity, note, status, eigyo_ymd)
+                        VALUES (:order_id, :order_day, :shop_mst, :base_item_id, :cast_id, :quantity, :note, :status, :eigyo_ymd)
                         ON DUPLICATE KEY UPDATE 
-                        shop_id = VALUES(shop_id), base_item_id = VALUES(base_item_id), cast_id = VALUES(cast_id), quantity = VALUES(quantity), note = VALUES(note), status = VALUES(status), eigyo_ymd = VALUES(eigyo_ymd)
+                        shop_mst = VALUES(shop_mst), base_item_id = VALUES(base_item_id), cast_id = VALUES(cast_id), quantity = VALUES(quantity), note = VALUES(note), status = VALUES(status), eigyo_ymd = VALUES(eigyo_ymd)
                     ");
 
                     $stmt->bindValue(':order_id', $order_id);
                     $stmt->bindValue(':order_day', $order_date_time);
-                    $stmt->bindValue(':shop_id', $store_id);
+                    $stmt->bindValue(':shop_mst', $store_id);
                     $stmt->bindValue(':base_item_id', $product_id);
                     $stmt->bindValue(':cast_id', $cast_id);
                     $stmt->bindValue(':quantity', $quantity);
@@ -95,7 +95,7 @@ try {
             // データの取得処理（検索機能を含む）
             $params = $input['params'] ?? [];
             
-            $sql = "SELECT bs.id, bs.order_id, bs.order_day, bs.shop_id, p.item_name, p.price, c.cast_name, bs.quantity, bs.note
+            $sql = "SELECT bs.id, bs.order_id, bs.order_day, bs.shop_mst, p.item_name, p.price, c.cast_name, bs.quantity, bs.note
                     FROM base_sales_tbl bs
                     LEFT JOIN item_mst p ON bs.base_item_id = p.item_id
                     LEFT JOIN cast_mst c ON bs.cast_id = c.cast_id
@@ -128,7 +128,7 @@ try {
             // 取得したデータを日本語のキーに変換
             $japanese_data = [];
             foreach ($data as $row) {
-                $shop_info = get_shop_info($row['shop_id']);
+                $shop_info = get_shop_info($row['shop_mst']);
                 $japanese_data[] = [
                     'id' => $row['id'],
                     '注文ID' => $row['order_id'],

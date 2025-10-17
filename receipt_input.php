@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
@@ -248,7 +248,7 @@ try {
                         <th>店舗</th>
                         <td>
                             <span class="check-info">コード: <?= htmlspecialchars($shop_info['id'], ENT_QUOTES) ?> / 店舗名: <?= htmlspecialchars($shop_info['name'], ENT_QUOTES) ?></span>
-                            <input type="hidden" name="shop_id" value="<?= htmlspecialchars($shop_info['id'], ENT_QUOTES) ?>">
+                            <input type="hidden" name="shop_mst" value="<?= htmlspecialchars($shop_info['id'], ENT_QUOTES) ?>">
                         </td>
                         <th>座席番号</th>
                         <td><input type="text" name="sheet_no" value="<?= htmlspecialchars($_SESSION['join']['sheet_no'] ?? '', ENT_QUOTES) ?>"></td>

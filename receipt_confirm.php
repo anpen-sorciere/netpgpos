@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
@@ -39,9 +39,9 @@ if (!empty($_POST)) {
         $params = [];
 
         // 店舗コード
-        if (!empty($_POST['shop_id'])) {
-            $conditions[] = "shop_id = ?";
-            $params[] = $_POST['shop_id'];
+        if (!empty($_POST['shop_mst'])) {
+            $conditions[] = "shop_mst = ?";
+            $params[] = $_POST['shop_mst'];
         }
 
         // 座席番号
@@ -156,14 +156,14 @@ $today = date('Y-m-d');
             <table>
                 <tbody>
                     <tr>
-                        <th><label for="shop_id">店舗コード</label></th>
+                        <th><label for="shop_mst">店舗コード</label></th>
                         <td>
                             <?php $shop_info = get_shop_info($utype); ?>
                             <?php if ($shop_info['name']): ?>
                                 <span class="check-info"><?= htmlspecialchars($shop_info['name'], ENT_QUOTES) ?></span>
-                                <input type="hidden" name="shop_id" value="<?= htmlspecialchars($shop_info['id'], ENT_QUOTES) ?>">
+                                <input type="hidden" name="shop_mst" value="<?= htmlspecialchars($shop_info['id'], ENT_QUOTES) ?>">
                             <?php else: ?>
-                                <input id="shop_id" type="text" name="shop_id" value="<?= htmlspecialchars($_POST['shop_id'] ?? $utype, ENT_QUOTES) ?>">
+                                <input id="shop_mst" type="text" name="shop_mst" value="<?= htmlspecialchars($_POST['shop_mst'] ?? $utype, ENT_QUOTES) ?>">
                             <?php endif; ?>
                         </td>
                     </tr>

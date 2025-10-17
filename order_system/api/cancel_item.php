@@ -5,8 +5,8 @@ error_reporting(E_ALL);
 
 header('Content-Type: application/json; charset=utf-8');
 
-require_once(__DIR__ . '/../../dbconnect.php');
-require_once(__DIR__ . '/../../functions.php');
+require_once(__DIR__ . '/../../../common/dbconnect.php');
+require_once(__DIR__ . '/../../../common/functions.php');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require("./dbconnect.php");
 session_start();
 
@@ -54,13 +54,13 @@ session_start();
 		<?php
 			$goukei = 0;	//合計金額
 		    $db=connect();
-		    $stmh = $db->prepare("SELECT * FROM receipt_detail_tbl where shop_id = ? AND receipt_day = ? ORDER BY receipt_day");
+		    $stmh = $db->prepare("SELECT * FROM receipt_detail_tbl where shop_mst = ? AND receipt_day = ? ORDER BY receipt_day");
 		    $getymd = $ymd[0].$ymd[1].$ymd[2];
 		    $stmh->execute(array($utype,$getymd));
 		    $receipt_id_old = 0;
 		    while($row = $stmh->fetch(PDO::FETCH_ASSOC)){
 		    	if($row['item_id'] == 0) {continue;}
-			    $stmh2 = $db->prepare("SELECT payment_type FROM receipt_tbl where shop_id = ? and receipt_id = ?");
+			    $stmh2 = $db->prepare("SELECT payment_type FROM receipt_tbl where shop_mst = ? and receipt_id = ?");
 			    $stmh2->execute(array($utype,$row['receipt_id']));
 			    $row2 = $stmh2->fetch(PDO::FETCH_ASSOC);
 			    if($_SESSION['join']['p_type'] > 0) {

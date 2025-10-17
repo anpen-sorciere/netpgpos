@@ -1,7 +1,7 @@
-<?php
+﻿<?php
 // QR打刻API（出勤/退勤登録）
-require_once('../dbconnect.php');
-require_once('../functions.php');
+require_once('../../common/dbconnect.php');
+require_once('../../common/functions.php');
 header('Content-Type: application/json; charset=UTF-8');
 
 $input = json_decode(file_get_contents('php://input'), true);
@@ -11,7 +11,7 @@ if (!$staff_id || !$qr) {
     echo json_encode(['status'=>'error','message'=>'スタッフIDまたはQR内容がありません']);
     exit;
 }
-// 仮：QR内容から出勤/退勤判定（例：qrにaction:in/out, timestamp, shop_id等を含む）
+// 仮：QR内容から出勤/退勤判定（例：qrにaction:in/out, timestamp, shop_mst等を含む）
 // ここでは単純にaction=inなら出勤、outなら退勤とする
 $pdo = connect();
 $action = null;

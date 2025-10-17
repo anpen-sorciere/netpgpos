@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require("./dbconnect.php");
 session_start();
 
@@ -31,7 +31,7 @@ if (!empty($_POST['check'])) {
 			<tr>
 				<td>
 	                <p>店舗コード</p>
-	                <p><?php echo htmlspecialchars($_SESSION['join']['shop_id'], ENT_QUOTES); ?></p>
+	                <p><?php echo htmlspecialchars($_SESSION['join']['shop_mst'], ENT_QUOTES); ?></p>
 	            </td>
 	            <td>
                 <p>座席番号</p>

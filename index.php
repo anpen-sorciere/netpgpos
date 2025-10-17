@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // エラー表示を有効化
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -65,8 +65,7 @@ if(isset($_GET['utype'])) {
             <li class="menu-item"><a href="cast_regist.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">キャスト登録</a></li>
             <li class="menu-item"><a href="paytbl_input.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">時給登録確認</a></li>
             <li class="menu-item"><a href="hourly_rate_mst_manage.php" class="menu-button">時給マスタ登録修正</a></li>
-            <li class="menu-item"><a href="upload_base_csv.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">BASEデータ登録確認</a></li>
-            <li class="menu-item"><a href="base_item_mst.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">BASE商品マスタ登録</a></li>
+            <li class="menu-item"><a href="base_data_sync_top.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">BASEデータ同期</a></li>
             <li class="menu-item"><a href="order_system/order_terminal.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">店内オーダー（テスト）</a></li>
             <li class="menu-item"><a href="order_system/kitchen_terminal.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">キッチン受注（テスト）</a></li>
         </ul>

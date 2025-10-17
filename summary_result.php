@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
@@ -17,7 +17,7 @@ if (isset($_GET['utype'])) {
 
 $shop_info = get_shop_info($utype);
 $shop_name = $shop_info['name'] ?? '不明な店舗';
-$shop_id = $shop_info['id'] ?? null;
+$shop_mst = $shop_info['id'] ?? null;
 
 $error = [];
 $pdo = null;
@@ -52,10 +52,10 @@ try {
     $payment_map = array_column($payment_mst_data, 'payment_name', 'payment_type');
 
     // 伝票の基本情報を取得するSQLクエリ
-    // $shop_idがnullでないことを確認してからクエリを実行
-    if ($shop_id !== null) {
-        $sql_receipts = "SELECT * FROM receipt_tbl WHERE shop_id = ? AND receipt_day BETWEEN ? AND ? ";
-        $params_receipts = [intval($shop_id), $start_ymd, $end_ymd];
+    // $shop_mstがnullでないことを確認してからクエリを実行
+    if ($shop_mst !== null) {
+        $sql_receipts = "SELECT * FROM receipt_tbl WHERE shop_mst = ? AND receipt_day BETWEEN ? AND ? ";
+        $params_receipts = [intval($shop_mst), $start_ymd, $end_ymd];
     
         if ($payment_type != '0') {
             $sql_receipts .= "AND payment_type = ? ";

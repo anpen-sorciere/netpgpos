@@ -1,6 +1,6 @@
-<?php
+﻿<?php
 // config.phpから接続設定を読み込む（絶対パス指定でどこからでも動作）
-require_once __DIR__ . '/config.php';
+require_once '../common/config.php';
 
 // MySQLに接続する関数（この関数のみが接続を確立する）
 function connect()

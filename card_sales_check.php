@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require("./dbconnect.php");
 session_cache_limiter('none');
 session_start();
@@ -123,7 +123,7 @@ if (!empty($_POST['check'])) {
 				<?php
 					}else{
 				?>
-					<p><span class="check-info"><?php echo htmlspecialchars($_SESSION['join']['shop_id'], ENT_QUOTES); ?></span></p>
+					<p><span class="check-info"><?php echo htmlspecialchars($_SESSION['join']['shop_mst'], ENT_QUOTES); ?></span></p>
 				<?php } ?>
             </div>
             <div class="control">

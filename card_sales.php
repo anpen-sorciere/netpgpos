@@ -1,4 +1,4 @@
-<?php 
+﻿<?php 
 require_once('./dbconnect.php');
 session_cache_limiter('none');
 session_start();
@@ -39,7 +39,7 @@ if (!empty($_POST)) {
             <div class="control">
 				<tr>
 				<th>
-                <label for="shop_id">店舗コード</label>
+                <label for="shop_mst">店舗コード</label>
                 <?php
                 	if($_SESSION['utype'] == 3) {
                 ?>

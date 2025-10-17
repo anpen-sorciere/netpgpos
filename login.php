@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once('./dbconnect.php');
 // ログイン処理
 session_start();

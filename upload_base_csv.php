@@ -1,11 +1,11 @@
-<?php
+﻿<?php
 // PHPエラーレポートを有効にする
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-require_once 'dbconnect.php'; // データベース接続ファイルを読み込む
-require_once 'functions.php'; // 共通関数ファイルを読み込む
+require_once '../common/dbconnect.php'; // データベース接続ファイルを読み込む
+require_once '../common/functions.php'; // 共通関数ファイルを読み込む
 
 // データベースに接続
 $pdo = connect();

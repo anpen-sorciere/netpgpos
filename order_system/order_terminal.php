@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // エラー表示
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
@@ -6,8 +6,8 @@ error_reporting(E_ALL);
 
 session_start();
 
-require_once(__DIR__ . '/../dbconnect.php');
-require_once(__DIR__ . '/../functions.php');
+require_once(__DIR__ . '/../../common/dbconnect.php');
+require_once(__DIR__ . '/../../common/functions.php');
 
 // 店舗判定（スマホ側は店舗内利用を想定）
 $utype = 0;

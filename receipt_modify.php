@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
@@ -13,7 +13,7 @@ $error = [];
 // セッションから店舗コードを取得
 $utype = isset($_SESSION['utype']) ? $_SESSION['utype'] : null;
 $shop_info = get_shop_info($utype);
-$shop_id = $shop_info['id'];
+$shop_mst = $shop_info['id'];
 
 // データベース接続
 try {
@@ -158,8 +158,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 初回アクセス時
     try {
         // 伝票マスターデータ取得
-        $stmh_receipt = $pdo->prepare("SELECT * FROM receipt_tbl WHERE receipt_id = ? AND shop_id = ?");
-        $stmh_receipt->execute([$receipt_id, $shop_id]);
+        $stmh_receipt = $pdo->prepare("SELECT * FROM receipt_tbl WHERE receipt_id = ? AND shop_mst = ?");
+        $stmh_receipt->execute([$receipt_id, $shop_mst]);
         $receipt_data = $stmh_receipt->fetch(PDO::FETCH_ASSOC);
 
         if (!$receipt_data) {
@@ -232,10 +232,10 @@ disconnect($pdo);
             <table>
                 <tbody>
                     <tr>
-                        <th><label for="shop_id">店舗コード</label></th>
+                        <th><label for="shop_mst">店舗コード</label></th>
                         <td>
                             <span class="check-info"><?= htmlspecialchars($shop_info['name'], ENT_QUOTES) ?></span>
-                            <input type="hidden" name="shop_id" value="<?= htmlspecialchars($shop_id, ENT_QUOTES) ?>">
+                            <input type="hidden" name="shop_mst" value="<?= htmlspecialchars($shop_mst, ENT_QUOTES) ?>">
                         </td>
                     </tr>
                     <tr>

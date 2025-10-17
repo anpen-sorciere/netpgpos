@@ -1,8 +1,8 @@
-<?php
+﻿<?php
 // ログイン処理
 session_start();
 
-require_once('dbconnect.php');
+require_once('../common/dbconnect.php');
 
 //if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 //  $username = htmlspecialchars($_POST['username'], ENT_QUOTES);

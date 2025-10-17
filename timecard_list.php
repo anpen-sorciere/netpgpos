@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
@@ -22,16 +22,16 @@ $cast_timecard_data = [];
 $year = $_GET['year'] ?? date('Y');
 $month = $_GET['month'] ?? date('m');
 $selected_cast_id = $_GET['cast_id'] ?? 'all'; // デフォルトは「全員」
-$selected_shop_id = $_GET['shop_id'] ?? 'all'; // デフォルトは「全店」
+$selected_shop_mst = $_GET['shop_mst'] ?? 'all'; // デフォルトは「全店」
 
 // SQLクエリの準備
 $sql = "SELECT * FROM timecard_tbl WHERE eigyo_ymd LIKE ? ";
 $params = [$year . $month . '%'];
 
 // 店舗が選択されている場合は絞り込む
-if ($selected_shop_id !== 'all') {
-    $sql .= "AND shop_id = ? ";
-    $params[] = intval($selected_shop_id);
+if ($selected_shop_mst !== 'all') {
+    $sql .= "AND shop_mst = ? ";
+    $params[] = intval($selected_shop_mst);
 }
 
 // キャストが選択されている場合は絞り込む
@@ -158,10 +158,10 @@ try {
             <input type="hidden" name="utype" value="<?= htmlspecialchars($utype_all) ?>">
             
             <div class="control-group">
-                <label for="shop_id">店舗:</label>
-                <select name="shop_id" id="shop_id">
+                <label for="shop_mst">店舗:</label>
+                <select name="shop_mst" id="shop_mst">
                     <?php foreach ($shops as $shop): ?>
-                        <option value="<?= htmlspecialchars($shop['id']) ?>" <?= ($shop['id'] == $selected_shop_id) ? 'selected' : ''; ?>>
+                        <option value="<?= htmlspecialchars($shop['id']) ?>" <?= ($shop['id'] == $selected_shop_mst) ? 'selected' : ''; ?>>
                             <?= htmlspecialchars($shop['name'], ENT_QUOTES); ?>
                         </option>
                     <?php endforeach; ?>
@@ -240,7 +240,7 @@ try {
                                 $break_time_formatted = format_minutes_to_hours_minutes($calculated_times['break_time_minutes']);
                             ?>
                             <tr>
-                                <td><?= htmlspecialchars(get_shop_info($detail['shop_id'])['name'] ?? '不明') ?></td>
+                                <td><?= htmlspecialchars(get_shop_info($detail['shop_mst'])['name'] ?? '不明') ?></td>
                                 <td><?= htmlspecialchars(format_ymd($detail['eigyo_ymd'])) ?></td>
                                 <td><?= $in_datetime ? htmlspecialchars($in_datetime->format('Y-m-d H:i')) : '-' ?></td>
                                 <td><?= $out_datetime ? htmlspecialchars($out_datetime->format('Y-m-d H:i')) : '-' ?></td>

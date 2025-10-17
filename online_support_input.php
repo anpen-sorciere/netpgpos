@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // online_support_input.php
 
 // 共通関数の読み込み

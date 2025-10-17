@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
@@ -22,9 +22,9 @@ if (!empty($_POST['check'])) {
     $receipt_id = intval($now->format('ymdHis'));
 
     // 伝票基本データ登録
-    $shop_id = $_SESSION['join']['shop_id'];
+    $shop_mst = $_SESSION['join']['shop_mst'];
     if ($utype == 3) {
-        $shop_id = $utype;
+        $shop_mst = $utype;
     }
 
     $receipt_day = str_replace('-', '', $_SESSION['join']['receipt_day'] ?? '');
@@ -39,10 +39,10 @@ if (!empty($_POST['check'])) {
     $out_date = '';
     $out_time = '';
 
-    $stmt_base = $pdo->prepare("INSERT INTO receipt_tbl (receipt_id, shop_id, sheet_no, receipt_day, in_date, in_time, out_date, out_time, customer_name, issuer_id, rep_id, payment_type, adjust_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt_base = $pdo->prepare("INSERT INTO receipt_tbl (receipt_id, shop_mst, sheet_no, receipt_day, in_date, in_time, out_date, out_time, customer_name, issuer_id, rep_id, payment_type, adjust_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     $stmt_base->execute([
         $receipt_id,
-        $shop_id,
+        $shop_mst,
         $_SESSION['join']['sheet_no'] ?? null,
         $receipt_day,
         $in_date,
@@ -57,7 +57,7 @@ if (!empty($_POST['check'])) {
     ]);
 
     // 伝票明細登録 (11行登録)
-    $stmt_detail = $pdo->prepare("INSERT INTO receipt_detail_tbl (shop_id, receipt_id, receipt_day, item_id, quantity, price, cast_id, cast_back_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt_detail = $pdo->prepare("INSERT INTO receipt_detail_tbl (shop_mst, receipt_id, receipt_day, item_id, quantity, price, cast_id, cast_back_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     for ($i = 1; $i <= 11; $i++) {
         // 全ての行に対して処理を実行
         $item_id = intval($_SESSION['join']["item_name$i"] ?? 0);
@@ -72,7 +72,7 @@ if (!empty($_POST['check'])) {
         }
 
         $stmt_detail->execute([
-            $shop_id,
+            $shop_mst,
             $receipt_id,
             $receipt_day,
             $item_id,
@@ -93,7 +93,7 @@ if (!empty($_POST['check'])) {
 }
 
 // 表示用データの準備
-$shop_id = $_SESSION['join']['shop_id'] ?? null;
+$shop_mst = $_SESSION['join']['shop_mst'] ?? null;
 $sheet_no = $_SESSION['join']['sheet_no'] ?? '';
 $receipt_day = $_SESSION['join']['receipt_day'] ?? '';
 $in_date = $_SESSION['join']['in_date'] ?? '';
@@ -201,7 +201,7 @@ $final_total = $total_with_tax + $adjust_price;
             <tbody>
                 <tr>
                     <th>店舗コード</th>
-                    <td><span class="check-info"><?= ($utype == 3) ? 'コレクト' : htmlspecialchars($shop_id, ENT_QUOTES); ?></span></td>
+                    <td><span class="check-info"><?= ($utype == 3) ? 'コレクト' : htmlspecialchars($shop_mst, ENT_QUOTES); ?></span></td>
                     <th>座席番号</th>
                     <td><span class="check-info"><?= htmlspecialchars($sheet_no, ENT_QUOTES); ?></span></td>
                 </tr>

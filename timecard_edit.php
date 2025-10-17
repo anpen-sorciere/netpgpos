@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
@@ -19,7 +19,7 @@ $pdo = null;
 
 // 店舗情報と店舗IDを取得
 $shop_info = get_shop_info($utype);
-$shop_id = $shop_info['id'];
+$shop_mst = $shop_info['id'];
 
 $cast_id = $_GET['cast_id'] ?? null;
 $eigyo_ymd = $_GET['eigyo_ymd'] ?? null;
@@ -80,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if(empty($error)){
-            $statement = $pdo->prepare("UPDATE timecard_tbl SET in_ymd=?, in_time=?, out_ymd=?, out_time=?, break_start_ymd=?, break_start_time=?, break_end_ymd=?, break_end_time=? WHERE cast_id=? AND shop_id=? AND eigyo_ymd=?");
+            $statement = $pdo->prepare("UPDATE timecard_tbl SET in_ymd=?, in_time=?, out_ymd=?, out_time=?, break_start_ymd=?, break_start_time=?, break_end_ymd=?, break_end_time=? WHERE cast_id=? AND shop_mst=? AND eigyo_ymd=?");
             $statement->execute(array(
                 str_replace('-', '', $in_ymd),
                 str_replace(':', '', $in_time),
@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 str_replace('-', '', $break_end_ymd),
                 str_replace(':', '', $break_end_time),
                 intval($cast_id),
-                intval($shop_id),
+                intval($shop_mst),
                 str_replace('-', '', $eigyo_ymd)
             ));
             
@@ -108,10 +108,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 初回表示時（GETリクエスト）
     try {
         $pdo = connect();
-        $statement = $pdo->prepare("SELECT * FROM timecard_tbl WHERE cast_id = ? AND shop_id = ? AND eigyo_ymd = ?");
+        $statement = $pdo->prepare("SELECT * FROM timecard_tbl WHERE cast_id = ? AND shop_mst = ? AND eigyo_ymd = ?");
         $statement->execute(array(
             intval($cast_id),
-            intval($shop_id),
+            intval($shop_mst),
             str_replace('-', '', $eigyo_ymd)
         ));
         $timecard_data = $statement->fetch(PDO::FETCH_ASSOC);

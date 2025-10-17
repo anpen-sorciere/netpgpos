@@ -1,4 +1,4 @@
-<?php
+ï»¿<?php
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
@@ -9,7 +9,7 @@ header('Content-Type: application/json; charset=UTF-8');
 
 $cast_id = $_GET['cast_id'] ?? null;
 $eigyo_ymd = $_GET['eigyo_ymd'] ?? null;
-$shop_id = $_GET['shop_id'] ?? null;
+$shop_mst = $_GET['shop_mst'] ?? null;
 
 $response = [
     'exists' => false,
@@ -23,15 +23,15 @@ $response = [
     'break_end_time' => ''
 ];
 
-if (empty($cast_id) || empty($eigyo_ymd) || empty($shop_id)) {
+if (empty($cast_id) || empty($eigyo_ymd) || empty($shop_mst)) {
     echo json_encode($response);
     exit;
 }
 
 try {
     $pdo = connect();
-    $statement = $pdo->prepare("SELECT * FROM timecard_tbl WHERE cast_id = ? AND shop_id = ? AND eigyo_ymd = ?");
-    $statement->execute([$cast_id, $shop_id, str_replace('-', '', $eigyo_ymd)]);
+    $statement = $pdo->prepare("SELECT * FROM timecard_tbl WHERE cast_id = ? AND shop_mst = ? AND eigyo_ymd = ?");
+    $statement->execute([$cast_id, $shop_mst, str_replace('-', '', $eigyo_ymd)]);
     $timecard_data = $statement->fetch(PDO::FETCH_ASSOC);
 
     if ($timecard_data) {
@@ -46,7 +46,7 @@ try {
         $response['break_end_time'] = format_time($timecard_data['break_end_time']);
     }
 } catch (PDOException $e) {
-    // ƒGƒ‰[‚ÍJSON‚Å•Ô‚³‚¸AƒƒO‚É‹L˜^
+    // ï¿½Gï¿½ï¿½ï¿½[ï¿½ï¿½JSONï¿½Å•Ô‚ï¿½ï¿½ï¿½ï¿½Aï¿½ï¿½ï¿½Oï¿½É‹Lï¿½^
     error_log("Database Error in timecard_get.php: " . $e->getMessage());
 } finally {
     disconnect($pdo);

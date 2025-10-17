@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // エラー表示を有効にする
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
@@ -25,9 +25,9 @@ $payments = [];
 try {
     $pdo = connect();
     $shop_info = get_shop_info($_SESSION['utype'] ?? 0);
-    $shop_id = $shop_info['id'] ?? null;
+    $shop_mst = $shop_info['id'] ?? null;
 
-    if (!$shop_id) {
+    if (!$shop_mst) {
         throw new Exception("店舗情報が取得できませんでした。");
     }
 
@@ -35,8 +35,8 @@ try {
     $pdo->beginTransaction();
 
     // 伝票データの取得
-    $stmt = $pdo->prepare("SELECT * FROM receipt_tbl WHERE receipt_id = ? AND shop_id = ?");
-    $stmt->execute([$receipt_id, $shop_id]);
+    $stmt = $pdo->prepare("SELECT * FROM receipt_tbl WHERE receipt_id = ? AND shop_mst = ?");
+    $stmt->execute([$receipt_id, $shop_mst]);
     $receipt = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($receipt) {
@@ -48,7 +48,7 @@ try {
         // 伝票が存在しない
         $error[] = "指定された伝票が見つかりませんでした。伝票ID: " . $receipt_id;
         $pdo->rollBack();
-        error_log("Receipt with ID: " . $receipt_id . " not found for shop ID: " . $shop_id);
+        error_log("Receipt with ID: " . $receipt_id . " not found for shop ID: " . $shop_mst);
     }
     
     // 商品マスターデータの取得

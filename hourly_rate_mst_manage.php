@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // hourly_rate_mst_manage.php
 
 // 共通関数の読み込み

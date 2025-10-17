@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // monthly_wage_summary.php
 
 require_once(__DIR__ . '/dbconnect.php');
@@ -15,7 +15,7 @@ if (isset($_GET['utype'])) {
 $utype = $_SESSION['utype'] ?? null;
 // get_shop_info関数を使ってutypeから店舗情報を取得
 $shop_info = get_shop_info($utype);
-$shop_id = $shop_info['id'] ?? null;
+$shop_mst = $shop_info['id'] ?? null;
 $shop_name = $shop_info['name'] ?? null;
 
 $casts = [];
@@ -132,20 +132,20 @@ if ($selected_cast_id !== null) {
         $sql_back_price = "SELECT SUM(cast_back_price) AS total_back_price_day
                              FROM receipt_detail_tbl
                              WHERE cast_id = :cast_id 
-                             AND shop_id = :shop_id 
+                             AND shop_mst = :shop_mst 
                              AND receipt_day = :receipt_day";
 
         $stmt_back_price = $pdo->prepare($sql_back_price);
         $stmt_back_price->bindValue(':cast_id', $selected_cast_id, PDO::PARAM_INT);
-        $stmt_back_price->bindValue(':shop_id', $timecard_data['shop_id'], PDO::PARAM_INT);
+        $stmt_back_price->bindValue(':shop_mst', $timecard_data['shop_mst'], PDO::PARAM_INT);
         $stmt_back_price->bindValue(':receipt_day', $eigyo_ymd, PDO::PARAM_STR);
         $stmt_back_price->execute();
         $total_back_price_day = $stmt_back_price->fetchColumn() ?? 0;
         
         $total_back_price += $total_back_price_day;
         
-        // timecard_tblのshop_idから店舗名を取得
-        $shop_info_day = get_shop_info($timecard_data['shop_id']);
+        // timecard_tblのshop_mstから店舗名を取得
+        $shop_info_day = get_shop_info($timecard_data['shop_mst']);
         $shop_name_day = $shop_info_day['name'] ?? '不明';
 
         $summary_data[] = [
