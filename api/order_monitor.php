@@ -363,6 +363,18 @@ try {
             margin-top: 10px;
         }
         
+        .item-detail-header {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 5px;
+            padding: 5px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            font-size: 0.9em;
+            font-weight: bold;
+            color: #495057;
+        }
+        
         .item-detail-row {
             display: flex;
             gap: 10px;
@@ -1235,6 +1247,16 @@ try {
                                     placeholder.remove();
                                 }
                                 
+                                // テーブルヘッダーを追加
+                                var headerDiv = document.createElement('div');
+                                headerDiv.className = 'item-detail-header';
+                                headerDiv.innerHTML = 
+                                    '<div class="item-title">商品名</div>' +
+                                    '<div class="item-quantity">数量</div>' +
+                                    '<div class="item-nickname">お客様名</div>' +
+                                    '<div class="item-cast">キャスト名</div>';
+                                container.appendChild(headerDiv);
+                                
                                 // 商品ごとの情報を表示
                                 data.items.forEach(function(item) {
                                     var itemDiv = document.createElement('div');
@@ -1256,9 +1278,9 @@ try {
                                     
                                     itemDiv.innerHTML = 
                                         '<div class="item-title">' + item.title + '</div>' +
-                                        '<div class="item-quantity">数量: ' + item.amount + '</div>' +
-                                        '<div class="item-nickname">ニックネーム: ' + (nickname || 'なし') + '</div>' +
-                                        '<div class="item-cast">キャスト: ' + (castName || 'なし') + '</div>';
+                                        '<div class="item-quantity">' + item.amount + '</div>' +
+                                        '<div class="item-nickname">' + (nickname || 'なし') + '</div>' +
+                                        '<div class="item-cast">' + (castName || 'なし') + '</div>';
                                     
                                     container.appendChild(itemDiv);
                                 });
