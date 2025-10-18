@@ -35,9 +35,9 @@ try {
         echo "<h3>デバッグ情報：BASE APIレスポンス</h3>";
         echo "<pre>" . htmlspecialchars(print_r($orders_data, true)) . "</pre>";
         echo "</div>";
-        
+
         $orders = $orders_data['orders'] ?? [];
-        
+
         // データ構造を確認してからソート
         if (!empty($orders)) {
             $first_order = $orders[0];
@@ -45,12 +45,20 @@ try {
             echo "<h3>デバッグ情報：最初の注文データ構造</h3>";
             echo "<pre>" . htmlspecialchars(print_r($first_order, true)) . "</pre>";
             echo "</div>";
-            
+
             // 利用可能なキーを確認
             $available_keys = array_keys($first_order);
             echo "<div style='background: #d4edda; padding: 15px; margin: 20px 0; border-radius: 8px;'>";
             echo "<h3>利用可能なキー</h3>";
             echo "<p>" . implode(', ', $available_keys) . "</p>";
+            echo "</div>";
+            
+            // 各注文のキーも確認
+            echo "<div style='background: #fff3cd; padding: 15px; margin: 20px 0; border-radius: 8px;'>";
+            echo "<h3>全注文のキー確認</h3>";
+            foreach ($orders as $index => $order) {
+                echo "<p>注文 " . ($index + 1) . ": " . implode(', ', array_keys($order)) . "</p>";
+            }
             echo "</div>";
         }
         
@@ -68,13 +76,28 @@ try {
                 }
             }
             
-            usort($orders, function($a, $b) use ($sort_key) {
-                if (is_numeric($a[$sort_key]) && is_numeric($b[$sort_key])) {
-                    return $b[$sort_key] - $a[$sort_key];
-                } else {
-                    return strcmp($b[$sort_key], $a[$sort_key]);
-                }
-            });
+            echo "<div style='background: #cce5ff; padding: 15px; margin: 20px 0; border-radius: 8px;'>";
+            echo "<h3>ソートキー: " . $sort_key . "</h3>";
+            echo "</div>";
+            
+            try {
+                usort($orders, function($a, $b) use ($sort_key) {
+                    // キーの存在確認を追加
+                    if (!isset($a[$sort_key]) || !isset($b[$sort_key])) {
+                        return 0; // キーが存在しない場合は順序を変更しない
+                    }
+                    
+                    if (is_numeric($a[$sort_key]) && is_numeric($b[$sort_key])) {
+                        return $b[$sort_key] - $a[$sort_key];
+                    } else {
+                        return strcmp($b[$sort_key], $a[$sort_key]);
+                    }
+                });
+            } catch (Exception $e) {
+                echo "<div style='background: #f8d7da; padding: 15px; margin: 20px 0; border-radius: 8px;'>";
+                echo "<h3>ソートエラー: " . htmlspecialchars($e->getMessage()) . "</h3>";
+                echo "</div>";
+            }
         }
     }
 } catch (Exception $e) {
