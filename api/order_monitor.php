@@ -1176,10 +1176,14 @@ try {
         
         // フィルターを適用して表示を更新
         function applyFilters() {
-            var rows = document.querySelectorAll('.order-table tbody tr');
+            console.log('フィルター適用開始:', activeFilters);
+            
+            // 注文行のみを対象にする（詳細行は除外）
+            var rows = document.querySelectorAll('.order-table tbody tr:not([id^="detail-"])');
+            console.log('対象行数:', rows.length);
             var visibleCount = 0;
             
-            rows.forEach(function(row) {
+            rows.forEach(function(row, index) {
                 var shouldShow = true;
                 
                 // ステータスフィルターの適用
@@ -1187,17 +1191,24 @@ try {
                     var statusElement = row.querySelector('.order-status');
                     if (statusElement) {
                         var statusClass = statusElement.className;
+                        var statusText = statusElement.textContent.trim();
                         var statusMatch = false;
+                        
+                        console.log('行' + index + ' ステータス:', statusText, 'クラス:', statusClass);
                         
                         activeFilters.status.forEach(function(filterStatus) {
                             if (statusClass.includes('status-' + filterStatus)) {
                                 statusMatch = true;
+                                console.log('マッチ:', filterStatus);
                             }
                         });
                         
                         if (!statusMatch) {
                             shouldShow = false;
+                            console.log('行' + index + ' 非表示');
                         }
+                    } else {
+                        console.log('行' + index + ' ステータス要素が見つからない');
                     }
                 }
                 
@@ -1210,10 +1221,24 @@ try {
                 if (shouldShow) {
                     row.style.display = '';
                     visibleCount++;
+                    
+                    // 対応する詳細行も表示
+                    var detailRow = document.getElementById('detail-' + row.id);
+                    if (detailRow) {
+                        detailRow.style.display = '';
+                    }
                 } else {
                     row.style.display = 'none';
+                    
+                    // 対応する詳細行も非表示
+                    var detailRow = document.getElementById('detail-' + row.id);
+                    if (detailRow) {
+                        detailRow.style.display = 'none';
+                    }
                 }
             });
+            
+            console.log('表示行数:', visibleCount);
             
             // 表示件数を更新
             var orderCountElement = document.getElementById('order-count');
@@ -1288,6 +1313,10 @@ try {
                         console.log('データに変更はありません。更新をスキップします。');
                         hideUpdateIndicator(); // 更新インジケーターを非表示
                         showNoChangeIndicator(); // 変更なしインジケーターを表示
+                        
+                        // データに変更がなくてもフィルターは再適用
+                        applyFilters();
+                        
                         setTimeout(hideUpdateIndicator, 1500); // 1.5秒後に非表示
                     }
                 })
