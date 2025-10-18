@@ -236,7 +236,14 @@ try {
                                         #<?= htmlspecialchars($order['unique_key'] ?? 'N/A') ?>
                                         <?php if (isset($order['subscription']) && $order['subscription'] !== null): ?>
                                             <br><small style="color: #6c757d;">
-                                                定期便: <?= htmlspecialchars($order['subscription']) ?>
+                                                定期便: <?php
+                                                if (is_array($order['subscription'])) {
+                                                    // 配列の場合は最初の要素を表示、または配列を文字列に変換
+                                                    echo htmlspecialchars(json_encode($order['subscription'], JSON_UNESCAPED_UNICODE));
+                                                } else {
+                                                    echo htmlspecialchars($order['subscription']);
+                                                }
+                                                ?>
                                                 <?php if (isset($order['repeat_number']) && $order['repeat_number'] !== null): ?>
                                                     (<?= htmlspecialchars($order['repeat_number']) ?>回目)
                                                 <?php endif; ?>
@@ -271,7 +278,12 @@ try {
                                         
                                         // 配送日時の表示
                                         if (isset($order['delivery_date']) && $order['delivery_date'] !== null) {
-                                            echo '<br><small style="color: #6c757d;">配送: ' . htmlspecialchars($order['delivery_date']);
+                                            echo '<br><small style="color: #6c757d;">配送: ';
+                                            if (is_array($order['delivery_date'])) {
+                                                echo htmlspecialchars(json_encode($order['delivery_date'], JSON_UNESCAPED_UNICODE));
+                                            } else {
+                                                echo htmlspecialchars($order['delivery_date']);
+                                            }
                                             if (isset($order['delivery_time_zone']) && $order['delivery_time_zone'] !== null) {
                                                 $time_zone = $order['delivery_time_zone'];
                                                 $time_zones = [
@@ -366,6 +378,12 @@ try {
                                         <?php if (isset($order['payment']) && $order['payment'] !== null): ?>
                                             <br><small style="color: #6c757d;">
                                                 <?php
+                                                $payment_value = $order['payment'];
+                                                if (is_array($payment_value)) {
+                                                    // 配列の場合は最初の要素を表示
+                                                    $payment_value = $payment_value[0] ?? json_encode($payment_value, JSON_UNESCAPED_UNICODE);
+                                                }
+                                                
                                                 $payment_methods = [
                                                     'creditcard' => 'クレジットカード',
                                                     'cod' => '代金引換',
@@ -381,7 +399,7 @@ try {
                                                     'bnpl' => 'Pay ID あと払い',
                                                     'bnpl_installment' => 'Pay ID 3回あと払い'
                                                 ];
-                                                echo htmlspecialchars($payment_methods[$order['payment']] ?? $order['payment']);
+                                                echo htmlspecialchars($payment_methods[$payment_value] ?? $payment_value);
                                                 ?>
                                             </small>
                                         <?php endif; ?>
