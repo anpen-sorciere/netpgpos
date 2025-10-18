@@ -246,6 +246,110 @@ try {
             background-color: #e9ecef;
             font-weight: bold;
         }
+        
+        /* 簡潔な表示用のスタイル */
+        .order-header {
+            width: 25%;
+            vertical-align: top;
+        }
+        
+        .order-header-info {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .order-header-info .order-id {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #007bff;
+            margin-bottom: 8px;
+        }
+        
+        .order-header-info .order-date {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-bottom: 8px;
+        }
+        
+        .order-header-info .order-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .order-header-info .customer-name {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .order-header-info .total-amount {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #28a745;
+        }
+        
+        .order-items {
+            width: 60%;
+            vertical-align: top;
+        }
+        
+        .item-detail {
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        
+        .item-name {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 6px;
+        }
+        
+        .item-variation {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-bottom: 4px;
+        }
+        
+        .item-quantity,
+        .item-price,
+        .item-total,
+        .item-status {
+            font-size: 0.9em;
+            margin-bottom: 3px;
+        }
+        
+        .item-options {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .option-item {
+            font-size: 0.8em;
+            color: #495057;
+            margin-bottom: 2px;
+        }
+        
+        .item-separator {
+            margin: 8px 0;
+            border: none;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .no-items {
+            color: #6c757d;
+            font-style: italic;
+            text-align: center;
+            padding: 20px;
+        }
     </style>
 </head>
 <body>

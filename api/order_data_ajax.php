@@ -37,28 +37,23 @@ try {
         exit;
     }
     
-    // テーブル全体を返す
+    // 簡潔なテーブル全体を返す
     echo '<table class="order-table">';
     echo '<thead>';
     echo '<tr>';
-    echo '<th>注文ID</th>';
-    echo '<th>注文日時</th>';
-    echo '<th>お客様名</th>';
-    echo '<th>ステータス</th>';
-    echo '<th>金額・決済</th>';
+    echo '<th>注文ヘッダー</th>';
+    echo '<th>商品明細</th>';
     echo '<th>詳細</th>';
     echo '</tr>';
     echo '</thead>';
     echo '<tbody>';
     
     foreach ($orders as $order) {
-        echo '<tr>';
-        
-        // 注文ID
-        echo '<td class="order-id">#' . htmlspecialchars($order['unique_key'] ?? 'N/A') . '</td>';
+        // 注文ヘッダー情報
+        $order_id = htmlspecialchars($order['unique_key'] ?? 'N/A');
+        $customer_name = htmlspecialchars(trim(($order['last_name'] ?? '') . ' ' . ($order['first_name'] ?? '')) ?: 'N/A');
         
         // 注文日時
-        echo '<td class="order-date">';
         $date_value = $order['ordered'] ?? 'N/A';
         if ($date_value !== 'N/A') {
             if (is_numeric($date_value)) {
@@ -72,109 +67,8 @@ try {
                 }
             }
         }
-        echo htmlspecialchars($date_value);
-        
-        // 配送日時
-        if (isset($order['delivery_date']) && $order['delivery_date'] !== null) {
-            echo '<br><small style="color: #6c757d;">配送: ';
-            if (is_array($order['delivery_date'])) {
-                echo htmlspecialchars(json_encode($order['delivery_date'], JSON_UNESCAPED_UNICODE));
-            } else {
-                echo htmlspecialchars($order['delivery_date']);
-            }
-            if (isset($order['delivery_time_zone']) && $order['delivery_time_zone'] !== null) {
-                $time_zone = $order['delivery_time_zone'];
-                $time_zones = [
-                    '0812' => '午前中', '1214' => '12時~14時', '1416' => '14時~16時',
-                    '1618' => '16時~18時', '1820' => '18時~20時', '2021' => '20時~21時'
-                ];
-                $time_display = $time_zones[$time_zone] ?? $time_zone;
-                echo ' ' . htmlspecialchars($time_display);
-            }
-            echo '</small>';
-        }
-        
-        // キャンセル日時
-        if (isset($order['cancelled']) && $order['cancelled'] !== null) {
-            echo '<br><small style="color: #dc3545;">キャンセル: ';
-            $cancelled_value = $order['cancelled'];
-            if (is_array($cancelled_value)) {
-                echo htmlspecialchars(json_encode($cancelled_value, JSON_UNESCAPED_UNICODE));
-            } else {
-                if (is_numeric($cancelled_value)) {
-                    echo htmlspecialchars(date('Y/m/d H:i', $cancelled_value));
-                } else {
-                    $timestamp = strtotime($cancelled_value);
-                    if ($timestamp !== false) {
-                        echo htmlspecialchars(date('Y/m/d H:i', $timestamp));
-                    } else {
-                        echo htmlspecialchars($cancelled_value);
-                    }
-                }
-            }
-            echo '</small>';
-        }
-        
-        // 発送日時
-        if (isset($order['dispatched']) && $order['dispatched'] !== null) {
-            echo '<br><small style="color: #28a745;">発送: ';
-            $dispatched_value = $order['dispatched'];
-            if (is_array($dispatched_value)) {
-                echo htmlspecialchars(json_encode($dispatched_value, JSON_UNESCAPED_UNICODE));
-            } else {
-                if (is_numeric($dispatched_value)) {
-                    echo htmlspecialchars(date('Y/m/d H:i', $dispatched_value));
-                } else {
-                    $timestamp = strtotime($dispatched_value);
-                    if ($timestamp !== false) {
-                        echo htmlspecialchars(date('Y/m/d H:i', $timestamp));
-                    } else {
-                        echo htmlspecialchars($dispatched_value);
-                    }
-                }
-            }
-            echo '</small>';
-        }
-        
-        // 更新日時（注文日時と異なる場合のみ）
-        if (isset($order['modified']) && $order['modified'] !== null) {
-            $modified_value = $order['modified'];
-            $modified_timestamp = null;
-            
-            if (is_array($modified_value)) {
-                // Skip if array
-            } else {
-                if (is_numeric($modified_value)) {
-                    $modified_timestamp = $modified_value;
-                } else {
-                    $modified_timestamp = strtotime($modified_value);
-                }
-            }
-            
-            $ordered_timestamp = null;
-            $ordered_value = $order['ordered'] ?? null;
-            if ($ordered_value !== null) {
-                if (is_numeric($ordered_value)) {
-                    $ordered_timestamp = $ordered_value;
-                } else {
-                    $ordered_timestamp = strtotime($ordered_value);
-                }
-            }
-            
-            if ($modified_timestamp !== null && $ordered_timestamp !== null && 
-                $modified_timestamp !== $ordered_timestamp) {
-                echo '<br><small style="color: #6c757d;">更新: ';
-                echo htmlspecialchars(date('Y/m/d H:i', $modified_timestamp));
-                echo '</small>';
-            }
-        }
-        echo '</td>';
-        
-        // お客様名
-        echo '<td>' . htmlspecialchars(trim(($order['last_name'] ?? '') . ' ' . ($order['first_name'] ?? '')) ?: 'N/A') . '</td>';
         
         // ステータス
-        echo '<td>';
         $status = 'N/A';
         $status_class = 'status-unpaid';
         if (isset($order['dispatch_status'])) {
@@ -202,42 +96,72 @@ try {
                 $status = '未対応'; $status_class = 'status-unpaid';
             }
         }
-        echo '<span class="order-status ' . $status_class . '">' . htmlspecialchars($status) . '</span>';
+        
+        // 合計金額
+        $total_amount = '¥' . number_format($order['total'] ?? 0);
+        
+        echo '<tr>';
+        
+        // 注文ヘッダー列
+        echo '<td class="order-header">';
+        echo '<div class="order-header-info">';
+        echo '<div class="order-id">#' . $order_id . '</div>';
+        echo '<div class="order-date">' . htmlspecialchars($date_value) . '</div>';
+        echo '<div class="order-status ' . $status_class . '">' . htmlspecialchars($status) . '</div>';
+        echo '<div class="customer-name">' . $customer_name . '</div>';
+        echo '<div class="total-amount">' . $total_amount . '</div>';
+        echo '</div>';
         echo '</td>';
         
-        // 合計金額と決済方法
-        echo '<td>¥' . number_format($order['total'] ?? 0);
-        if (isset($order['payment']) && $order['payment'] !== null) {
-            echo '<br><small style="color: #6c757d;">';
-            $payment_value = $order['payment'];
-            if (is_array($payment_value)) {
-                $payment_value = $payment_value[0] ?? json_encode($payment_value, JSON_UNESCAPED_UNICODE);
+        // 商品明細列
+        echo '<td class="order-items">';
+        if (isset($order['order_items']) && is_array($order['order_items'])) {
+            foreach ($order['order_items'] as $index => $item) {
+                echo '<div class="item-detail">';
+                echo '<div class="item-name">' . htmlspecialchars($item['title'] ?? 'N/A') . '</div>';
+                
+                if (!empty($item['variation'])) {
+                    echo '<div class="item-variation">バリエーション: ' . htmlspecialchars($item['variation']) . '</div>';
+                }
+                
+                echo '<div class="item-quantity">数量: ' . htmlspecialchars($item['amount'] ?? 'N/A') . '</div>';
+                echo '<div class="item-price">単価: ¥' . number_format($item['price'] ?? 0) . '</div>';
+                echo '<div class="item-total">小計: ¥' . number_format($item['total'] ?? 0) . '</div>';
+                echo '<div class="item-status">ステータス: ' . htmlspecialchars($item['status'] ?? 'N/A') . '</div>';
+                
+                // オプション情報
+                if (isset($item['options']) && is_array($item['options']) && !empty($item['options'])) {
+                    echo '<div class="item-options">';
+                    foreach ($item['options'] as $option) {
+                        echo '<div class="option-item">';
+                        echo htmlspecialchars($option['option_name'] ?? 'N/A') . ': ' . htmlspecialchars($option['option_value'] ?? 'N/A');
+                        echo '</div>';
+                    }
+                    echo '</div>';
+                }
+                
+                echo '</div>';
+                if ($index < count($order['order_items']) - 1) {
+                    echo '<hr class="item-separator">';
+                }
             }
-            $payment_methods = [
-                'creditcard' => 'クレジットカード', 'cod' => '代金引換', 'cvs' => 'コンビニ決済',
-                'base_bt' => '銀行振込(BASE口座)', 'atobarai' => '後払い決済', 'carrier_01' => 'キャリア決済(ドコモ)',
-                'carrier_02' => 'キャリア決済(au)', 'carrier_03' => 'キャリア決済(ソフトバンク)', 'paypal' => 'PayPal決済',
-                'coin' => 'コイン決済', 'amazon_pay' => 'Amazon Pay', 'bnpl' => 'Pay ID あと払い',
-                'bnpl_installment' => 'Pay ID 3回あと払い'
-            ];
-            echo htmlspecialchars($payment_methods[$payment_value] ?? $payment_value);
-            echo '</small>';
+        } else {
+            echo '<div class="no-items">商品情報なし</div>';
         }
         echo '</td>';
         
-        // 詳細ボタン
+        // 詳細ボタン列
         echo '<td>';
-        echo '<button class="btn btn-sm btn-secondary" id="toggle-' . htmlspecialchars($order['unique_key'] ?? 'N/A') . '" onclick="toggleOrderDetail(\'' . htmlspecialchars($order['unique_key'] ?? 'N/A') . '\')">';
-        echo '<i class="fas fa-chevron-down"></i> 詳細を見る';
+        echo '<button class="btn btn-sm btn-secondary" id="toggle-' . $order_id . '" onclick="toggleOrderDetail(\'' . $order_id . '\')">';
+        echo '<i class="fas fa-chevron-down"></i> 全詳細';
         echo '</button>';
         echo '</td>';
         echo '</tr>';
         
-        // 注文詳細行
-        echo '<!-- 注文詳細行 -->';
-        echo '<tr id="detail-' . htmlspecialchars($order['unique_key'] ?? 'N/A') . '" style="display: none;">';
-        echo '<td colspan="6" style="padding: 0;">';
-        echo '<!-- 注文詳細内容がここに表示されます -->';
+        // 注文詳細行（全情報表示用）
+        echo '<tr id="detail-' . $order_id . '" style="display: none;">';
+        echo '<td colspan="3" style="padding: 0;">';
+        echo '<!-- 全詳細内容がここに表示されます -->';
         echo '</td>';
         echo '</tr>';
     }

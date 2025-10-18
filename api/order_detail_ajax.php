@@ -127,38 +127,63 @@ try {
     echo '</table>';
     echo '</div>';
     
-    // お客様情報（BASE APIの直接フィールドを使用）
-    echo '<div class="order-detail-section">';
-    echo '<h3><i class="fas fa-user"></i> お客様情報</h3>';
-    echo '<table class="order-detail-table">';
-    echo '<tr><td>お名前</td><td>' . htmlspecialchars(($order_detail['last_name'] ?? '') . ' ' . ($order_detail['first_name'] ?? '')) . '</td></tr>';
-    echo '<tr><td>メールアドレス</td><td>' . htmlspecialchars($order_detail['mail_address'] ?? 'N/A') . '</td></tr>';
-    echo '<tr><td>電話番号</td><td>' . htmlspecialchars($order_detail['tel'] ?? 'N/A') . '</td></tr>';
-    echo '<tr><td>郵便番号</td><td>' . htmlspecialchars($order_detail['zip_code'] ?? 'N/A') . '</td></tr>';
-    echo '<tr><td>都道府県</td><td>' . htmlspecialchars($order_detail['prefecture'] ?? 'N/A') . '</td></tr>';
-    echo '<tr><td>住所1</td><td>' . htmlspecialchars($order_detail['address'] ?? 'N/A') . '</td></tr>';
-    echo '<tr><td>住所2</td><td>' . htmlspecialchars($order_detail['address2'] ?? 'N/A') . '</td></tr>';
-    echo '<tr><td>国</td><td>' . htmlspecialchars($order_detail['country'] ?? 'N/A') . '</td></tr>';
-    echo '<tr><td>備考</td><td>' . htmlspecialchars($order_detail['remark'] ?? 'N/A') . '</td></tr>';
-    echo '</table>';
-    echo '</div>';
-    
-    // 配送先情報（order_receiver）
-    if (isset($order_detail['order_receiver']) && is_array($order_detail['order_receiver'])) {
-        echo '<div class="order-detail-section">';
-        echo '<h3><i class="fas fa-truck"></i> 配送先情報</h3>';
-        echo '<table class="order-detail-table">';
-        $receiver = $order_detail['order_receiver'];
-        echo '<tr><td>配送先お名前</td><td>' . htmlspecialchars(($receiver['last_name'] ?? '') . ' ' . ($receiver['first_name'] ?? '')) . '</td></tr>';
-        echo '<tr><td>配送先電話番号</td><td>' . htmlspecialchars($receiver['tel'] ?? 'N/A') . '</td></tr>';
-        echo '<tr><td>配送先郵便番号</td><td>' . htmlspecialchars($receiver['zip_code'] ?? 'N/A') . '</td></tr>';
-        echo '<tr><td>配送先都道府県</td><td>' . htmlspecialchars($receiver['prefecture'] ?? 'N/A') . '</td></tr>';
-        echo '<tr><td>配送先住所1</td><td>' . htmlspecialchars($receiver['address'] ?? 'N/A') . '</td></tr>';
-        echo '<tr><td>配送先住所2</td><td>' . htmlspecialchars($receiver['address2'] ?? 'N/A') . '</td></tr>';
-        echo '<tr><td>配送先国</td><td>' . htmlspecialchars($receiver['country'] ?? 'N/A') . '</td></tr>';
-        echo '</table>';
-        echo '</div>';
-    }
+       // お客様情報と配送先情報の統合表示
+       echo '<div class="order-detail-section">';
+       echo '<h3><i class="fas fa-user"></i> お客様・配送先情報</h3>';
+       echo '<table class="order-detail-table">';
+       echo '<tr><td>お名前</td><td>' . htmlspecialchars(($order_detail['last_name'] ?? '') . ' ' . ($order_detail['first_name'] ?? '')) . '</td></tr>';
+       echo '<tr><td>メールアドレス</td><td>' . htmlspecialchars($order_detail['mail_address'] ?? 'N/A') . '</td></tr>';
+       echo '<tr><td>電話番号</td><td>' . htmlspecialchars($order_detail['tel'] ?? 'N/A') . '</td></tr>';
+       echo '<tr><td>郵便番号</td><td>' . htmlspecialchars($order_detail['zip_code'] ?? 'N/A') . '</td></tr>';
+       echo '<tr><td>都道府県</td><td>' . htmlspecialchars($order_detail['prefecture'] ?? 'N/A') . '</td></tr>';
+       echo '<tr><td>住所1</td><td>' . htmlspecialchars($order_detail['address'] ?? 'N/A') . '</td></tr>';
+       echo '<tr><td>住所2</td><td>' . htmlspecialchars($order_detail['address2'] ?? 'N/A') . '</td></tr>';
+       echo '<tr><td>国</td><td>' . htmlspecialchars($order_detail['country'] ?? 'N/A') . '</td></tr>';
+       echo '<tr><td>備考</td><td>' . htmlspecialchars($order_detail['remark'] ?? 'N/A') . '</td></tr>';
+       echo '</table>';
+       
+       // 配送先情報が異なる場合のみ表示
+       if (isset($order_detail['order_receiver']) && is_array($order_detail['order_receiver'])) {
+           $receiver = $order_detail['order_receiver'];
+           
+           // お客様情報と配送先情報を比較
+           $customer_info = [
+               'name' => ($order_detail['last_name'] ?? '') . ' ' . ($order_detail['first_name'] ?? ''),
+               'tel' => $order_detail['tel'] ?? '',
+               'zip_code' => $order_detail['zip_code'] ?? '',
+               'prefecture' => $order_detail['prefecture'] ?? '',
+               'address' => $order_detail['address'] ?? '',
+               'address2' => $order_detail['address2'] ?? '',
+               'country' => $order_detail['country'] ?? ''
+           ];
+           
+           $receiver_info = [
+               'name' => ($receiver['last_name'] ?? '') . ' ' . ($receiver['first_name'] ?? ''),
+               'tel' => $receiver['tel'] ?? '',
+               'zip_code' => $receiver['zip_code'] ?? '',
+               'prefecture' => $receiver['prefecture'] ?? '',
+               'address' => $receiver['address'] ?? '',
+               'address2' => $receiver['address2'] ?? '',
+               'country' => $receiver['country'] ?? ''
+           ];
+           
+           // 情報が異なる場合のみ配送先情報を表示
+           if ($customer_info !== $receiver_info) {
+               echo '<h4 style="margin-top: 20px; color: #007bff;">配送先情報（お客様情報と異なる場合）</h4>';
+               echo '<table class="order-detail-table">';
+               echo '<tr><td>配送先お名前</td><td>' . htmlspecialchars($receiver_info['name']) . '</td></tr>';
+               echo '<tr><td>配送先電話番号</td><td>' . htmlspecialchars($receiver_info['tel']) . '</td></tr>';
+               echo '<tr><td>配送先郵便番号</td><td>' . htmlspecialchars($receiver_info['zip_code']) . '</td></tr>';
+               echo '<tr><td>配送先都道府県</td><td>' . htmlspecialchars($receiver_info['prefecture']) . '</td></tr>';
+               echo '<tr><td>配送先住所1</td><td>' . htmlspecialchars($receiver_info['address']) . '</td></tr>';
+               echo '<tr><td>配送先住所2</td><td>' . htmlspecialchars($receiver_info['address2']) . '</td></tr>';
+               echo '<tr><td>配送先国</td><td>' . htmlspecialchars($receiver_info['country']) . '</td></tr>';
+               echo '</table>';
+           } else {
+               echo '<p style="margin-top: 15px; color: #28a745; font-style: italic;"><i class="fas fa-check-circle"></i> 配送先情報はお客様情報と同じです</p>';
+           }
+       }
+       echo '</div>';
     
     // 商品情報（BASE APIのorder_itemsキーを使用）
     if (isset($order_detail['order_items']) && is_array($order_detail['order_items'])) {
