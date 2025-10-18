@@ -913,12 +913,12 @@ try {
                             if (isset($order['dispatch_status'])) {
                                 switch ($order['dispatch_status']) {
                                     case 'unpaid': $status = '入金待ち'; $status_class = 'status-unpaid'; break;
-                                    case 'ordered': $status = '未対応'; $status_class = 'status-unpaid'; break;
-                                    case 'unshippable': $status = '対応開始前'; $status_class = 'status-paid'; break;
-                                    case 'shipping': $status = '配送中'; $status_class = 'status-paid'; break;
-                                    case 'dispatched': $status = '対応済'; $status_class = 'status-shipped'; break;
+                                    case 'ordered': $status = '未対応'; $status_class = 'status-ordered'; break;
+                                    case 'unshippable': $status = '対応開始前'; $status_class = 'status-unshippable'; break;
+                                    case 'shipping': $status = '配送中'; $status_class = 'status-shipping'; break;
+                                    case 'dispatched': $status = '対応済'; $status_class = 'status-dispatched'; break;
                                     case 'cancelled': $status = 'キャンセル'; $status_class = 'status-cancelled'; break;
-                                    default: $status = '未対応'; $status_class = 'status-unpaid'; break;
+                                    default: $status = '未対応'; $status_class = 'status-ordered'; break;
                                 }
                             } else {
                                 if (isset($order['cancelled']) && $order['cancelled'] !== null) {
