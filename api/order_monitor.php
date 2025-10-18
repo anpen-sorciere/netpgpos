@@ -481,6 +481,76 @@ try {
             transform: translateY(-1px);
         }
         
+        .filter-section {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .filter-title {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-label {
+            font-weight: 500;
+            color: #6c757d;
+            margin-right: 5px;
+        }
+        
+        .filter-btn {
+            padding: 6px 12px;
+            border: 1px solid #dee2e6;
+            background-color: white;
+            color: #495057;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.2s ease;
+        }
+        
+        .filter-btn:hover {
+            background-color: #e9ecef;
+            border-color: #adb5bd;
+        }
+        
+        .filter-btn.active {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        
+        .filter-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 10px;
+            border-top: 1px solid #dee2e6;
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+        
         .popup-buttons {
             display: flex;
             gap: 5px;
@@ -697,6 +767,32 @@ try {
                     注文データがありません
                 </div>
             <?php else: ?>
+                <div class="filter-section">
+                    <div class="filter-title">
+                        <i class="fas fa-filter"></i> 表示フィルター
+                    </div>
+                    <div class="filter-buttons">
+                        <div class="filter-group">
+                            <span class="filter-label">ステータス:</span>
+                            <button class="filter-btn active" data-status="all" onclick="toggleFilter('all')">全て</button>
+                            <button class="filter-btn" data-status="unpaid" onclick="toggleFilter('unpaid')">入金待ち</button>
+                            <button class="filter-btn" data-status="unshippable" onclick="toggleFilter('unshippable')">対応開始前</button>
+                            <button class="filter-btn" data-status="ordered" onclick="toggleFilter('ordered')">未対応</button>
+                            <button class="filter-btn" data-status="shipping" onclick="toggleFilter('shipping')">対応中</button>
+                            <button class="filter-btn" data-status="dispatched" onclick="toggleFilter('dispatched')">対応済</button>
+                            <button class="filter-btn" data-status="cancelled" onclick="toggleFilter('cancelled')">キャンセル</button>
+                        </div>
+                        <div class="filter-group">
+                            <span class="filter-label">顧客情報:</span>
+                            <button class="filter-btn" data-filter="customer" onclick="toggleCustomerFilter()">購入者名、電話番号など</button>
+                        </div>
+                    </div>
+                    <div class="filter-info">
+                        <span id="filter-status">全ての注文を表示中</span>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="clearAllFilters()">フィルタークリア</button>
+                    </div>
+                </div>
+                
                 <div class="pagination-info">
             <div class="pagination-stats">
                 全 <?= $total_orders ?> 件中 <?= $offset + 1 ?>-<?= min($offset + $limit, $total_orders) ?> 件を表示 (<?= $page ?>/<?= $total_pages ?> ページ)
@@ -959,11 +1055,163 @@ try {
         // 現在のデータを保存する変数
         var currentOrderData = null;
         
+        // フィルター状態を管理する変数
+        var activeFilters = {
+            status: ['all'],
+            customer: false
+        };
+        
         // 現在のページ番号を取得する関数
         function getCurrentPage() {
             var urlParams = new URLSearchParams(window.location.search);
             var page = urlParams.get('page');
             return page ? parseInt(page) : 1;
+        }
+        
+        // ステータスフィルターの切り替え
+        function toggleFilter(status) {
+            var button = document.querySelector('[data-status="' + status + '"]');
+            
+            if (status === 'all') {
+                // 「全て」が選択された場合、他のステータスを全て非アクティブに
+                document.querySelectorAll('.filter-btn[data-status]').forEach(function(btn) {
+                    btn.classList.remove('active');
+                });
+                button.classList.add('active');
+                activeFilters.status = ['all'];
+            } else {
+                // 「全て」を非アクティブに
+                document.querySelector('[data-status="all"]').classList.remove('active');
+                
+                if (button.classList.contains('active')) {
+                    // 既にアクティブな場合は非アクティブに
+                    button.classList.remove('active');
+                    activeFilters.status = activeFilters.status.filter(function(s) { return s !== status; });
+                    
+                    // 全てのステータスが非アクティブになった場合は「全て」をアクティブに
+                    if (activeFilters.status.length === 0) {
+                        document.querySelector('[data-status="all"]').classList.add('active');
+                        activeFilters.status = ['all'];
+                    }
+                } else {
+                    // 非アクティブな場合はアクティブに
+                    button.classList.add('active');
+                    activeFilters.status.push(status);
+                }
+            }
+            
+            updateFilterStatus();
+            applyFilters();
+        }
+        
+        // 顧客情報フィルターの切り替え
+        function toggleCustomerFilter() {
+            var button = document.querySelector('[data-filter="customer"]');
+            activeFilters.customer = !activeFilters.customer;
+            
+            if (activeFilters.customer) {
+                button.classList.add('active');
+            } else {
+                button.classList.remove('active');
+            }
+            
+            updateFilterStatus();
+            applyFilters();
+        }
+        
+        // 全てのフィルターをクリア
+        function clearAllFilters() {
+            // ステータスフィルターをリセット
+            document.querySelectorAll('.filter-btn[data-status]').forEach(function(btn) {
+                btn.classList.remove('active');
+            });
+            document.querySelector('[data-status="all"]').classList.add('active');
+            activeFilters.status = ['all'];
+            
+            // 顧客情報フィルターをリセット
+            document.querySelector('[data-filter="customer"]').classList.remove('active');
+            activeFilters.customer = false;
+            
+            updateFilterStatus();
+            applyFilters();
+        }
+        
+        // フィルター状態の表示を更新
+        function updateFilterStatus() {
+            var statusText = '';
+            
+            if (activeFilters.status.includes('all')) {
+                statusText = '全ての注文を表示中';
+            } else {
+                var statusNames = {
+                    'unpaid': '入金待ち',
+                    'unshippable': '対応開始前',
+                    'ordered': '未対応',
+                    'shipping': '対応中',
+                    'dispatched': '対応済',
+                    'cancelled': 'キャンセル'
+                };
+                
+                var selectedStatuses = activeFilters.status.map(function(status) {
+                    return statusNames[status] || status;
+                });
+                
+                statusText = selectedStatuses.join('、') + 'の注文を表示中';
+            }
+            
+            if (activeFilters.customer) {
+                statusText += '（顧客情報フィルター適用中）';
+            }
+            
+            document.getElementById('filter-status').textContent = statusText;
+        }
+        
+        // フィルターを適用して表示を更新
+        function applyFilters() {
+            var rows = document.querySelectorAll('.order-table tbody tr');
+            var visibleCount = 0;
+            
+            rows.forEach(function(row) {
+                var shouldShow = true;
+                
+                // ステータスフィルターの適用
+                if (!activeFilters.status.includes('all')) {
+                    var statusElement = row.querySelector('.order-status');
+                    if (statusElement) {
+                        var statusClass = statusElement.className;
+                        var statusMatch = false;
+                        
+                        activeFilters.status.forEach(function(filterStatus) {
+                            if (statusClass.includes('status-' + filterStatus)) {
+                                statusMatch = true;
+                            }
+                        });
+                        
+                        if (!statusMatch) {
+                            shouldShow = false;
+                        }
+                    }
+                }
+                
+                // 顧客情報フィルターの適用（将来的な拡張用）
+                if (activeFilters.customer && shouldShow) {
+                    // 顧客情報が存在するかチェック（現在は常にtrue）
+                    // 将来的に顧客情報の有無でフィルタリング可能
+                }
+                
+                if (shouldShow) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            
+            // 表示件数を更新
+            var orderCountElement = document.getElementById('order-count');
+            if (orderCountElement) {
+                orderCountElement.textContent = visibleCount;
+            }
         }
         
         // AJAXでデータのみを更新（データ変更検知付き）
@@ -1463,6 +1711,10 @@ try {
             
             // 商品ごとの情報を読み込み
             loadItemDetails();
+            
+            // フィルター機能を初期化
+            updateFilterStatus();
+            applyFilters();
             
             // 30秒間隔で自動更新
             setInterval(refreshOrderData, 30000);
