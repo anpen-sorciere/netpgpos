@@ -3,11 +3,24 @@ session_start();
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/base_practical_auto_manager.php';
 
+// デバッグ: スクリプト開始を表示
+echo '<div style="background-color: #fff3cd; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
+echo '<strong>DEBUG:</strong> order_data_ajax.php が実行されました | ';
+echo '時刻: ' . date('H:i:s') . ' | ';
+echo 'セッションID: ' . session_id();
+echo '</div>';
+
 // 認証チェック（新しいシステム）
 try {
     $auth_status = (new BasePracticalAutoManager())->getAuthStatus();
     $orders_ok = isset($auth_status['read_orders']['authenticated']) && $auth_status['read_orders']['authenticated'];
     $items_ok = isset($auth_status['read_items']['authenticated']) && $auth_status['read_items']['authenticated'];
+    
+    // デバッグ: 認証状況を表示
+    echo '<div style="background-color: #e7f3ff; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
+    echo '<strong>認証状況:</strong> read_orders: ' . ($orders_ok ? 'OK' : 'NG') . ' | ';
+    echo 'read_items: ' . ($items_ok ? 'OK' : 'NG');
+    echo '</div>';
     
     // デバッグ情報を画面に表示
     if (!$orders_ok || !$items_ok) {
@@ -34,6 +47,14 @@ try {
     $practical_manager = new BasePracticalAutoManager();
     $combined_data = $practical_manager->getCombinedOrderData(50);
     $orders = $combined_data['merged_orders'] ?? [];
+    
+    // デバッグ: データ取得状況を確認
+    echo '<div style="background-color: #e7f3ff; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
+    echo '<strong>デバッグ:</strong> 注文件数: ' . count($orders) . ' | ';
+    echo 'merged_orders存在: ' . (isset($combined_data['merged_orders']) ? 'Yes' : 'No') . ' | ';
+    echo 'データ構造: ' . htmlspecialchars(json_encode(array_keys($combined_data), JSON_UNESCAPED_UNICODE));
+    echo '</div>';
+    
 } catch (Exception $e) {
     echo '<div class="no-orders" style="text-align: center; padding: 20px; color: #dc3545;">データ取得エラー: ' . htmlspecialchars($e->getMessage()) . '</div>';
     exit;
@@ -75,33 +96,9 @@ foreach ($orders as $order) {
         $order_id = htmlspecialchars($order['unique_key'] ?? 'N/A');
         $customer_name = htmlspecialchars(trim(($order['last_name'] ?? '') . ' ' . ($order['first_name'] ?? '')) ?: 'N/A');
         
-        // ニックネームを抽出（オプション情報から）
-        $nicknames = [];
-        if (isset($order['order_items']) && is_array($order['order_items'])) {
-            foreach ($order['order_items'] as $item) {
-                if (isset($item['options']) && is_array($item['options'])) {
-                    foreach ($item['options'] as $option) {
-                        $option_name = $option['option_name'] ?? '';
-                        $option_value = $option['option_value'] ?? '';
-                        
-                        // ニックネーム関連のオプションを検索（お客様名を追加）
-                        if (stripos($option_name, 'お客様名') !== false ||
-                            stripos($option_name, 'ニックネーム') !== false || 
-                            stripos($option_name, 'nickname') !== false ||
-                            stripos($option_name, 'お名前') !== false ||
-                            stripos($option_name, '名前') !== false ||
-                            stripos($option_name, 'name') !== false ||
-                            stripos($option_name, '呼び名') !== false ||
-                            stripos($option_name, '愛称') !== false) {
-                            if (!empty($option_value) && !in_array($option_value, $nicknames)) {
-                                $nicknames[] = htmlspecialchars($option_value);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        $nickname_display = !empty($nicknames) ? implode(', ', $nicknames) : '';
+        // ニックネームとキャスト名はAJAXで個別取得するため、プレースホルダーを表示
+        $nickname_display = '<span class="nickname-placeholder" data-order-id="' . $order_id . '">読み込み中...</span>';
+        $cast_display = '<span class="cast-placeholder" data-order-id="' . $order_id . '">読み込み中...</span>';
         
         // 注文日時
         $date_value = $order['ordered'] ?? 'N/A';
@@ -162,6 +159,9 @@ foreach ($orders as $order) {
         if (!empty($nickname_display)) {
             echo '<div class="nickname">ニックネーム: ' . $nickname_display . '</div>';
         }
+        if (!empty($cast_display)) {
+            echo '<div class="cast-name">キャスト: ' . $cast_display . '</div>';
+        }
         echo '<div class="total-amount">' . $total_amount . '</div>';
         
         // ポップアップボタン群
@@ -178,6 +178,10 @@ foreach ($orders as $order) {
         echo '<button class="btn btn-xs btn-secondary" onclick="showOtherInfo(\'' . $order_id . '\')">';
         echo '<i class="fas fa-info"></i> その他';
         echo '</button>';
+        // 商品ボタンはJavaScriptで動的に追加
+        echo '<div class="item-buttons" data-order-id="' . $order_id . '">';
+        echo '<span class="item-buttons-placeholder">商品読み込み中...</span>';
+        echo '</div>';
         echo '</div>';
         
         echo '</div>';

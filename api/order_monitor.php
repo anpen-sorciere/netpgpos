@@ -27,19 +27,76 @@ try {
     try {
         $combined_data = $practical_manager->getCombinedOrderData(50);
         $orders_data = $combined_data['merged_orders'];
-        $orders = $orders_data['orders'] ?? [];
-        $error_message = '';
+        
+        // データ構造を確認して適切に注文データを取得
+        if (isset($orders_data['orders'])) {
+            // 従来の構造: merged_orders.orders
+            $orders = $orders_data['orders'];
+        } else {
+            // 新しい構造: merged_orders自体が注文配列
+            $orders = $orders_data;
+        }
+        
+        // $error_message = ''; // 空文字列を設定しない
+        
+        // デバッグ: データ構造を確認
+        echo '<div style="background-color: #fff3cd; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
+        echo '<strong>DEBUG order_monitor.php:</strong> ';
+        echo 'merged_orders存在: ' . (isset($combined_data['merged_orders']) ? 'Yes' : 'No') . ' | ';
+        echo 'orders_data型: ' . gettype($orders_data) . ' | ';
+        echo 'orders配列数: ' . count($orders) . ' | ';
+        echo 'データ構造: ' . (isset($orders_data['orders']) ? 'merged_orders.orders' : 'merged_orders直接') . ' | ';
+        echo '最初の注文キー: ' . (count($orders) > 0 ? htmlspecialchars(json_encode(array_keys($orders[0]), JSON_UNESCAPED_UNICODE)) : 'なし');
+        echo '</div>';
+        
+        // デバッグ: 認証状況を確認
+        echo '<div style="background-color: #e8f4fd; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
+        echo '<strong>認証デバッグ情報:</strong><br>';
+        echo 'セッションアクセストークン存在: ' . (isset($_SESSION['base_access_token']) ? 'Yes' : 'No') . '<br>';
+        if (isset($_SESSION['base_access_token'])) {
+            echo 'トークン長: ' . strlen($_SESSION['base_access_token']) . '文字<br>';
+            echo 'トークン先頭: ' . substr($_SESSION['base_access_token'], 0, 20) . '...<br>';
+        }
+        
+        // BasePracticalAutoManagerの認証状況を確認
+        $scopes = ['read_orders', 'read_items', 'write_orders'];
+        foreach ($scopes as $scope) {
+            $is_valid = $practical_manager->isTokenValid($scope);
+            echo "スコープ {$scope}: " . ($is_valid ? '有効' : '無効') . '<br>';
+        }
+        echo '</div>';
+        
     } catch (Exception $e) {
         $error_message = $e->getMessage();
         $orders = [];
+        
+        // デバッグ: エラー情報を表示
+        echo '<div style="background-color: #f8d7da; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
+        echo '<strong>ERROR:</strong> ' . htmlspecialchars($e->getMessage()) . ' | ';
+        echo 'ファイル: ' . htmlspecialchars($e->getFile()) . ' | ';
+        echo '行: ' . htmlspecialchars($e->getLine());
+        echo '</div>';
     }
+    
+    // デバッグ: 処理継続確認
+    echo '<div style="background-color: #d1ecf1; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
+    echo '<strong>処理継続:</strong> データ取得完了 | ';
+    echo 'orders数: ' . count($orders) . ' | ';
+    echo 'error_message: ' . (isset($error_message) ? htmlspecialchars($error_message) : 'なし');
+    echo '</div>';
     
     // 最新の注文が上に来るようにソート（注文日時順）
     if (!empty($orders)) {
-            $sort_key = 'ordered'; // 注文日時でソート
-            if (!isset($orders[0]['ordered'])) {
-                // orderedが存在しない場合、他の日時キーを試す
-                $possible_keys = ['modified', 'created_at', 'date', 'order_date'];
+        // デバッグ: ソート処理開始
+        echo '<div style="background-color: #d4edda; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
+        echo '<strong>ソート処理開始:</strong> orders数: ' . count($orders) . ' | ';
+        echo '最初の注文キー: ' . (isset($orders[0]) ? htmlspecialchars(json_encode(array_keys($orders[0]), JSON_UNESCAPED_UNICODE)) : 'なし');
+        echo '</div>';
+        
+        $sort_key = 'ordered'; // 注文日時でソート
+        if (!isset($orders[0]['ordered'])) {
+            // orderedが存在しない場合、他の日時キーを試す
+            $possible_keys = ['modified', 'created_at', 'date', 'order_date'];
                 foreach ($possible_keys as $key) {
                     if (isset($orders[0][$key])) {
                         $sort_key = $key;
@@ -77,6 +134,13 @@ try {
                 // ソートエラーが発生した場合はそのまま
                 error_log('ソートエラー: ' . $e->getMessage());
             }
+            
+            // デバッグ: ソート処理完了
+            echo '<div style="background-color: #d4edda; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
+            echo '<strong>ソート処理完了:</strong> orders数: ' . count($orders) . ' | ';
+            echo 'ソートキー: ' . $sort_key . ' | ';
+            echo '最初の注文日時: ' . (isset($orders[0][$sort_key]) ? $orders[0][$sort_key] : 'なし');
+            echo '</div>';
         }
 } catch (Exception $e) {
     $error_message = 'BASE API接続エラー: ' . $e->getMessage();
@@ -288,10 +352,47 @@ try {
             border-left: 3px solid #e74c3c;
         }
         
+        .nickname-placeholder, .cast-placeholder {
+            font-style: italic;
+            color: #6c757d;
+            font-size: 0.8em;
+        }
+        
+        .nickname {
+            font-weight: bold;
+            color: #e67e22;
+            font-size: 0.9em;
+            background-color: #fdf2e9;
+            padding: 2px 6px;
+            border-radius: 3px;
+            border-left: 3px solid #e67e22;
+        }
+        
+        .cast-name {
+            font-weight: bold;
+            color: #8e44ad;
+            font-size: 0.9em;
+            background-color: #f4f0f7;
+            padding: 2px 6px;
+            border-radius: 3px;
+            border-left: 3px solid #8e44ad;
+        }
+        
         .total-amount {
             font-weight: bold;
             color: #28a745;
             font-size: 1.1em;
+        }
+        
+        .item-buttons {
+            display: inline-block;
+            margin-left: 5px;
+        }
+        
+        .item-buttons-placeholder {
+            font-style: italic;
+            color: #6c757d;
+            font-size: 0.8em;
         }
         
         .popup-buttons {
@@ -488,6 +589,16 @@ try {
         </div>
         
         <div id="orders-container">
+            <?php 
+            // デバッグ: 表示条件を確認
+            echo '<div style="background-color: #e7f3ff; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
+            echo '<strong>表示条件デバッグ:</strong> ';
+            echo 'error_message設定: ' . (isset($error_message) ? 'Yes (' . htmlspecialchars($error_message) . ')' : 'No') . ' | ';
+            echo 'orders空チェック: ' . (empty($orders) ? 'Yes (空)' : 'No (' . count($orders) . '件)') . ' | ';
+            echo '表示パターン: ' . (isset($error_message) ? 'エラー表示' : (empty($orders) ? 'データなし表示' : 'テーブル表示'));
+            echo '</div>';
+            ?>
+            
             <?php if (isset($error_message)): ?>
                 <div class="error-message">
                     <i class="fas fa-exclamation-triangle"></i><br>
@@ -516,33 +627,9 @@ try {
                             $order_id = htmlspecialchars($order['unique_key'] ?? 'N/A');
                             $customer_name = htmlspecialchars(trim(($order['last_name'] ?? '') . ' ' . ($order['first_name'] ?? '')) ?: 'N/A');
                             
-                            // ニックネームを抽出（オプション情報から）
-                            $nicknames = [];
-                            if (isset($order['order_items']) && is_array($order['order_items'])) {
-                                foreach ($order['order_items'] as $item) {
-                                    if (isset($item['options']) && is_array($item['options'])) {
-                                        foreach ($item['options'] as $option) {
-                                            $option_name = $option['option_name'] ?? '';
-                                            $option_value = $option['option_value'] ?? '';
-                                            
-                                            // ニックネーム関連のオプションを検索（お客様名を追加）
-                                            if (stripos($option_name, 'お客様名') !== false ||
-                                                stripos($option_name, 'ニックネーム') !== false || 
-                                                stripos($option_name, 'nickname') !== false ||
-                                                stripos($option_name, 'お名前') !== false ||
-                                                stripos($option_name, '名前') !== false ||
-                                                stripos($option_name, 'name') !== false ||
-                                                stripos($option_name, '呼び名') !== false ||
-                                                stripos($option_name, '愛称') !== false) {
-                                                if (!empty($option_value) && !in_array($option_value, $nicknames)) {
-                                                    $nicknames[] = htmlspecialchars($option_value);
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            $nickname_display = !empty($nicknames) ? implode(', ', $nicknames) : '';
+                            // ニックネームとキャスト名はAJAXで個別取得するため、プレースホルダーを表示
+                            $nickname_display = '<span class="nickname-placeholder" data-order-id="' . $order_id . '">読み込み中...</span>';
+                            $cast_display = '<span class="cast-placeholder" data-order-id="' . $order_id . '">読み込み中...</span>';
                             
                             // デバッグ情報（開発時のみ）
                             if (isset($_GET['debug']) && $_GET['debug'] === 'nickname') {
@@ -641,6 +728,9 @@ try {
                                         <?php if (!empty($nickname_display)): ?>
                                             <div class="nickname">ニックネーム: <?= $nickname_display ?></div>
                                         <?php endif; ?>
+                                        <?php if (!empty($cast_display)): ?>
+                                            <div class="cast-name">キャスト: <?= $cast_display ?></div>
+                                        <?php endif; ?>
                                         <div class="total-amount"><?= $total_amount ?></div>
                                         
                                         <!-- ポップアップボタン群 -->
@@ -657,6 +747,10 @@ try {
                                             <button class="btn btn-xs btn-secondary" onclick="showOtherInfo('<?= $order_id ?>')">
                                                 <i class="fas fa-info"></i> その他
                                             </button>
+                                            <!-- 商品ボタンはJavaScriptで動的に追加 -->
+                                            <div class="item-buttons" data-order-id="<?= $order_id ?>">
+                                                <span class="item-buttons-placeholder">商品読み込み中...</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </td>
@@ -933,6 +1027,12 @@ try {
                 updateLastUpdateTime();
                 updateOrderCount();
                 
+                // ニックネームとキャスト名を再読み込み
+                loadOrderOptions();
+                
+                // 商品ボタンを再読み込み
+                loadItemButtons();
+                
             }, 300);
         }
         
@@ -1000,6 +1100,69 @@ try {
         
         function showOtherInfo(orderId) {
             showPopup(orderId, 'other', 'その他の情報');
+        }
+        
+        function showItemInfo(orderId, itemIndex) {
+            showItemPopup(orderId, itemIndex);
+        }
+        
+        function showItemPopup(orderId, itemIndex) {
+            // 商品情報を取得
+            fetch('get_order_items.php?order_id=' + encodeURIComponent(orderId))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.items && data.items[itemIndex - 1]) {
+                        var item = data.items[itemIndex - 1];
+                        
+                        // モーダル要素を作成
+                        var modal = document.createElement('div');
+                        modal.className = 'popup-modal';
+                        modal.id = 'popup-modal-' + orderId + '-item' + itemIndex;
+                        
+                        var content = '<div class="popup-content">';
+                        content += '<div class="popup-header">';
+                        content += '<h3><i class="fas fa-box"></i> 商品' + itemIndex + ': ' + item.title + '</h3>';
+                        content += '<button class="popup-close" onclick="closePopup(\'' + orderId + '\', \'item' + itemIndex + '\')">&times;</button>';
+                        content += '</div>';
+                        content += '<div class="popup-body">';
+                        
+                        // 商品基本情報
+                        content += '<table class="order-detail-table">';
+                        content += '<tr><td>商品ID</td><td>' + item.item_id + '</td></tr>';
+                        content += '<tr><td>数量</td><td>' + item.amount + '</td></tr>';
+                        content += '<tr><td>単価</td><td>¥' + Number(item.price).toLocaleString() + '</td></tr>';
+                        content += '<tr><td>小計</td><td>¥' + Number(item.total).toLocaleString() + '</td></tr>';
+                        content += '<tr><td>ステータス</td><td>' + item.status + '</td></tr>';
+                        content += '</table>';
+                        
+                        // オプション情報
+                        if (item.options && item.options.length > 0) {
+                            content += '<h4 style="margin-top: 20px; color: #495057;">オプション情報:</h4>';
+                            content += '<table class="order-detail-table">';
+                            item.options.forEach(function(option) {
+                                content += '<tr><td>' + option.name + '</td><td>' + option.value + '</td></tr>';
+                            });
+                            content += '</table>';
+                        }
+                        
+                        content += '</div>';
+                        content += '</div>';
+                        
+                        modal.innerHTML = content;
+                        document.body.appendChild(modal);
+                        
+                        // フェードイン効果
+                        setTimeout(function() {
+                            modal.style.opacity = '1';
+                        }, 10);
+                    } else {
+                        alert('商品情報の取得に失敗しました。');
+                    }
+                })
+                .catch(error => {
+                    console.error('商品情報取得エラー:', error);
+                    alert('商品情報の取得中にエラーが発生しました。');
+                });
         }
         
         function showPopup(orderId, type, title) {
@@ -1117,6 +1280,106 @@ try {
             }
         }
         
+        // 商品ボタンを読み込む関数
+        function loadItemButtons() {
+            var itemButtonContainers = document.querySelectorAll('.item-buttons');
+            
+            itemButtonContainers.forEach(function(container) {
+                var orderId = container.getAttribute('data-order-id');
+                if (orderId) {
+                    fetch('get_order_items.php?order_id=' + encodeURIComponent(orderId))
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success && data.items) {
+                                // デバッグ情報を表示（開発時のみ）
+                                if (data.debug_info && orderId === '28FEEB6EDAA52A18') {
+                                    console.log('商品ボタンデバッグ情報 (注文ID: ' + orderId + '):', data.debug_info);
+                                }
+                                
+                                // プレースホルダーを削除
+                                var placeholder = container.querySelector('.item-buttons-placeholder');
+                                if (placeholder) {
+                                    placeholder.remove();
+                                }
+                                
+                                // 商品ボタンを生成
+                                data.items.forEach(function(item, index) {
+                                    var button = document.createElement('button');
+                                    button.className = 'btn btn-xs btn-primary';
+                                    button.onclick = function() { showItemInfo(orderId, item.index); };
+                                    button.innerHTML = '<i class="fas fa-box"></i> 商品' + item.index;
+                                    container.appendChild(button);
+                                });
+                            } else {
+                                // エラー時はエラーメッセージを表示
+                                var placeholder = container.querySelector('.item-buttons-placeholder');
+                                if (placeholder) {
+                                    placeholder.textContent = 'エラー: ' + (data.error || '不明なエラー');
+                                    placeholder.style.color = '#dc3545';
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('商品ボタン取得エラー:', error);
+                            var placeholder = container.querySelector('.item-buttons-placeholder');
+                            if (placeholder) {
+                                placeholder.textContent = 'エラー: ' + error.message;
+                                placeholder.style.color = '#dc3545';
+                            }
+                        });
+                }
+            });
+        }
+        
+        // ニックネームとキャスト名を取得する関数
+        function loadOrderOptions() {
+            var nicknamePlaceholders = document.querySelectorAll('.nickname-placeholder');
+            var castPlaceholders = document.querySelectorAll('.cast-placeholder');
+            
+            // 各注文のオプション情報を取得
+            nicknamePlaceholders.forEach(function(placeholder) {
+                var orderId = placeholder.getAttribute('data-order-id');
+                if (orderId) {
+                    fetch('get_order_options.php?order_id=' + encodeURIComponent(orderId))
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                // デバッグ情報を表示（開発時のみ）
+                                if (data.debug_info && orderId === '28FEEB6EDAA52A18') {
+                                    console.log('デバッグ情報 (注文ID: ' + orderId + '):', data.debug_info);
+                                }
+                                
+                                // ニックネームを更新
+                                var nicknameElement = document.querySelector('.nickname-placeholder[data-order-id="' + orderId + '"]');
+                                if (nicknameElement && data.nickname_display) {
+                                    nicknameElement.textContent = data.nickname_display;
+                                    nicknameElement.className = 'nickname';
+                                } else if (nicknameElement) {
+                                    nicknameElement.style.display = 'none';
+                                }
+                                
+                                // キャスト名を更新
+                                var castElement = document.querySelector('.cast-placeholder[data-order-id="' + orderId + '"]');
+                                if (castElement && data.cast_display) {
+                                    castElement.textContent = data.cast_display;
+                                    castElement.className = 'cast-name';
+                                } else if (castElement) {
+                                    castElement.style.display = 'none';
+                                }
+                            } else {
+                                console.warn('オプション情報取得エラー:', data.error);
+                                // エラー時はプレースホルダーを非表示
+                                placeholder.style.display = 'none';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('オプション情報取得エラー:', error);
+                            placeholder.style.display = 'none';
+                        });
+                }
+            });
+        }
+        
         // ページ読み込み時の初期化
         window.onload = function() {
             // 初期データを保存
@@ -1128,6 +1391,12 @@ try {
             // 最終更新時刻と注文数を設定
             updateLastUpdateTime();
             updateOrderCount();
+            
+            // ニックネームとキャスト名を読み込み
+            loadOrderOptions();
+            
+            // 商品ボタンを読み込み
+            loadItemButtons();
             
             // 30秒間隔で自動更新
             setInterval(refreshOrderData, 30000);

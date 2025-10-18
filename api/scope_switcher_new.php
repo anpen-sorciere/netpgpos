@@ -112,37 +112,18 @@ foreach ($scope_groups as $group_key => $group) {
     echo '<p style="font-size: 0.8em; color: #495057;"><strong>含まれる権限:</strong> ' . implode(', ', $group['scopes']) . '</p>';
     
     // 認証ボタン（主要権限のみ）
-    $params = [
+    $auth_url = "https://api.thebase.in/1/oauth/authorize?" . http_build_query([
         'response_type' => 'code',
         'client_id' => $base_client_id,
         'redirect_uri' => $base_redirect_uri,
         'scope' => $group['primary_scope'],
         'state' => $group['primary_scope']  // 実際のスコープ名をstateパラメータで渡す
-    ];
-    
-    // デバッグ: パラメーターを確認
-    echo '<p>パラメーター: ' . print_r($params, true) . '</p>';
-    
-    // 手動でURLを構築（http_build_queryの問題を回避）
-    $query_string = 'response_type=' . urlencode($params['response_type']) . 
-                   '&client_id=' . urlencode($params['client_id']) . 
-                   '&redirect_uri=' . urlencode($params['redirect_uri']) . 
-                   '&scope=' . urlencode($params['scope']) . 
-                   '&state=' . urlencode($params['state']);
-    
-    $auth_url = "https://api.thebase.in/1/oauth/authorize?" . $query_string;
-    
-    // デバッグ: クエリ文字列を確認
-    echo '<p>クエリ文字列: ' . htmlspecialchars($query_string) . '</p>';
+    ]);
     
     // デバッグ: 認証URLを表示
     echo '<div style="background-color: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
     echo '<strong>デバッグ - 認証URL:</strong><br>';
-    echo '<p>Client ID: ' . htmlspecialchars($base_client_id ?? 'N/A') . '</p>';
-    echo '<p>Redirect URI: ' . htmlspecialchars($base_redirect_uri ?? 'N/A') . '</p>';
-    echo '<p>Scope: ' . htmlspecialchars($group['primary_scope']) . '</p>';
-    echo '<p>State: ' . htmlspecialchars($group['primary_scope']) . '</p>';
-    echo '<div style="word-break: break-all; white-space: pre-wrap; background-color: #e9ecef; padding: 5px; border-radius: 3px; font-family: monospace; font-size: 0.7em;">' . htmlspecialchars($auth_url) . '</div>';
+    echo '<code>' . htmlspecialchars($auth_url) . '</code>';
     echo '</div>';
     
     echo '<a href="' . htmlspecialchars($auth_url) . '" style="background-color: #007bff; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin-right: 10px;">認証実行</a>';

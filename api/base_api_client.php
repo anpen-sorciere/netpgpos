@@ -97,6 +97,11 @@ class BaseApiClient {
             } else {
                 $error_message .= ' - ' . $response;
             }
+            
+            // デバッグ情報を追加
+            $error_message .= ' | URL: ' . $url;
+            $error_message .= ' | トークン先頭: ' . substr($this->access_token, 0, 20) . '...';
+            
             throw new Exception($error_message);
         }
 
