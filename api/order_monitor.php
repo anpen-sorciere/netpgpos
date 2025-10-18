@@ -275,6 +275,7 @@ try {
                         注文データがありません
                     </div>
                 <?php else: ?>
+                    <div id="orders-table-container">
                     <table class="order-table">
                         <thead>
                             <tr>
@@ -540,6 +541,7 @@ try {
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+                    </div>
                 <?php endif; ?>
             </div>
         <?php endif; ?>
@@ -556,10 +558,59 @@ try {
 
 
     <script>
-        // 5秒間隔で自動更新
-        setInterval(function() {
-            location.reload();
-        }, 5000);
+        // AJAXでデータのみを更新（画面リロードなし）
+        function refreshOrderData() {
+            fetch('order_data_ajax.php')
+                .then(response => response.text())
+                .then(data => {
+                    // 現在展開されている詳細の状態を保存
+                    var expandedOrders = [];
+                    var detailRows = document.querySelectorAll('[id^="detail-"]');
+                    detailRows.forEach(function(row) {
+                        if (row.style.display !== 'none') {
+                            var orderId = row.id.replace('detail-', '');
+                            expandedOrders.push(orderId);
+                        }
+                    });
+                    
+                    // テーブル部分のみを更新
+                    var tableContainer = document.getElementById('orders-table-container');
+                    if (tableContainer) {
+                        tableContainer.innerHTML = data;
+                        
+                        // 展開されていた詳細を再展開
+                        expandedOrders.forEach(function(orderId) {
+                            var detailRow = document.getElementById('detail-' + orderId);
+                            var toggleButton = document.getElementById('toggle-' + orderId);
+                            if (detailRow && toggleButton) {
+                                detailRow.style.display = 'table-row';
+                                toggleButton.innerHTML = '<i class="fas fa-chevron-up"></i> 詳細を閉じる';
+                                
+                                // 詳細がまだ読み込まれていない場合は読み込む
+                                if (!detailRow.dataset.loaded) {
+                                    detailRow.innerHTML = '<td colspan="7" style="padding: 20px; text-align: center;"><i class="fas fa-spinner fa-spin"></i> 注文詳細を読み込み中...</td>';
+                                    
+                                    fetch('order_detail_ajax.php?order_id=' + encodeURIComponent(orderId))
+                                        .then(response => response.text())
+                                        .then(detailData => {
+                                            detailRow.innerHTML = '<td colspan="7" style="padding: 0;">' + detailData + '</td>';
+                                            detailRow.dataset.loaded = 'true';
+                                        })
+                                        .catch(error => {
+                                            detailRow.innerHTML = '<td colspan="7" style="padding: 20px; color: #dc3545;">エラー: ' + error.message + '</td>';
+                                        });
+                                }
+                            }
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('データ更新エラー:', error);
+                });
+        }
+        
+        // 5秒間隔でデータのみを更新
+        setInterval(refreshOrderData, 5000);
         
         // ページ読み込み時に全ての詳細を自動展開（キッチン用）
         window.onload = function() {
