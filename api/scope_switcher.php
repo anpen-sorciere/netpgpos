@@ -120,6 +120,12 @@ foreach ($scope_groups as $group_key => $group) {
         'state' => $group['primary_scope']  // 実際のスコープ名をstateパラメータで渡す
     ]);
     
+    // デバッグ: 認証URLを表示
+    echo '<div style="background-color: #f8f9fa; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
+    echo '<strong>デバッグ - 認証URL:</strong><br>';
+    echo '<code>' . htmlspecialchars($auth_url) . '</code>';
+    echo '</div>';
+    
     echo '<a href="' . htmlspecialchars($auth_url) . '" style="background-color: #007bff; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin-right: 10px;">認証実行</a>';
     
     // テストボタン
