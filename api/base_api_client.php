@@ -78,40 +78,52 @@ class BaseApiClient {
      * 注文データを取得
      */
     public function getOrders($limit = 100, $offset = 0) {
-        $endpoint = "orders?limit={$limit}&offset={$offset}";
+        $endpoint = "1/orders?limit={$limit}&offset={$offset}";
         return $this->makeRequest($endpoint);
+    }
+    
+    /**
+     * 注文詳細を取得
+     */
+    public function getOrderDetail($unique_key) {
+        $endpoint = "1/orders/detail/{$unique_key}";
+        return $this->makeRequest($endpoint);
+    }
+    
+    /**
+     * 注文ステータスを更新
+     */
+    public function updateOrderStatus($unique_key, $status) {
+        $endpoint = "1/orders/edit_status";
+        $data = [
+            'unique_key' => $unique_key,
+            'status' => $status
+        ];
+        return $this->makeRequest($endpoint, 'POST', $data);
     }
 
     /**
      * 商品データを取得
      */
     public function getProducts($limit = 100, $offset = 0) {
-        // BASE APIの正しい商品エンドポイントを試行
-        $endpoints = [
-            "items?limit={$limit}&offset={$offset}",
-            "products?limit={$limit}&offset={$offset}",
-            "goods?limit={$limit}&offset={$offset}"
-        ];
-        
-        foreach ($endpoints as $endpoint) {
-            try {
-                return $this->makeRequest($endpoint);
-            } catch (Exception $e) {
-                if (strpos($e->getMessage(), '404') !== false) {
-                    continue; // 次のエンドポイントを試行
-                }
-                throw $e; // 404以外のエラーは再スロー
-            }
-        }
-        
-        throw new Exception('商品データのエンドポイントが見つかりませんでした');
+        $endpoint = "1/items?limit={$limit}&offset={$offset}";
+        return $this->makeRequest($endpoint);
+    }
+    
+    /**
+     * 商品詳細を取得
+     */
+    public function getProductDetail($item_id) {
+        $endpoint = "1/items/detail/{$item_id}";
+        return $this->makeRequest($endpoint);
     }
 
     /**
      * ショップ情報を取得
      */
     public function getShopInfo() {
-        return $this->makeRequest('shop');
+        $endpoint = "1/users/me";
+        return $this->makeRequest($endpoint);
     }
 
     /**

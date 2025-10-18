@@ -29,12 +29,53 @@ try {
     } else {
         // 注文データを取得
         $orders_data = $baseApi->getOrders(50, 0); // 最新50件
+        
+        // デバッグ：実際のデータ構造を確認
+        echo "<div style='background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 8px;'>";
+        echo "<h3>デバッグ情報：BASE APIレスポンス</h3>";
+        echo "<pre>" . htmlspecialchars(print_r($orders_data, true)) . "</pre>";
+        echo "</div>";
+        
         $orders = $orders_data['orders'] ?? [];
         
-        // 最新の注文が上に来るようにソート（注文IDの降順）
-        usort($orders, function($a, $b) {
-            return $b['order_id'] - $a['order_id'];
-        });
+        // データ構造を確認してからソート
+        if (!empty($orders)) {
+            $first_order = $orders[0];
+            echo "<div style='background: #e9ecef; padding: 15px; margin: 20px 0; border-radius: 8px;'>";
+            echo "<h3>デバッグ情報：最初の注文データ構造</h3>";
+            echo "<pre>" . htmlspecialchars(print_r($first_order, true)) . "</pre>";
+            echo "</div>";
+            
+            // 利用可能なキーを確認
+            $available_keys = array_keys($first_order);
+            echo "<div style='background: #d4edda; padding: 15px; margin: 20px 0; border-radius: 8px;'>";
+            echo "<h3>利用可能なキー</h3>";
+            echo "<p>" . implode(', ', $available_keys) . "</p>";
+            echo "</div>";
+        }
+        
+        // 最新の注文が上に来るようにソート（利用可能なキーでソート）
+        if (!empty($orders)) {
+            $sort_key = 'order_id';
+            if (!isset($orders[0]['order_id'])) {
+                // order_idが存在しない場合、他のキーを試す
+                $possible_keys = ['id', 'order_no', 'order_number', 'created_at', 'date'];
+                foreach ($possible_keys as $key) {
+                    if (isset($orders[0][$key])) {
+                        $sort_key = $key;
+                        break;
+                    }
+                }
+            }
+            
+            usort($orders, function($a, $b) use ($sort_key) {
+                if (is_numeric($a[$sort_key]) && is_numeric($b[$sort_key])) {
+                    return $b[$sort_key] - $a[$sort_key];
+                } else {
+                    return strcmp($b[$sort_key], $a[$sort_key]);
+                }
+            });
+        }
     }
 } catch (Exception $e) {
     $error_message = 'エラー: ' . $e->getMessage();
@@ -192,19 +233,53 @@ try {
                         <tbody>
                             <?php foreach ($orders as $order): ?>
                                 <tr>
-                                    <td class="order-id">#<?= htmlspecialchars($order['order_id']) ?></td>
-                                    <td class="order-date">
-                                        <?= date('Y/m/d H:i', strtotime($order['order_date'])) ?>
+                                    <td class="order-id">
+                                        #<?= htmlspecialchars($order['order_id'] ?? $order['id'] ?? $order['order_no'] ?? 'N/A') ?>
                                     </td>
-                                    <td><?= htmlspecialchars($order['customer_name'] ?? '未設定') ?></td>
+                                    <td class="order-date">
+                                        <?php
+                                        $date_key = 'order_date';
+                                        if (!isset($order[$date_key])) {
+                                            $possible_date_keys = ['created_at', 'date', 'order_created_at'];
+                                            foreach ($possible_date_keys as $key) {
+                                                if (isset($order[$key])) {
+                                                    $date_key = $key;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        echo isset($order[$date_key]) ? date('Y/m/d H:i', strtotime($order[$date_key])) : 'N/A';
+                                        ?>
+                                    </td>
+                                    <td><?= htmlspecialchars($order['customer_name'] ?? $order['customer'] ?? $order['buyer_name'] ?? '未設定') ?></td>
                                     <td>
-                                        <span class="order-status status-<?= htmlspecialchars($order['status']) ?>">
-                                            <?= htmlspecialchars($order['status']) ?>
+                                        <?php
+                                        $status = $order['status'] ?? $order['order_status'] ?? 'unknown';
+                                        ?>
+                                        <span class="order-status status-<?= htmlspecialchars($status) ?>">
+                                            <?= htmlspecialchars($status) ?>
                                         </span>
                                     </td>
-                                    <td>¥<?= number_format($order['total']) ?></td>
                                     <td>
-                                        <button class="btn btn-sm btn-secondary" onclick="showOrderDetail(<?= htmlspecialchars($order['order_id']) ?>)">
+                                        <?php
+                                        $total_key = 'total';
+                                        if (!isset($order[$total_key])) {
+                                            $possible_total_keys = ['amount', 'price', 'order_total', 'total_amount'];
+                                            foreach ($possible_total_keys as $key) {
+                                                if (isset($order[$key])) {
+                                                    $total_key = $key;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        echo isset($order[$total_key]) ? '¥' . number_format($order[$total_key]) : 'N/A';
+                                        ?>
+                                    </td>
+                                    <td>
+                                        <?php
+                                        $order_id = $order['order_id'] ?? $order['id'] ?? $order['order_no'] ?? 'N/A';
+                                        ?>
+                                        <button class="btn btn-sm btn-secondary" onclick="showOrderDetail('<?= htmlspecialchars($order_id) ?>')">
                                             <i class="fas fa-eye"></i> 詳細
                                         </button>
                                     </td>
