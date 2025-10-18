@@ -263,14 +263,14 @@ try {
             </div>
         <?php else: ?>
             <div class="auto-refresh">
-                <i class="fas fa-sync-alt"></i> 60秒間隔で自動更新中...
+                <i class="fas fa-sync-alt"></i> 30秒間隔で自動更新中...
             </div>
             
             <div class="order-monitor">
                 <h2><i class="fas fa-list"></i> 注文一覧（最新順）</h2>
                 <div style="background-color: #e7f3ff; padding: 10px; border-radius: 5px; margin-bottom: 20px; font-size: 0.9em;">
                     <i class="fas fa-info-circle"></i> 
-                    <strong>賢い自動更新:</strong> 60秒間隔でデータをチェックし、変更がある場合のみ更新します
+                    <strong>賢い自動更新:</strong> 30秒間隔でデータをチェックし、変更がある場合のみ更新します
                 </div>
                 
                 <?php if (empty($orders)): ?>
@@ -600,7 +600,9 @@ try {
                     }
                     
                     // データ変更の検知
-                    if (hasDataChanged(data)) {
+                    var dataChanged = hasDataChanged(data);
+                    
+                    if (dataChanged) {
                         console.log('データに変更を検知しました。更新を実行します。');
                         
                         // 現在展開されている詳細の状態を保存
@@ -618,16 +620,14 @@ try {
                         
                         // 現在のデータを更新
                         currentOrderData = data;
+                        
+                        // 更新完了後にインジケーターを非表示
+                        setTimeout(hideUpdateIndicator, 500);
                     } else {
                         console.log('データに変更はありません。更新をスキップします。');
                         hideUpdateIndicator(); // 更新インジケーターを非表示
                         showNoChangeIndicator(); // 変更なしインジケーターを表示
                         setTimeout(hideUpdateIndicator, 1500); // 1.5秒後に非表示
-                    }
-                    
-                    // データ変更があった場合のみ更新完了後にインジケーターを非表示
-                    if (hasDataChanged(data)) {
-                        setTimeout(hideUpdateIndicator, 500);
                     }
                 })
                 .catch(error => {
@@ -641,6 +641,7 @@ try {
         function hasDataChanged(newData) {
             if (!currentOrderData) {
                 // 初回は必ず更新
+                console.log('初回データ読み込みのため更新を実行します。');
                 return true;
             }
             
@@ -649,20 +650,36 @@ try {
                 var currentOrders = extractOrderData(currentOrderData);
                 var newOrders = extractOrderData(newData);
                 
+                console.log('現在の注文数:', currentOrders.length, '新しい注文数:', newOrders.length);
+                
                 // 注文数が変わった場合
                 if (currentOrders.length !== newOrders.length) {
+                    console.log('注文数が変更されました。');
                     return true;
                 }
                 
                 // 各注文の詳細を比較
                 for (var i = 0; i < currentOrders.length; i++) {
-                    if (currentOrders[i].id !== newOrders[i].id || 
-                        currentOrders[i].status !== newOrders[i].status ||
-                        currentOrders[i].total !== newOrders[i].total) {
+                    var currentOrder = currentOrders[i];
+                    var newOrder = newOrders[i];
+                    
+                    if (currentOrder.id !== newOrder.id) {
+                        console.log('注文IDが変更されました:', currentOrder.id, '→', newOrder.id);
+                        return true;
+                    }
+                    
+                    if (currentOrder.status !== newOrder.status) {
+                        console.log('ステータスが変更されました:', currentOrder.status, '→', newOrder.status);
+                        return true;
+                    }
+                    
+                    if (currentOrder.total !== newOrder.total) {
+                        console.log('合計金額が変更されました:', currentOrder.total, '→', newOrder.total);
                         return true;
                     }
                 }
                 
+                console.log('データに変更はありません。');
                 return false;
             } catch (error) {
                 console.warn('データ比較エラー:', error);
@@ -800,8 +817,8 @@ try {
             }, 30 * 60 * 1000); // 30分
         }
         
-        // 60秒間隔でデータのみを更新（API制限を考慮、ちらつき軽減）
-        setInterval(refreshOrderData, 60000);
+        // 30秒間隔でデータのみを更新（API制限を考慮、適切な間隔）
+        setInterval(refreshOrderData, 30000);
         
         // 更新インジケーターの管理
         var updateIndicator = null;
