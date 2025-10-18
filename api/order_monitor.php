@@ -1176,11 +1176,13 @@ try {
         
         // フィルターを適用して表示を更新
         function applyFilters() {
+            alert('フィルター適用開始: ' + JSON.stringify(activeFilters));
             console.log('フィルター適用開始:', activeFilters);
             
             // 注文行のみを対象にする（詳細行は除外）
             var rows = document.querySelectorAll('.order-table tbody tr:not([id^="detail-"])');
             console.log('対象行数:', rows.length);
+            alert('対象行数: ' + rows.length);
             var visibleCount = 0;
             
             rows.forEach(function(row, index) {
