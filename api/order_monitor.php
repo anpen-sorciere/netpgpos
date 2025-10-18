@@ -1097,6 +1097,8 @@ try {
                 alert('「全て」以外が選択されました: ' + status);
                 // 「全て」を非アクティブに
                 document.querySelector('[data-status="all"]').classList.remove('active');
+                // activeFiltersから「all」を削除
+                activeFilters.status = activeFilters.status.filter(function(s) { return s !== 'all'; });
                 
                 alert('ボタンの現在の状態: ' + (button.classList.contains('active') ? 'active' : 'inactive'));
                 
