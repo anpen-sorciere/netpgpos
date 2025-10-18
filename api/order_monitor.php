@@ -1081,6 +1081,7 @@ try {
         
         // ステータスフィルターの切り替え
         function toggleFilter(status) {
+            alert('toggleFilter呼び出し: ' + status + ', 現在のactiveFilters: ' + JSON.stringify(activeFilters));
             var button = document.querySelector('[data-status="' + status + '"]');
             
             if (status === 'all') {
@@ -1111,6 +1112,7 @@ try {
                 }
             }
             
+            alert('toggleFilter完了後のactiveFilters: ' + JSON.stringify(activeFilters));
             updateFilterStatus();
         }
         
