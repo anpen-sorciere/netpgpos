@@ -780,13 +780,13 @@ try {
                     <div class="filter-buttons">
                         <div class="filter-group">
                             <span class="filter-label">ステータス:</span>
-                            <button class="filter-btn active" data-status="all" onclick="toggleFilter('all')">全て</button>
-                            <button class="filter-btn" data-status="unpaid" onclick="toggleFilter('unpaid')">入金待ち</button>
-                            <button class="filter-btn" data-status="unshippable" onclick="toggleFilter('unshippable')">対応開始前</button>
-                            <button class="filter-btn" data-status="ordered" onclick="toggleFilter('ordered')">未対応</button>
-                            <button class="filter-btn" data-status="shipping" onclick="toggleFilter('shipping')">対応中</button>
-                            <button class="filter-btn" data-status="dispatched" onclick="toggleFilter('dispatched')">対応済</button>
-                            <button class="filter-btn" data-status="cancelled" onclick="toggleFilter('cancelled')">キャンセル</button>
+                            <button class="filter-btn active" data-status="all">全て</button>
+                            <button class="filter-btn" data-status="unpaid">入金待ち</button>
+                            <button class="filter-btn" data-status="unshippable">対応開始前</button>
+                            <button class="filter-btn" data-status="ordered">未対応</button>
+                            <button class="filter-btn" data-status="shipping">対応中</button>
+                            <button class="filter-btn" data-status="dispatched">対応済</button>
+                            <button class="filter-btn" data-status="cancelled">キャンセル</button>
                         </div>
                         <div class="filter-group">
                             <span class="filter-label">顧客情報:</span>
@@ -1765,6 +1765,15 @@ try {
             
             // フィルター状態の表示を初期化（適用はしない）
             updateFilterStatus();
+            
+            // フィルターボタンのイベントリスナーを設定
+            document.querySelectorAll('.filter-btn[data-status]').forEach(function(button) {
+                button.addEventListener('click', function() {
+                    var status = this.getAttribute('data-status');
+                    alert('イベントリスナー: ' + status);
+                    toggleFilter(status);
+                });
+            });
             
             // 30秒間隔で自動更新
             setInterval(refreshOrderData, 30000);
