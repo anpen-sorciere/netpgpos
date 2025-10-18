@@ -21,29 +21,18 @@ if (empty($order_id)) {
 try {
     $api = new BaseApiClient($_SESSION['base_access_token']);
     
-    // 注文詳細を取得（注文一覧から該当する注文を検索）
+    // 注文詳細を取得（BASE APIの注文詳細エンドポイントを使用）
     try {
-        // まず注文一覧を取得して該当する注文を検索
-        $orders_data = $api->getOrders(100, 0); // 最新100件を取得
-        $orders = $orders_data['orders'] ?? [];
+        $order_detail_response = $api->getOrderDetail($order_id);
         
-        $order_detail = null;
-        foreach ($orders as $order) {
-            if ($order['unique_key'] === $order_id) {
-                $order_detail = $order;
-                break;
-            }
-        }
+        // BASE APIのレスポンス構造: {"order": {...}}
+        $order_detail = $order_detail_response['order'] ?? null;
         
         if (empty($order_detail)) {
-            echo '<div style="color: #dc3545; padding: 20px;">注文ID「' . htmlspecialchars($order_id) . '」が見つかりませんでした。</div>';
+            echo '<div style="color: #dc3545; padding: 20px;">注文ID「' . htmlspecialchars($order_id) . '」の詳細が見つかりませんでした。</div>';
             echo '<div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">';
-            echo '<h4>利用可能な注文ID:</h4>';
-            echo '<ul>';
-            foreach (array_slice($orders, 0, 10) as $order) {
-                echo '<li>' . htmlspecialchars($order['unique_key'] ?? 'N/A') . '</li>';
-            }
-            echo '</ul>';
+            echo '<h4>APIレスポンス:</h4>';
+            echo '<pre>' . htmlspecialchars(print_r($order_detail_response, true)) . '</pre>';
             echo '</div>';
             exit;
         }
@@ -83,35 +72,56 @@ try {
     echo '</table>';
     echo '</div>';
     
-    // お客様情報
-    if (isset($order_detail['customer']) && is_array($order_detail['customer'])) {
+    // お客様情報（BASE APIの直接フィールドを使用）
+    echo '<div class="order-detail-section">';
+    echo '<h3><i class="fas fa-user"></i> お客様情報</h3>';
+    echo '<table class="order-detail-table">';
+    echo '<tr><td>お名前</td><td>' . htmlspecialchars(($order_detail['last_name'] ?? '') . ' ' . ($order_detail['first_name'] ?? '')) . '</td></tr>';
+    echo '<tr><td>メールアドレス</td><td>' . htmlspecialchars($order_detail['mail_address'] ?? 'N/A') . '</td></tr>';
+    echo '<tr><td>電話番号</td><td>' . htmlspecialchars($order_detail['tel'] ?? 'N/A') . '</td></tr>';
+    echo '<tr><td>郵便番号</td><td>' . htmlspecialchars($order_detail['zip_code'] ?? 'N/A') . '</td></tr>';
+    echo '<tr><td>都道府県</td><td>' . htmlspecialchars($order_detail['prefecture'] ?? 'N/A') . '</td></tr>';
+    echo '<tr><td>住所1</td><td>' . htmlspecialchars($order_detail['address'] ?? 'N/A') . '</td></tr>';
+    echo '<tr><td>住所2</td><td>' . htmlspecialchars($order_detail['address2'] ?? 'N/A') . '</td></tr>';
+    echo '<tr><td>国</td><td>' . htmlspecialchars($order_detail['country'] ?? 'N/A') . '</td></tr>';
+    echo '<tr><td>備考</td><td>' . htmlspecialchars($order_detail['remark'] ?? 'N/A') . '</td></tr>';
+    echo '</table>';
+    echo '</div>';
+    
+    // 配送先情報（order_receiver）
+    if (isset($order_detail['order_receiver']) && is_array($order_detail['order_receiver'])) {
         echo '<div class="order-detail-section">';
-        echo '<h3><i class="fas fa-user"></i> お客様情報</h3>';
+        echo '<h3><i class="fas fa-truck"></i> 配送先情報</h3>';
         echo '<table class="order-detail-table">';
-        foreach ($order_detail['customer'] as $key => $value) {
-            if (is_array($value)) {
-                $value = json_encode($value, JSON_UNESCAPED_UNICODE);
-            }
-            echo '<tr><td>' . htmlspecialchars($key) . '</td><td>' . htmlspecialchars($value) . '</td></tr>';
-        }
+        $receiver = $order_detail['order_receiver'];
+        echo '<tr><td>配送先お名前</td><td>' . htmlspecialchars(($receiver['last_name'] ?? '') . ' ' . ($receiver['first_name'] ?? '')) . '</td></tr>';
+        echo '<tr><td>配送先電話番号</td><td>' . htmlspecialchars($receiver['tel'] ?? 'N/A') . '</td></tr>';
+        echo '<tr><td>配送先郵便番号</td><td>' . htmlspecialchars($receiver['zip_code'] ?? 'N/A') . '</td></tr>';
+        echo '<tr><td>配送先都道府県</td><td>' . htmlspecialchars($receiver['prefecture'] ?? 'N/A') . '</td></tr>';
+        echo '<tr><td>配送先住所1</td><td>' . htmlspecialchars($receiver['address'] ?? 'N/A') . '</td></tr>';
+        echo '<tr><td>配送先住所2</td><td>' . htmlspecialchars($receiver['address2'] ?? 'N/A') . '</td></tr>';
+        echo '<tr><td>配送先国</td><td>' . htmlspecialchars($receiver['country'] ?? 'N/A') . '</td></tr>';
         echo '</table>';
         echo '</div>';
     }
     
-    // 商品情報
-    if (isset($order_detail['items']) && is_array($order_detail['items'])) {
+    // 商品情報（BASE APIのorder_itemsキーを使用）
+    if (isset($order_detail['order_items']) && is_array($order_detail['order_items'])) {
         echo '<div class="order-detail-section">';
         echo '<h3><i class="fas fa-box"></i> 商品情報</h3>';
         echo '<table class="items-table">';
-        echo '<thead><tr><th>商品名</th><th>数量</th><th>単価</th><th>小計</th></tr></thead>';
+        echo '<thead><tr><th>商品名</th><th>商品コード</th><th>バリエーション</th><th>数量</th><th>単価</th><th>小計</th><th>ステータス</th></tr></thead>';
         echo '<tbody>';
         
-        foreach ($order_detail['items'] as $item) {
+        foreach ($order_detail['order_items'] as $item) {
             echo '<tr>';
-            echo '<td>' . htmlspecialchars($item['name'] ?? 'N/A') . '</td>';
-            echo '<td>' . htmlspecialchars($item['quantity'] ?? 'N/A') . '</td>';
+            echo '<td>' . htmlspecialchars($item['title'] ?? 'N/A') . '</td>';
+            echo '<td>' . htmlspecialchars($item['item_identifier'] ?? 'N/A') . '</td>';
+            echo '<td>' . htmlspecialchars($item['variation'] ?? 'N/A') . '</td>';
+            echo '<td>' . htmlspecialchars($item['amount'] ?? 'N/A') . '</td>';
             echo '<td>¥' . number_format($item['price'] ?? 0) . '</td>';
-            echo '<td>¥' . number_format(($item['quantity'] ?? 0) * ($item['price'] ?? 0)) . '</td>';
+            echo '<td>¥' . number_format($item['total'] ?? 0) . '</td>';
+            echo '<td>' . htmlspecialchars($item['status'] ?? 'N/A') . '</td>';
             echo '</tr>';
         }
         
