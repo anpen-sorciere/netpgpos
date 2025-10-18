@@ -578,6 +578,13 @@ try {
                     return response.text();
                 })
                 .then(data => {
+                    // 認証エラーのチェック
+                    if (data.includes('アクセストークンが無効') || data.includes('再認証が必要') || data.includes('BASE API認証が必要')) {
+                        console.warn('認証エラーが発生しました。再認証が必要です。');
+                        showAuthError();
+                        return;
+                    }
+                    
                     // API制限エラーのチェック
                     if (data.includes('hour_api_limit') || data.includes('APIの利用上限')) {
                         console.warn('BASE API利用上限に達しました。更新を一時停止します。');
@@ -639,6 +646,28 @@ try {
                     console.error('データ更新エラー:', error);
                     // エラー時は静かに失敗（画面を壊さない）
                 });
+        }
+        
+        // 認証エラーメッセージの表示
+        function showAuthError() {
+            var existingMessage = document.getElementById('auth-error-message');
+            if (existingMessage) {
+                return; // 既に表示されている場合は何もしない
+            }
+            
+            var messageDiv = document.createElement('div');
+            messageDiv.id = 'auth-error-message';
+            messageDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; border: 1px solid #f5c6cb; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000; max-width: 350px;';
+            messageDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <strong>認証エラー</strong><br>アクセストークンが無効です。<br><a href="scope_switcher.php" style="color: #721c24; text-decoration: underline;">再認証を実行</a>';
+            
+            document.body.appendChild(messageDiv);
+            
+            // 10秒後にメッセージを削除
+            setTimeout(function() {
+                if (messageDiv.parentNode) {
+                    messageDiv.parentNode.removeChild(messageDiv);
+                }
+            }, 10000); // 10秒
         }
         
         // API制限メッセージの表示

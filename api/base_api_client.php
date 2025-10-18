@@ -45,12 +45,18 @@ class BaseApiClient {
             throw new Exception('アクセストークンが設定されていません');
         }
 
+        // トークンの有効性をチェック（リフレッシュトークンエンドポイント以外）
+        if ($endpoint !== 'oauth/token' && !$this->isTokenValid()) {
+            throw new Exception('アクセストークンが無効です。再認証が必要です。');
+        }
+
         $url = $this->api_url . $endpoint;
         
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
             'Authorization: Bearer ' . $this->access_token,
             'Content-Type: application/json'
@@ -67,11 +73,34 @@ class BaseApiClient {
         $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        if ($http_code !== 200) {
-            throw new Exception('APIリクエストエラー: HTTP ' . $http_code . ' - ' . $response);
+        if ($response === false) {
+            throw new Exception('APIリクエストに失敗しました');
         }
 
-        return json_decode($response, true);
+        $decoded_response = json_decode($response, true);
+        
+        // トークン無効エラーの特別処理
+        if ($http_code === 400 && isset($decoded_response['error']) && $decoded_response['error'] === 'invalid_request') {
+            // セッションをクリア
+            unset($_SESSION['base_access_token']);
+            unset($_SESSION['base_refresh_token']);
+            unset($_SESSION['base_token_expires']);
+            throw new Exception('アクセストークンが無効です。再認証が必要です。');
+        }
+        
+        if ($http_code !== 200) {
+            $error_message = 'APIリクエストエラー: HTTP ' . $http_code;
+            if (isset($decoded_response['error_description'])) {
+                $error_message .= ' - ' . $decoded_response['error_description'];
+            } elseif (isset($decoded_response['error'])) {
+                $error_message .= ' - ' . $decoded_response['error'];
+            } else {
+                $error_message .= ' - ' . $response;
+            }
+            throw new Exception($error_message);
+        }
+
+        return $decoded_response;
     }
 
     /**
