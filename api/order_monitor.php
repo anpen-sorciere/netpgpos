@@ -225,7 +225,7 @@ try {
                                 <th>注文日時</th>
                                 <th>お客様名</th>
                                 <th>ステータス</th>
-                                <th>金額</th>
+                                <th>金額・決済</th>
                                 <th>詳細</th>
                             </tr>
                         </thead>
@@ -234,6 +234,19 @@ try {
                                 <tr>
                                     <td class="order-id">
                                         #<?= htmlspecialchars($order['unique_key'] ?? 'N/A') ?>
+                                        <?php if (isset($order['subscription']) && $order['subscription'] !== null): ?>
+                                            <br><small style="color: #6c757d;">
+                                                定期便: <?= htmlspecialchars($order['subscription']) ?>
+                                                <?php if (isset($order['repeat_number']) && $order['repeat_number'] !== null): ?>
+                                                    (<?= htmlspecialchars($order['repeat_number']) ?>回目)
+                                                <?php endif; ?>
+                                                <?php if (isset($order['repeat_times']) && $order['repeat_times'] !== null && $order['repeat_times'] > 0): ?>
+                                                    /<?= htmlspecialchars($order['repeat_times']) ?>回
+                                                <?php elseif (isset($order['repeat_times']) && $order['repeat_times'] === 0): ?>
+                                                    (無制限)
+                                                <?php endif; ?>
+                                            </small>
+                                        <?php endif; ?>
                                     </td>
                                     <td class="order-date">
                                         <?php
@@ -255,6 +268,25 @@ try {
                                             }
                                         }
                                         echo htmlspecialchars($date_value);
+                                        
+                                        // 配送日時の表示
+                                        if (isset($order['delivery_date']) && $order['delivery_date'] !== null) {
+                                            echo '<br><small style="color: #6c757d;">配送: ' . htmlspecialchars($order['delivery_date']);
+                                            if (isset($order['delivery_time_zone']) && $order['delivery_time_zone'] !== null) {
+                                                $time_zone = $order['delivery_time_zone'];
+                                                $time_zones = [
+                                                    '0812' => '午前中',
+                                                    '1214' => '12時~14時',
+                                                    '1416' => '14時~16時',
+                                                    '1618' => '16時~18時',
+                                                    '1820' => '18時~20時',
+                                                    '2021' => '20時~21時'
+                                                ];
+                                                $time_display = $time_zones[$time_zone] ?? $time_zone;
+                                                echo ' ' . htmlspecialchars($time_display);
+                                            }
+                                            echo '</small>';
+                                        }
                                         ?>
                                     </td>
                                     <td><?= htmlspecialchars(trim(($order['last_name'] ?? '') . ' ' . ($order['first_name'] ?? '')) ?: 'N/A') ?></td>
@@ -331,6 +363,28 @@ try {
                                     </td>
                                     <td>
                                         ¥<?= number_format($order['total'] ?? 0) ?>
+                                        <?php if (isset($order['payment']) && $order['payment'] !== null): ?>
+                                            <br><small style="color: #6c757d;">
+                                                <?php
+                                                $payment_methods = [
+                                                    'creditcard' => 'クレジットカード',
+                                                    'cod' => '代金引換',
+                                                    'cvs' => 'コンビニ決済',
+                                                    'base_bt' => '銀行振込(BASE口座)',
+                                                    'atobarai' => '後払い決済',
+                                                    'carrier_01' => 'キャリア決済(ドコモ)',
+                                                    'carrier_02' => 'キャリア決済(au)',
+                                                    'carrier_03' => 'キャリア決済(ソフトバンク)',
+                                                    'paypal' => 'PayPal決済',
+                                                    'coin' => 'コイン決済',
+                                                    'amazon_pay' => 'Amazon Pay',
+                                                    'bnpl' => 'Pay ID あと払い',
+                                                    'bnpl_installment' => 'Pay ID 3回あと払い'
+                                                ];
+                                                echo htmlspecialchars($payment_methods[$order['payment']] ?? $order['payment']);
+                                                ?>
+                                            </small>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <button class="btn btn-sm btn-secondary" onclick="showOrderDetail('<?= htmlspecialchars($order['unique_key'] ?? 'N/A') ?>')">
