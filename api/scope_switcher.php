@@ -22,24 +22,38 @@ echo '</pre>';
 
 // 権限の定義（用途別にグループ化）
 $scope_groups = [
-    'orders' => [
-        'name' => '注文管理',
-        'description' => '注文の確認・更新',
-        'scopes' => ['read_orders', 'write_orders'],
+    'orders_read' => [
+        'name' => '注文確認',
+        'description' => '注文の確認',
+        'scopes' => ['read_orders'],
         'primary_scope' => 'read_orders',
         'test_endpoint' => 'orders?limit=1&offset=0'
     ],
-    'products' => [
-        'name' => '商品管理',
-        'description' => '商品の確認・更新',
-        'scopes' => ['read_items', 'write_items'],
+    'orders_write' => [
+        'name' => '注文更新',
+        'description' => '注文の更新',
+        'scopes' => ['write_orders'],
+        'primary_scope' => 'write_orders',
+        'test_endpoint' => 'orders/edit_status'
+    ],
+    'items_read' => [
+        'name' => '商品確認',
+        'description' => '商品の確認',
+        'scopes' => ['read_items'],
         'primary_scope' => 'read_items',
         'test_endpoint' => 'items?limit=1&offset=0'
     ],
+    'items_write' => [
+        'name' => '商品更新',
+        'description' => '商品の更新',
+        'scopes' => ['write_items'],
+        'primary_scope' => 'write_items',
+        'test_endpoint' => 'items/edit'
+    ],
     'shop' => [
         'name' => 'ショップ管理',
-        'description' => 'ショップ情報の確認・更新',
-        'scopes' => ['read_users', 'write_users'],
+        'description' => 'ショップ情報の確認',
+        'scopes' => ['read_users'],
         'primary_scope' => 'read_users',
         'test_endpoint' => 'users/me'
     ],
