@@ -52,6 +52,30 @@ try {
         $order_id = htmlspecialchars($order['unique_key'] ?? 'N/A');
         $customer_name = htmlspecialchars(trim(($order['last_name'] ?? '') . ' ' . ($order['first_name'] ?? '')) ?: 'N/A');
         
+        // ニックネームを抽出（オプション情報から）
+        $nicknames = [];
+        if (isset($order['order_items']) && is_array($order['order_items'])) {
+            foreach ($order['order_items'] as $item) {
+                if (isset($item['options']) && is_array($item['options'])) {
+                    foreach ($item['options'] as $option) {
+                        $option_name = $option['option_name'] ?? '';
+                        $option_value = $option['option_value'] ?? '';
+                        
+                        // ニックネーム関連のオプションを検索
+                        if (stripos($option_name, 'ニックネーム') !== false || 
+                            stripos($option_name, 'nickname') !== false ||
+                            stripos($option_name, 'お名前') !== false ||
+                            stripos($option_name, '名前') !== false) {
+                            if (!empty($option_value) && !in_array($option_value, $nicknames)) {
+                                $nicknames[] = htmlspecialchars($option_value);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        $nickname_display = !empty($nicknames) ? implode(', ', $nicknames) : '';
+        
         // 注文日時
         $date_value = $order['ordered'] ?? 'N/A';
         if ($date_value !== 'N/A') {
@@ -108,6 +132,9 @@ try {
         echo '<div class="order-date">' . htmlspecialchars($date_value) . '</div>';
         echo '<div class="order-status ' . $status_class . '">' . htmlspecialchars($status) . '</div>';
         echo '<div class="customer-name">' . $customer_name . '</div>';
+        if (!empty($nickname_display)) {
+            echo '<div class="nickname">ニックネーム: ' . $nickname_display . '</div>';
+        }
         echo '<div class="total-amount">' . $total_amount . '</div>';
         
         // ポップアップボタン群
