@@ -1081,12 +1081,10 @@ try {
         
         // ステータスフィルターの切り替え
         function toggleFilter(status) {
-            alert('toggleFilter呼び出し: ' + status + ', 現在のactiveFilters: ' + JSON.stringify(activeFilters));
+            console.log('toggleFilter呼び出し: ' + status + ', 現在のactiveFilters: ' + JSON.stringify(activeFilters));
             var button = document.querySelector('[data-status="' + status + '"]');
-            alert('ボタンが見つかったか: ' + (button ? 'Yes' : 'No'));
             
             if (status === 'all') {
-                alert('「全て」が選択されました');
                 // 「全て」が選択された場合、他のステータスを全て非アクティブに
                 document.querySelectorAll('.filter-btn[data-status]').forEach(function(btn) {
                     btn.classList.remove('active');
@@ -1094,16 +1092,12 @@ try {
                 button.classList.add('active');
                 activeFilters.status = ['all'];
             } else {
-                alert('「全て」以外が選択されました: ' + status);
                 // 「全て」を非アクティブに
                 document.querySelector('[data-status="all"]').classList.remove('active');
                 // activeFiltersから「all」を削除
                 activeFilters.status = activeFilters.status.filter(function(s) { return s !== 'all'; });
                 
-                alert('ボタンの現在の状態: ' + (button.classList.contains('active') ? 'active' : 'inactive'));
-                
                 if (button.classList.contains('active')) {
-                    alert('ボタンは既にアクティブ - 非アクティブにします');
                     // 既にアクティブな場合は非アクティブに
                     button.classList.remove('active');
                     activeFilters.status = activeFilters.status.filter(function(s) { return s !== status; });
@@ -1114,14 +1108,13 @@ try {
                         activeFilters.status = ['all'];
                     }
                 } else {
-                    alert('ボタンは非アクティブ - アクティブにします');
                     // 非アクティブな場合はアクティブに
                     button.classList.add('active');
                     activeFilters.status.push(status);
                 }
             }
             
-            alert('toggleFilter完了後のactiveFilters: ' + JSON.stringify(activeFilters));
+            console.log('toggleFilter完了後のactiveFilters: ' + JSON.stringify(activeFilters));
             updateFilterStatus();
         }
         
@@ -1187,13 +1180,11 @@ try {
         
         // フィルターを適用して表示を更新
         function applyFilters() {
-            alert('フィルター適用開始: ' + JSON.stringify(activeFilters));
             console.log('フィルター適用開始:', activeFilters);
             
             // 注文行のみを対象にする（詳細行は除外）
             var rows = document.querySelectorAll('.order-table tbody tr:not([id^="detail-"])');
             console.log('対象行数:', rows.length);
-            alert('対象行数: ' + rows.length);
             var visibleCount = 0;
             
             rows.forEach(function(row, index) {
@@ -1215,6 +1206,11 @@ try {
                                 console.log('マッチ:', filterStatus);
                             }
                         });
+                        
+                        // デバッグ用：最初の3行の詳細情報を表示
+                        if (index < 3) {
+                            alert('行' + index + ' ステータス: ' + statusText + '\nクラス: ' + statusClass + '\nマッチ: ' + statusMatch);
+                        }
                         
                         if (!statusMatch) {
                             shouldShow = false;
