@@ -546,12 +546,29 @@ try {
                                 echo '<div style="background: #f0f0f0; padding: 10px; margin: 5px 0; border: 1px solid #ccc;">';
                                 echo '<strong>デバッグ情報 (注文ID: ' . $order_id . '):</strong><br>';
                                 echo '抽出されたニックネーム: ' . ($nickname_display ?: 'なし') . '<br>';
+                                echo '検索キーワード: ニックネーム, nickname, お名前, 名前, name, 呼び名, 愛称<br>';
                                 if (isset($order['order_items']) && is_array($order['order_items'])) {
                                     foreach ($order['order_items'] as $itemIndex => $item) {
-                                        echo '商品' . ($itemIndex + 1) . 'のオプション: ';
+                                        echo '商品' . ($itemIndex + 1) . ' (' . htmlspecialchars($item['title'] ?? 'N/A') . ') のオプション: ';
                                         if (isset($item['options']) && is_array($item['options'])) {
                                             foreach ($item['options'] as $option) {
-                                                echo '[' . htmlspecialchars($option['option_name'] ?? '') . '=' . htmlspecialchars($option['option_value'] ?? '') . '] ';
+                                                $option_name = $option['option_name'] ?? '';
+                                                $option_value = $option['option_value'] ?? '';
+                                                echo '[' . htmlspecialchars($option_name) . '=' . htmlspecialchars($option_value) . '] ';
+                                                
+                                                // 各キーワードでのマッチングテスト
+                                                $matches = [];
+                                                if (stripos($option_name, 'ニックネーム') !== false) $matches[] = 'ニックネーム';
+                                                if (stripos($option_name, 'nickname') !== false) $matches[] = 'nickname';
+                                                if (stripos($option_name, 'お名前') !== false) $matches[] = 'お名前';
+                                                if (stripos($option_name, '名前') !== false) $matches[] = '名前';
+                                                if (stripos($option_name, 'name') !== false) $matches[] = 'name';
+                                                if (stripos($option_name, '呼び名') !== false) $matches[] = '呼び名';
+                                                if (stripos($option_name, '愛称') !== false) $matches[] = '愛称';
+                                                
+                                                if (!empty($matches)) {
+                                                    echo '<span style="color: #28a745; font-weight: bold;"> ✓ マッチ: ' . implode(', ', $matches) . '</span>';
+                                                }
                                             }
                                         } else {
                                             echo 'なし';
