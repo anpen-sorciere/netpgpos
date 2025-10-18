@@ -21,21 +21,53 @@ if (empty($order_id)) {
 try {
     $api = new BaseApiClient($_SESSION['base_access_token']);
     
-    // 注文詳細を取得
-    $order_detail = $api->getOrderDetail($order_id);
-    
-    if (empty($order_detail)) {
-        echo '<div style="color: #dc3545; padding: 20px;">注文詳細を取得できませんでした。</div>';
+    // 注文詳細を取得（注文一覧から該当する注文を検索）
+    try {
+        // まず注文一覧を取得して該当する注文を検索
+        $orders_data = $api->getOrders(100, 0); // 最新100件を取得
+        $orders = $orders_data['orders'] ?? [];
+        
+        $order_detail = null;
+        foreach ($orders as $order) {
+            if ($order['unique_key'] === $order_id) {
+                $order_detail = $order;
+                break;
+            }
+        }
+        
+        if (empty($order_detail)) {
+            echo '<div style="color: #dc3545; padding: 20px;">注文ID「' . htmlspecialchars($order_id) . '」が見つかりませんでした。</div>';
+            echo '<div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">';
+            echo '<h4>利用可能な注文ID:</h4>';
+            echo '<ul>';
+            foreach (array_slice($orders, 0, 10) as $order) {
+                echo '<li>' . htmlspecialchars($order['unique_key'] ?? 'N/A') . '</li>';
+            }
+            echo '</ul>';
+            echo '</div>';
+            exit;
+        }
+        
+        // デバッグ：APIレスポンスの確認
+        echo '<div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">';
+        echo '<h4>APIレスポンス確認</h4>';
+        echo '<p><strong>注文ID:</strong> ' . htmlspecialchars($order_id) . '</p>';
+        echo '<p><strong>レスポンスタイプ:</strong> ' . gettype($order_detail) . '</p>';
+        echo '<p><strong>レスポンスサイズ:</strong> ' . (is_array($order_detail) ? count($order_detail) : 'N/A') . '</p>';
+        echo '</div>';
+        
+    } catch (Exception $e) {
+        echo '<div style="color: #dc3545; padding: 20px;">注文詳細取得エラー: ' . htmlspecialchars($e->getMessage()) . '</div>';
         exit;
     }
     
-    // デバッグ用：詳細データ構造を表示（キッチン用は非表示）
-    // echo '<div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">';
-    // echo '<h4>デバッグ: 注文詳細データ構造</h4>';
-    // echo '<pre style="font-size: 12px; overflow-x: auto;">';
-    // echo htmlspecialchars(print_r($order_detail, true));
-    // echo '</pre>';
-    // echo '</div>';
+    // デバッグ用：詳細データ構造を表示（一時的に有効化）
+    echo '<div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">';
+    echo '<h4>デバッグ: 注文詳細データ構造</h4>';
+    echo '<pre style="font-size: 12px; overflow-x: auto;">';
+    echo htmlspecialchars(print_r($order_detail, true));
+    echo '</pre>';
+    echo '</div>';
     
     // キッチン用の詳細表示コンテナ
     echo '<div class="order-detail-content">';
