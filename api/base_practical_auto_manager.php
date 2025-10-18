@@ -358,12 +358,12 @@ class BasePracticalAutoManager {
         try {
             // 注文データ取得
             $auth_log[] = "注文データ取得を開始...";
-            $orders_data = $this->getDataWithAutoAuth('orders_only', '/1/orders', ['limit' => $limit]);
+            $orders_data = $this->getDataWithAutoAuth('orders_only', '/orders', ['limit' => $limit]);
             $auth_log[] = "注文データ取得成功: " . count($orders_data['orders']) . "件";
             
             // 商品データ取得
             $auth_log[] = "商品データ取得を開始...";
-            $items_data = $this->getDataWithAutoAuth('items_only', '/1/items', ['limit' => 100]);
+            $items_data = $this->getDataWithAutoAuth('items_only', '/items', ['limit' => 100]);
             $auth_log[] = "商品データ取得成功: " . count($items_data['items']) . "件";
             
             // データ合成
