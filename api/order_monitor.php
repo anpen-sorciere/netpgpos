@@ -551,6 +551,12 @@ try {
             color: #6c757d;
         }
         
+        .filter-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
         .popup-buttons {
             display: flex;
             gap: 5px;
@@ -789,7 +795,12 @@ try {
                     </div>
                     <div class="filter-info">
                         <span id="filter-status">全ての注文を表示中</span>
-                        <button class="btn btn-sm btn-outline-secondary" onclick="clearAllFilters()">フィルタークリア</button>
+                        <div class="filter-actions">
+                            <button class="btn btn-sm btn-primary" onclick="applyFilters()">
+                                <i class="fas fa-search"></i> 検索
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="clearAllFilters()">フィルタークリア</button>
+                        </div>
                     </div>
                 </div>
                 
@@ -1101,7 +1112,6 @@ try {
             }
             
             updateFilterStatus();
-            applyFilters();
         }
         
         // 顧客情報フィルターの切り替え
@@ -1116,7 +1126,6 @@ try {
             }
             
             updateFilterStatus();
-            applyFilters();
         }
         
         // 全てのフィルターをクリア
@@ -1133,7 +1142,6 @@ try {
             activeFilters.customer = false;
             
             updateFilterStatus();
-            applyFilters();
         }
         
         // フィルター状態の表示を更新
@@ -1267,6 +1275,9 @@ try {
                         
                         // スムーズな更新処理
                         smoothUpdateTable(data, expandedOrders);
+                        
+                        // フィルターを再適用
+                        applyFilters();
                         
                         // 現在のデータを更新
                         currentOrderData = data;
@@ -1712,9 +1723,8 @@ try {
             // 商品ごとの情報を読み込み
             loadItemDetails();
             
-            // フィルター機能を初期化
+            // フィルター状態の表示を初期化（適用はしない）
             updateFilterStatus();
-            applyFilters();
             
             // 30秒間隔で自動更新
             setInterval(refreshOrderData, 30000);
