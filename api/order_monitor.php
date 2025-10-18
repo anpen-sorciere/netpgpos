@@ -279,6 +279,39 @@ try {
                                             }
                                             echo '</small>';
                                         }
+                                        
+                                        // キャンセル日時の表示
+                                        if (isset($order['cancelled']) && $order['cancelled'] !== null) {
+                                            echo '<br><small style="color: #dc3545;">キャンセル: ';
+                                            if (is_array($order['cancelled'])) {
+                                                echo htmlspecialchars(json_encode($order['cancelled'], JSON_UNESCAPED_UNICODE));
+                                            } else {
+                                                echo htmlspecialchars($order['cancelled']);
+                                            }
+                                            echo '</small>';
+                                        }
+                                        
+                                        // 発送日時の表示
+                                        if (isset($order['dispatched']) && $order['dispatched'] !== null) {
+                                            echo '<br><small style="color: #28a745;">発送: ';
+                                            if (is_array($order['dispatched'])) {
+                                                echo htmlspecialchars(json_encode($order['dispatched'], JSON_UNESCAPED_UNICODE));
+                                            } else {
+                                                echo htmlspecialchars($order['dispatched']);
+                                            }
+                                            echo '</small>';
+                                        }
+                                        
+                                        // 更新日時の表示
+                                        if (isset($order['modified']) && $order['modified'] !== null) {
+                                            echo '<br><small style="color: #6c757d;">更新: ';
+                                            if (is_array($order['modified'])) {
+                                                echo htmlspecialchars(json_encode($order['modified'], JSON_UNESCAPED_UNICODE));
+                                            } else {
+                                                echo htmlspecialchars($order['modified']);
+                                            }
+                                            echo '</small>';
+                                        }
                                         ?>
                                     </td>
                                     <td><?= htmlspecialchars(trim(($order['last_name'] ?? '') . ' ' . ($order['first_name'] ?? '')) ?: 'N/A') ?></td>
