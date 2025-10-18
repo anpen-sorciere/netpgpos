@@ -4,12 +4,21 @@ require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/base_practical_auto_manager.php';
 
 // 認証チェック（新しいシステム）
-$auth_status = (new BasePracticalAutoManager())->getAuthStatus();
-$orders_ok = isset($auth_status['orders_only']['authenticated']) && $auth_status['orders_only']['authenticated'];
-$items_ok = isset($auth_status['items_only']['authenticated']) && $auth_status['items_only']['authenticated'];
-
-if (!$orders_ok || !$items_ok) {
-    echo '<div class="no-orders" style="text-align: center; padding: 20px; color: #dc3545;">BASE API認証が必要です。<br><a href="test_practical_auto.php" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">BASE API認証を実行</a></div>';
+try {
+    $auth_status = (new BasePracticalAutoManager())->getAuthStatus();
+    $orders_ok = isset($auth_status['orders_only']['authenticated']) && $auth_status['orders_only']['authenticated'];
+    $items_ok = isset($auth_status['items_only']['authenticated']) && $auth_status['items_only']['authenticated'];
+    
+    // デバッグ情報をログに記録
+    error_log('認証チェック結果: orders_ok=' . ($orders_ok ? 'true' : 'false') . ', items_ok=' . ($items_ok ? 'true' : 'false'));
+    
+    if (!$orders_ok || !$items_ok) {
+        echo '<div class="no-orders" style="text-align: center; padding: 20px; color: #dc3545;">BASE API認証が必要です。<br><a href="test_practical_auto.php" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">BASE API認証を実行</a></div>';
+        exit;
+    }
+} catch (Exception $e) {
+    error_log('認証チェックエラー: ' . $e->getMessage());
+    echo '<div class="no-orders" style="text-align: center; padding: 20px; color: #dc3545;">認証チェックエラー: ' . htmlspecialchars($e->getMessage()) . '</div>';
     exit;
 }
 
