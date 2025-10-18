@@ -21,9 +21,9 @@ try {
     echo '<div class="no-orders" style="text-align: center; padding: 20px; color: #dc3545;">データ取得エラー: ' . htmlspecialchars($e->getMessage()) . '</div>';
     exit;
 }
-    
-    // 注文を日時で降順ソート
-    usort($orders, function($a, $b) {
+
+// 注文を日時で降順ソート
+usort($orders, function($a, $b) {
         $time_a = $a['ordered'] ?? 0;
         $time_b = $b['ordered'] ?? 0;
         
@@ -35,25 +35,25 @@ try {
         $timestamp_b = is_numeric($time_b) ? $time_b : strtotime($time_b);
         
         return $timestamp_b - $timestamp_a;
-    });
-    
-    if (empty($orders)) {
-        echo '<div class="no-orders"><i class="fas fa-inbox"></i><br>注文データがありません</div>';
-        exit;
-    }
-    
-    // 簡潔なテーブル全体を返す
-    echo '<table class="order-table">';
-    echo '<thead>';
-    echo '<tr>';
-    echo '<th>注文ヘッダー</th>';
-    echo '<th>商品明細</th>';
-    echo '<th>詳細</th>';
-    echo '</tr>';
-    echo '</thead>';
-    echo '<tbody>';
-    
-    foreach ($orders as $order) {
+});
+
+if (empty($orders)) {
+    echo '<div class="no-orders"><i class="fas fa-inbox"></i><br>注文データがありません</div>';
+    exit;
+}
+
+// 簡潔なテーブル全体を返す
+echo '<table class="order-table">';
+echo '<thead>';
+echo '<tr>';
+echo '<th>注文ヘッダー</th>';
+echo '<th>商品明細</th>';
+echo '<th>詳細</th>';
+echo '</tr>';
+echo '</thead>';
+echo '<tbody>';
+
+foreach ($orders as $order) {
         // 注文ヘッダー情報
         $order_id = htmlspecialchars($order['unique_key'] ?? 'N/A');
         $customer_name = htmlspecialchars(trim(($order['last_name'] ?? '') . ' ' . ($order['first_name'] ?? '')) ?: 'N/A');
@@ -229,8 +229,4 @@ try {
     
     echo '</tbody>';
     echo '</table>';
-    
-} catch (Exception $e) {
-    echo '<div class="no-orders" style="text-align: center; padding: 20px; color: #dc3545;">エラー: ' . htmlspecialchars($e->getMessage()) . '</div>';
-}
 ?>

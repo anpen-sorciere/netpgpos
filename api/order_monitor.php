@@ -33,9 +33,9 @@ try {
         $error_message = $e->getMessage();
         $orders = [];
     }
-        
-        // 最新の注文が上に来るようにソート（注文日時順）
-        if (!empty($orders)) {
+    
+    // 最新の注文が上に来るようにソート（注文日時順）
+    if (!empty($orders)) {
             $sort_key = 'ordered'; // 注文日時でソート
             if (!isset($orders[0]['ordered'])) {
                 // orderedが存在しない場合、他の日時キーを試す
@@ -78,7 +78,6 @@ try {
                 error_log('ソートエラー: ' . $e->getMessage());
             }
         }
-    }
 } catch (Exception $e) {
     $error_message = 'BASE API接続エラー: ' . $e->getMessage();
     $orders = [];
