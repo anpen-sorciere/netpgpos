@@ -1083,8 +1083,10 @@ try {
         function toggleFilter(status) {
             alert('toggleFilter呼び出し: ' + status + ', 現在のactiveFilters: ' + JSON.stringify(activeFilters));
             var button = document.querySelector('[data-status="' + status + '"]');
+            alert('ボタンが見つかったか: ' + (button ? 'Yes' : 'No'));
             
             if (status === 'all') {
+                alert('「全て」が選択されました');
                 // 「全て」が選択された場合、他のステータスを全て非アクティブに
                 document.querySelectorAll('.filter-btn[data-status]').forEach(function(btn) {
                     btn.classList.remove('active');
@@ -1092,10 +1094,14 @@ try {
                 button.classList.add('active');
                 activeFilters.status = ['all'];
             } else {
+                alert('「全て」以外が選択されました: ' + status);
                 // 「全て」を非アクティブに
                 document.querySelector('[data-status="all"]').classList.remove('active');
                 
+                alert('ボタンの現在の状態: ' + (button.classList.contains('active') ? 'active' : 'inactive'));
+                
                 if (button.classList.contains('active')) {
+                    alert('ボタンは既にアクティブ - 非アクティブにします');
                     // 既にアクティブな場合は非アクティブに
                     button.classList.remove('active');
                     activeFilters.status = activeFilters.status.filter(function(s) { return s !== status; });
@@ -1106,6 +1112,7 @@ try {
                         activeFilters.status = ['all'];
                     }
                 } else {
+                    alert('ボタンは非アクティブ - アクティブにします');
                     // 非アクティブな場合はアクティブに
                     button.classList.add('active');
                     activeFilters.status.push(status);
