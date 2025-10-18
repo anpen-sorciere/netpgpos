@@ -237,14 +237,6 @@ foreach ($orders as $order) {
         echo '<button class="btn btn-sm btn-secondary" id="toggle-' . $order_id . '" onclick="toggleOrderDetail(\'' . $order_id . '\')">';
         echo '<i class="fas fa-chevron-down"></i> 全詳細';
         echo '</button>';
-        
-        // 発送完了ボタンの追加
-        if ($order['dispatch_status'] !== 'dispatched') {
-            echo ' <button onclick="showShippingModal(\'' . htmlspecialchars($order['unique_key']) . '\')" style="background: #28a745; color: white; padding: 5px 10px; border: none; border-radius: 3px; cursor: pointer; font-size: 12px; margin-left: 5px;">発送完了</button>';
-        } else {
-            echo ' <span style="color: #28a745; font-weight: bold; margin-left: 5px;">✓ 発送済み</span>';
-        }
-        
         echo '</td>';
         echo '</tr>';
         
