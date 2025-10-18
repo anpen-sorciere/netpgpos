@@ -480,7 +480,7 @@ class BasePracticalAutoManager {
      * 認証状態の確認
      */
     public function getAuthStatus() {
-        $scopes = ['orders_only', 'items_only', 'users_only', 'users_mail_only', 'savings_only', 'write_items_only', 'write_orders_only'];
+        $scopes = ['注文のみ', 'アイテムのみ', 'users_only', 'users_mail_only', 'savings_only', 'write_items_only', 'write_orders_only'];
         $status = [];
         
         foreach ($scopes as $scope) {
