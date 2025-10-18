@@ -22,6 +22,7 @@ try {
     echo 'read_items: ' . ($items_ok ? 'OK' : 'NG');
     echo '</div>';
     
+    
     // デバッグ情報を画面に表示
     if (!$orders_ok || !$items_ok) {
         echo '<div class="no-orders" style="text-align: center; padding: 20px; color: #dc3545;">';
@@ -47,6 +48,20 @@ try {
     $practical_manager = new BasePracticalAutoManager();
     $combined_data = $practical_manager->getCombinedOrderData(50);
     $orders = $combined_data['merged_orders'] ?? [];
+    
+    // デバッグ: 最初の3件の注文のdispatch_statusを確認
+    if (count($orders) > 0) {
+        echo '<div style="background-color: #f0f8ff; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
+        echo '<strong>AJAX ステータスデバッグ（最初の3件）:</strong><br>';
+        for ($i = 0; $i < min(3, count($orders)); $i++) {
+            $order = $orders[$i];
+            $order_id = $order['unique_key'] ?? 'N/A';
+            $dispatch_status = $order['dispatch_status'] ?? 'N/A';
+            $ordered = $order['ordered'] ?? 'N/A';
+            echo '注文' . ($i + 1) . ': ' . $order_id . ' | dispatch_status: ' . $dispatch_status . ' | ordered: ' . $ordered . '<br>';
+        }
+        echo '</div>';
+    }
     
     // デバッグ: データ取得状況を確認
     echo '<div style="background-color: #e7f3ff; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';

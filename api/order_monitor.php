@@ -65,6 +65,20 @@ try {
         echo 'オフセット: ' . $offset;
         echo '</div>';
         
+        // デバッグ: 最初の3件の注文のdispatch_statusを確認
+        if (count($orders) > 0) {
+            echo '<div style="background-color: #e8f4fd; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
+            echo '<strong>ステータスデバッグ（最初の3件）:</strong><br>';
+            for ($i = 0; $i < min(3, count($orders)); $i++) {
+                $order = $orders[$i];
+                $order_id = $order['unique_key'] ?? 'N/A';
+                $dispatch_status = $order['dispatch_status'] ?? 'N/A';
+                $ordered = $order['ordered'] ?? 'N/A';
+                echo '注文' . ($i + 1) . ': ' . $order_id . ' | dispatch_status: ' . $dispatch_status . ' | ordered: ' . $ordered . '<br>';
+            }
+            echo '</div>';
+        }
+        
         // デバッグ: 認証状況を確認
         echo '<div style="background-color: #e8f4fd; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
         echo '<strong>認証デバッグ情報:</strong><br>';
