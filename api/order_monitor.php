@@ -959,11 +959,25 @@ try {
         // 現在のデータを保存する変数
         var currentOrderData = null;
         
+        // 現在のページ番号を取得する関数
+        function getCurrentPage() {
+            var urlParams = new URLSearchParams(window.location.search);
+            var page = urlParams.get('page');
+            return page ? parseInt(page) : 1;
+        }
+        
         // AJAXでデータのみを更新（データ変更検知付き）
         function refreshOrderData() {
             showUpdateIndicator(); // 更新開始を表示
             
-            fetch('order_data_ajax.php')
+            // 現在のページ番号を取得
+            var currentPage = getCurrentPage();
+            var url = 'order_data_ajax.php';
+            if (currentPage > 1) {
+                url += '?page=' + currentPage;
+            }
+            
+            fetch(url)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('ネットワークエラー: ' + response.status);

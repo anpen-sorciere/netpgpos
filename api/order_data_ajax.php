@@ -46,8 +46,35 @@ try {
 
 try {
     $practical_manager = new BasePracticalAutoManager();
-    $combined_data = $practical_manager->getCombinedOrderData(50);
-    $orders = $combined_data['merged_orders'] ?? [];
+    
+    // ページング設定
+    $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+    $limit = 50;
+    $offset = ($page - 1) * $limit;
+    
+    $combined_data = $practical_manager->getCombinedOrderData(1000); // 全件取得してページング処理
+    $orders_data = $combined_data['merged_orders'] ?? [];
+    
+    // データ構造を確認して適切に注文データを取得
+    if (isset($orders_data['orders'])) {
+        // 従来の構造: merged_orders.orders
+        $all_orders = $orders_data['orders'];
+    } else {
+        // 新しい構造: merged_orders自体が注文配列
+        $all_orders = $orders_data;
+    }
+    
+    // 注文日時で並び替え（新しいものが先頭）
+    usort($all_orders, function($a, $b) {
+        $date_a = $a['ordered'] ?? 0;
+        $date_b = $b['ordered'] ?? 0;
+        return $date_b - $date_a; // 降順（新しいものが先頭）
+    });
+    
+    // ページング処理
+    $total_orders = count($all_orders);
+    $total_pages = ceil($total_orders / $limit);
+    $orders = array_slice($all_orders, $offset, $limit);
     
     // デバッグ: 最初の3件の注文のdispatch_statusを確認
     if (count($orders) > 0) {
@@ -65,9 +92,10 @@ try {
     
     // デバッグ: データ取得状況を確認
     echo '<div style="background-color: #e7f3ff; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
-    echo '<strong>デバッグ:</strong> 注文件数: ' . count($orders) . ' | ';
-    echo 'merged_orders存在: ' . (isset($combined_data['merged_orders']) ? 'Yes' : 'No') . ' | ';
-    echo 'データ構造: ' . htmlspecialchars(json_encode(array_keys($combined_data), JSON_UNESCAPED_UNICODE));
+    echo '<strong>AJAX デバッグ:</strong> 全注文数: ' . $total_orders . ' | ';
+    echo '現在ページ: ' . $page . '/' . $total_pages . ' | ';
+    echo '表示件数: ' . count($orders) . ' | ';
+    echo 'オフセット: ' . $offset;
     echo '</div>';
     
 } catch (Exception $e) {
