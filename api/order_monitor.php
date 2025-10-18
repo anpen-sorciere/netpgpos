@@ -491,6 +491,19 @@ try {
         </div>
     </div>
 
+    <!-- 注文詳細モーダル -->
+    <div id="orderModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5);">
+        <div class="modal-content" style="background-color: #fefefe; margin: 5% auto; padding: 20px; border: 1px solid #888; width: 90%; max-width: 800px; border-radius: 8px; max-height: 80%; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2><i class="fas fa-shopping-cart"></i> 注文詳細 <span id="modalOrderId"></span></h2>
+                <span class="close" onclick="closeModal()" style="color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer;">&times;</span>
+            </div>
+            <div id="modalContent">
+                <!-- 注文詳細内容がここに表示されます -->
+            </div>
+        </div>
+    </div>
+
     <script>
         // 5秒間隔で自動更新
         setInterval(function() {
@@ -499,7 +512,35 @@ try {
         
         // 注文詳細表示（第2段階で実装予定）
         function showOrderDetail(orderId) {
-            alert('注文詳細機能は第2段階で実装予定です。\n注文ID: ' + orderId);
+            // モーダルを表示
+            document.getElementById('orderModal').style.display = 'block';
+            document.getElementById('modalOrderId').textContent = orderId;
+            
+            // ローディング表示
+            document.getElementById('modalContent').innerHTML = '<div style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> 注文詳細を読み込み中...</div>';
+            
+            // 注文詳細を取得
+            fetch('order_detail_ajax.php?order_id=' + encodeURIComponent(orderId))
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('modalContent').innerHTML = data;
+                })
+                .catch(error => {
+                    document.getElementById('modalContent').innerHTML = '<div style="color: #dc3545; padding: 20px;">エラー: ' + error.message + '</div>';
+                });
+        }
+        
+        // モーダルを閉じる
+        function closeModal() {
+            document.getElementById('orderModal').style.display = 'none';
+        }
+        
+        // モーダル外クリックで閉じる
+        window.onclick = function(event) {
+            var modal = document.getElementById('orderModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
         }
     </script>
 </body>
