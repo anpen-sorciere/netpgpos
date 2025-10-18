@@ -167,6 +167,9 @@ class BasePracticalAutoManager {
             $stmt->execute([$scope_key]);
             $result = $stmt->fetch();
             
+            // デバッグログ
+            $this->logSystemEvent("SCOPE_TOKEN_QUERY", "スコープ {$scope_key} のクエリ結果: " . ($result ? 'データあり' : 'データなし'));
+            
             if (!$result) {
                 return null;
             }
@@ -189,6 +192,9 @@ class BasePracticalAutoManager {
      */
     public function isTokenValid($scope_key) {
         $token_data = $this->getScopeToken($scope_key);
+        
+        // デバッグログ
+        $this->logSystemEvent("TOKEN_VALIDATION", "スコープ {$scope_key} のトークン検証: " . ($token_data ? 'データあり' : 'データなし'));
         
         if (!$token_data) {
             return false;
