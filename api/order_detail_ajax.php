@@ -37,26 +37,26 @@ try {
             exit;
         }
         
-        // デバッグ：APIレスポンスの確認
-        echo '<div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">';
-        echo '<h4>APIレスポンス確認</h4>';
-        echo '<p><strong>注文ID:</strong> ' . htmlspecialchars($order_id) . '</p>';
-        echo '<p><strong>レスポンスタイプ:</strong> ' . gettype($order_detail) . '</p>';
-        echo '<p><strong>レスポンスサイズ:</strong> ' . (is_array($order_detail) ? count($order_detail) : 'N/A') . '</p>';
-        echo '</div>';
+        // デバッグ：APIレスポンスの確認（本番用は非表示）
+        // echo '<div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">';
+        // echo '<h4>APIレスポンス確認</h4>';
+        // echo '<p><strong>注文ID:</strong> ' . htmlspecialchars($order_id) . '</p>';
+        // echo '<p><strong>レスポンスタイプ:</strong> ' . gettype($order_detail) . '</p>';
+        // echo '<p><strong>レスポンスサイズ:</strong> ' . (is_array($order_detail) ? count($order_detail) : 'N/A') . '</p>';
+        // echo '</div>';
         
     } catch (Exception $e) {
         echo '<div style="color: #dc3545; padding: 20px;">注文詳細取得エラー: ' . htmlspecialchars($e->getMessage()) . '</div>';
         exit;
     }
     
-    // デバッグ用：詳細データ構造を表示（一時的に有効化）
-    echo '<div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">';
-    echo '<h4>デバッグ: 注文詳細データ構造</h4>';
-    echo '<pre style="font-size: 12px; overflow-x: auto;">';
-    echo htmlspecialchars(print_r($order_detail, true));
-    echo '</pre>';
-    echo '</div>';
+    // デバッグ用：詳細データ構造を表示（本番用は非表示）
+    // echo '<div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">';
+    // echo '<h4>デバッグ: 注文詳細データ構造</h4>';
+    // echo '<pre style="font-size: 12px; overflow-x: auto;">';
+    // echo htmlspecialchars(print_r($order_detail, true));
+    // echo '</pre>';
+    // echo '</div>';
     
     // キッチン用の詳細表示コンテナ
     echo '<div class="order-detail-content">';
@@ -66,9 +66,64 @@ try {
     echo '<h3><i class="fas fa-info-circle"></i> 注文基本情報</h3>';
     echo '<table class="order-detail-table">';
     echo '<tr><td>注文ID</td><td>' . htmlspecialchars($order_detail['unique_key'] ?? 'N/A') . '</td></tr>';
-    echo '<tr><td>注文日時</td><td>' . htmlspecialchars($order_detail['ordered'] ?? 'N/A') . '</td></tr>';
-    echo '<tr><td>ステータス</td><td>' . htmlspecialchars($order_detail['dispatch_status'] ?? 'N/A') . '</td></tr>';
+    
+    // 注文日時の表示
+    $ordered_time = $order_detail['ordered'] ?? null;
+    if ($ordered_time) {
+        if (is_numeric($ordered_time)) {
+            $ordered_display = date('Y/m/d H:i', $ordered_time);
+        } else {
+            $timestamp = strtotime($ordered_time);
+            $ordered_display = $timestamp !== false ? date('Y/m/d H:i', $timestamp) : $ordered_time;
+        }
+    } else {
+        $ordered_display = 'N/A';
+    }
+    echo '<tr><td>注文日時</td><td>' . htmlspecialchars($ordered_display) . '</td></tr>';
+    
+    // ステータスの表示
+    $status = $order_detail['dispatch_status'] ?? 'N/A';
+    $status_labels = [
+        'unpaid' => '入金待ち',
+        'ordered' => '未対応',
+        'unshippable' => '対応開始前',
+        'shipping' => '配送中',
+        'dispatched' => '対応済',
+        'cancelled' => 'キャンセル'
+    ];
+    $status_display = $status_labels[$status] ?? $status;
+    echo '<tr><td>ステータス</td><td>' . htmlspecialchars($status_display) . '</td></tr>';
+    
+    // 決済方法の表示
+    $payment = $order_detail['payment'] ?? 'N/A';
+    $payment_labels = [
+        'creditcard' => 'クレジットカード',
+        'cod' => '代金引換',
+        'cvs' => 'コンビニ決済',
+        'base_bt' => '銀行振込(BASE口座)',
+        'atobarai' => '後払い決済',
+        'carrier_01' => 'キャリア決済(ドコモ)',
+        'carrier_02' => 'キャリア決済(au)',
+        'carrier_03' => 'キャリア決済(ソフトバンク)',
+        'paypal' => 'PayPal決済',
+        'coin' => 'コイン決済',
+        'amazon_pay' => 'Amazon Pay',
+        'bnpl' => 'Pay ID あと払い',
+        'bnpl_installment' => 'Pay ID 3回あと払い'
+    ];
+    $payment_display = $payment_labels[$payment] ?? $payment;
+    echo '<tr><td>決済方法</td><td>' . htmlspecialchars($payment_display) . '</td></tr>';
+    
     echo '<tr><td>合計金額</td><td>¥' . number_format($order_detail['total'] ?? 0) . '</td></tr>';
+    
+    // 送料・手数料の表示
+    if (isset($order_detail['shipping_fee']) && $order_detail['shipping_fee'] > 0) {
+        echo '<tr><td>送料</td><td>¥' . number_format($order_detail['shipping_fee']) . '</td></tr>';
+    }
+    if (isset($order_detail['cod_fee']) && $order_detail['cod_fee'] > 0) {
+        echo '<tr><td>代引き手数料</td><td>¥' . number_format($order_detail['cod_fee']) . '</td></tr>';
+    }
+    
     echo '</table>';
     echo '</div>';
     
@@ -109,37 +164,76 @@ try {
     if (isset($order_detail['order_items']) && is_array($order_detail['order_items'])) {
         echo '<div class="order-detail-section">';
         echo '<h3><i class="fas fa-box"></i> 商品情報</h3>';
-        echo '<table class="items-table">';
-        echo '<thead><tr><th>商品名</th><th>商品コード</th><th>バリエーション</th><th>数量</th><th>単価</th><th>小計</th><th>ステータス</th></tr></thead>';
-        echo '<tbody>';
         
-        foreach ($order_detail['order_items'] as $item) {
-            echo '<tr>';
-            echo '<td>' . htmlspecialchars($item['title'] ?? 'N/A') . '</td>';
-            echo '<td>' . htmlspecialchars($item['item_identifier'] ?? 'N/A') . '</td>';
-            echo '<td>' . htmlspecialchars($item['variation'] ?? 'N/A') . '</td>';
-            echo '<td>' . htmlspecialchars($item['amount'] ?? 'N/A') . '</td>';
-            echo '<td>¥' . number_format($item['price'] ?? 0) . '</td>';
-            echo '<td>¥' . number_format($item['total'] ?? 0) . '</td>';
-            echo '<td>' . htmlspecialchars($item['status'] ?? 'N/A') . '</td>';
-            echo '</tr>';
+        foreach ($order_detail['order_items'] as $index => $item) {
+            echo '<div style="border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 15px; background-color: #f8f9fa;">';
+            echo '<h4 style="margin-top: 0; color: #2c3e50;">商品 ' . ($index + 1) . ': ' . htmlspecialchars($item['title'] ?? 'N/A') . '</h4>';
+            
+            echo '<table class="order-detail-table">';
+            echo '<tr><td>商品ID</td><td>' . htmlspecialchars($item['item_id'] ?? 'N/A') . '</td></tr>';
+            echo '<tr><td>商品コード</td><td>' . htmlspecialchars($item['item_identifier'] ?? 'N/A') . '</td></tr>';
+            echo '<tr><td>バリエーション</td><td>' . htmlspecialchars($item['variation'] ?? 'N/A') . '</td></tr>';
+            echo '<tr><td>数量</td><td>' . htmlspecialchars($item['amount'] ?? 'N/A') . '</td></tr>';
+            echo '<tr><td>単価</td><td>¥' . number_format($item['price'] ?? 0) . '</td></tr>';
+            echo '<tr><td>小計</td><td>¥' . number_format($item['total'] ?? 0) . '</td></tr>';
+            echo '<tr><td>ステータス</td><td>' . htmlspecialchars($item['status'] ?? 'N/A') . '</td></tr>';
+            echo '</table>';
+            
+            // オプション情報の表示
+            if (isset($item['options']) && is_array($item['options']) && !empty($item['options'])) {
+                echo '<h5 style="color: #495057; margin: 15px 0 10px 0;">オプション情報:</h5>';
+                echo '<table class="order-detail-table">';
+                foreach ($item['options'] as $option) {
+                    echo '<tr><td>' . htmlspecialchars($option['option_name'] ?? 'N/A') . '</td><td>' . htmlspecialchars($option['option_value'] ?? 'N/A') . '</td></tr>';
+                }
+                echo '</table>';
+            }
+            
+            echo '</div>';
         }
         
-        echo '</tbody>';
-        echo '</table>';
         echo '</div>';
     }
     
-    // 配送情報
-    if (isset($order_detail['shipping']) && is_array($order_detail['shipping'])) {
+    // 配送情報（shipping_linesを使用）
+    if (isset($order_detail['shipping_lines']) && is_array($order_detail['shipping_lines'])) {
         echo '<div class="order-detail-section">';
         echo '<h3><i class="fas fa-truck"></i> 配送情報</h3>';
-        echo '<table class="order-detail-table">';
-        foreach ($order_detail['shipping'] as $key => $value) {
-            if (is_array($value)) {
-                $value = json_encode($value, JSON_UNESCAPED_UNICODE);
+        
+        foreach ($order_detail['shipping_lines'] as $index => $shipping) {
+            echo '<div style="border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 15px; background-color: #f8f9fa;">';
+            echo '<h4 style="margin-top: 0; color: #2c3e50;">配送ライン ' . ($index + 1) . '</h4>';
+            
+            echo '<table class="order-detail-table">';
+            echo '<tr><td>配送方法</td><td>' . htmlspecialchars($shipping['shipping_method'] ?? 'N/A') . '</td></tr>';
+            echo '<tr><td>送料</td><td>¥' . number_format($shipping['shipping_fee'] ?? 0) . '</td></tr>';
+            if (isset($shipping['order_item_ids']) && is_array($shipping['order_item_ids'])) {
+                echo '<tr><td>対象商品ID</td><td>' . implode(', ', $shipping['order_item_ids']) . '</td></tr>';
             }
-            echo '<tr><td>' . htmlspecialchars($key) . '</td><td>' . htmlspecialchars($value) . '</td></tr>';
+            echo '</table>';
+            echo '</div>';
+        }
+        
+        echo '</div>';
+    }
+    
+    // 配送日時の表示
+    if (isset($order_detail['delivery_date']) && !empty($order_detail['delivery_date'])) {
+        echo '<div class="order-detail-section">';
+        echo '<h3><i class="fas fa-calendar"></i> 配送日時</h3>';
+        echo '<table class="order-detail-table">';
+        echo '<tr><td>配送希望日</td><td>' . htmlspecialchars($order_detail['delivery_date']) . '</td></tr>';
+        if (isset($order_detail['delivery_time_zone']) && !empty($order_detail['delivery_time_zone'])) {
+            $time_zones = [
+                '0812' => '午前中',
+                '1214' => '12時~14時',
+                '1416' => '14時~16時',
+                '1618' => '16時~18時',
+                '1820' => '18時~20時',
+                '2021' => '20時~21時'
+            ];
+            $time_display = $time_zones[$order_detail['delivery_time_zone']] ?? $order_detail['delivery_time_zone'];
+            echo '<tr><td>配送希望時間帯</td><td>' . htmlspecialchars($time_display) . '</td></tr>';
         }
         echo '</table>';
         echo '</div>';
