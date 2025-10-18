@@ -263,46 +263,66 @@ try {
                                         $status = 'N/A';
                                         $status_class = 'status-unpaid';
                                         
-                                        // BASE APIの実際のステータスに基づく判定
-                                        // まずキャンセルをチェック
-                                        if (isset($order['cancelled']) && $order['cancelled'] === true) {
-                                            $status = 'キャンセル';
-                                            $status_class = 'status-cancelled';
-                                        }
-                                        // dispatch_statusで配送状況を判定
-                                        elseif (isset($order['dispatch_status'])) {
-                                            if ($order['dispatch_status'] === 'dispatched' || $order['dispatch_status'] === true) {
-                                                $status = '対応済';
-                                                $status_class = 'status-shipped';
-                                            } else {
-                                                $status = '対応中';
-                                                $status_class = 'status-paid';
+                                        // BASE APIの正確なdispatch_statusに基づく判定
+                                        if (isset($order['dispatch_status'])) {
+                                            switch ($order['dispatch_status']) {
+                                                case 'unpaid':
+                                                    $status = '入金待ち';
+                                                    $status_class = 'status-unpaid';
+                                                    break;
+                                                case 'ordered':
+                                                    $status = '未対応';
+                                                    $status_class = 'status-unpaid';
+                                                    break;
+                                                case 'unshippable':
+                                                    $status = '対応開始前';
+                                                    $status_class = 'status-paid';
+                                                    break;
+                                                case 'shipping':
+                                                    $status = '配送中';
+                                                    $status_class = 'status-paid';
+                                                    break;
+                                                case 'dispatched':
+                                                    $status = '対応済';
+                                                    $status_class = 'status-shipped';
+                                                    break;
+                                                case 'cancelled':
+                                                    $status = 'キャンセル';
+                                                    $status_class = 'status-cancelled';
+                                                    break;
+                                                default:
+                                                    $status = '未対応';
+                                                    $status_class = 'status-unpaid';
+                                                    break;
                                             }
                                         }
-                                        // paymentキーで支払い状況を判定
-                                        elseif (isset($order['payment'])) {
-                                            if ($order['payment'] === 'paid' || $order['payment'] === true) {
-                                                $status = '対応開始前';
-                                                $status_class = 'status-paid';
-                                            } else {
-                                                $status = '入金待ち';
-                                                $status_class = 'status-unpaid';
+                                        // dispatch_statusがない場合のフォールバック
+                                        else {
+                                            // cancelledキーでキャンセルをチェック
+                                            if (isset($order['cancelled']) && $order['cancelled'] !== null) {
+                                                $status = 'キャンセル';
+                                                $status_class = 'status-cancelled';
                                             }
-                                        }
-                                        // terminatedキーで終了状況を判定
-                                        elseif (isset($order['terminated'])) {
-                                            if ($order['terminated'] === true) {
+                                            // dispatchedキーで発送済みをチェック
+                                            elseif (isset($order['dispatched']) && $order['dispatched'] !== null) {
                                                 $status = '対応済';
                                                 $status_class = 'status-shipped';
-                                            } else {
+                                            }
+                                            // paymentキーで支払い状況をチェック
+                                            elseif (isset($order['payment'])) {
+                                                if ($order['payment'] === 'paid' || $order['payment'] === true) {
+                                                    $status = '対応開始前';
+                                                    $status_class = 'status-paid';
+                                                } else {
+                                                    $status = '入金待ち';
+                                                    $status_class = 'status-unpaid';
+                                                }
+                                            }
+                                            // デフォルト
+                                            else {
                                                 $status = '未対応';
                                                 $status_class = 'status-unpaid';
                                             }
-                                        }
-                                        // デフォルト
-                                        else {
-                                            $status = '未対応';
-                                            $status_class = 'status-unpaid';
                                         }
                                         ?>
                                         <span class="order-status <?= $status_class ?>">
