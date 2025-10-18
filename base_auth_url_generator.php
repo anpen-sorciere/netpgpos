@@ -37,12 +37,16 @@ echo '<br><textarea style="width: 100%; height: 100px;">' . htmlspecialchars($si
 echo "<h2>4. 代替スコープテスト</h2>";
 $alternative_scopes = [
     'read_orders',
-    'read_products', 
-    'read_shop',
-    'read_orders,read_products',
-    'read_orders,read_shop',
-    'read_products,read_shop',
-    'read_orders,read_products,read_shop'
+    'read_items', 
+    'read_users',
+    'read_users_mail',
+    'read_savings',
+    'write_items',
+    'write_orders',
+    'read_orders,read_items',
+    'read_orders,read_users',
+    'read_items,read_users',
+    'read_orders,read_items,read_users'
 ];
 
 foreach ($alternative_scopes as $scope) {
