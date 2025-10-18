@@ -358,12 +358,12 @@ class BasePracticalAutoManager {
         try {
             // 注文データ取得
             $auth_log[] = "注文データ取得を開始...";
-            $orders_data = $this->getDataWithAutoAuth('orders_only', '/orders', ['limit' => $limit]);
+            $orders_data = $this->getDataWithAutoAuth('注文のみ', '/orders', ['limit' => $limit]);
             $auth_log[] = "注文データ取得成功: " . count($orders_data['orders']) . "件";
             
             // 商品データ取得
             $auth_log[] = "商品データ取得を開始...";
-            $items_data = $this->getDataWithAutoAuth('items_only', '/items', ['limit' => 100]);
+            $items_data = $this->getDataWithAutoAuth('アイテムのみ', '/items', ['limit' => 100]);
             $auth_log[] = "商品データ取得成功: " . count($items_data['items']) . "件";
             
             // データ合成
@@ -453,8 +453,8 @@ class BasePracticalAutoManager {
         }
         
         $scope_map = [
-            'orders_only' => 'read_orders',
-            'items_only' => 'read_items',
+            '注文のみ' => 'read_orders',
+            'アイテムのみ' => 'read_items',
             'users_only' => 'read_users',
             'users_mail_only' => 'read_users_mail',
             'savings_only' => 'read_savings',
