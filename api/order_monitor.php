@@ -234,54 +234,6 @@ try {
                                 <tr>
                                     <td class="order-id">
                                         #<?= htmlspecialchars($order['unique_key'] ?? 'N/A') ?>
-                                        <?php 
-                                        // 定期便情報の表示（有効な値がある場合のみ）
-                                        $show_subscription = false;
-                                        $subscription_text = '';
-                                        
-                                        if (isset($order['subscription']) && $order['subscription'] !== null) {
-                                            if (is_array($order['subscription'])) {
-                                                // 配列の場合、有効な値があるかチェック
-                                                $has_valid_data = false;
-                                                foreach ($order['subscription'] as $key => $value) {
-                                                    if ($value !== null && $value !== '') {
-                                                        $has_valid_data = true;
-                                                        break;
-                                                    }
-                                                }
-                                                if ($has_valid_data) {
-                                                    $show_subscription = true;
-                                                    $subscription_text = json_encode($order['subscription'], JSON_UNESCAPED_UNICODE);
-                                                }
-                                            } else {
-                                                // 文字列の場合
-                                                $show_subscription = true;
-                                                $subscription_text = $order['subscription'];
-                                            }
-                                        }
-                                        
-                                        // repeat_numberとrepeat_timesもチェック
-                                        if (!$show_subscription) {
-                                            if ((isset($order['repeat_number']) && $order['repeat_number'] !== null) ||
-                                                (isset($order['repeat_times']) && $order['repeat_times'] !== null)) {
-                                                $show_subscription = true;
-                                                $subscription_text = '定期便';
-                                            }
-                                        }
-                                        
-                                        if ($show_subscription): ?>
-                                            <br><small style="color: #6c757d;">
-                                                定期便: <?= htmlspecialchars($subscription_text) ?>
-                                                <?php if (isset($order['repeat_number']) && $order['repeat_number'] !== null): ?>
-                                                    (<?= htmlspecialchars($order['repeat_number']) ?>回目)
-                                                <?php endif; ?>
-                                                <?php if (isset($order['repeat_times']) && $order['repeat_times'] !== null && $order['repeat_times'] > 0): ?>
-                                                    /<?= htmlspecialchars($order['repeat_times']) ?>回
-                                                <?php elseif (isset($order['repeat_times']) && $order['repeat_times'] === 0): ?>
-                                                    (無制限)
-                                                <?php endif; ?>
-                                            </small>
-                                        <?php endif; ?>
                                     </td>
                                     <td class="order-date">
                                         <?php
