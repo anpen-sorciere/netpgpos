@@ -473,7 +473,7 @@ class BasePracticalAutoManager {
             'state' => $state
         ];
         
-        return 'https://api.thebase.in/oauth/authorize?' . http_build_query($params);
+        return 'https://api.thebase.in/1/oauth/authorize?' . http_build_query($params);
     }
 
     /**

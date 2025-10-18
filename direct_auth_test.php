@@ -28,7 +28,7 @@ if (isset($base_client_id) && isset($base_redirect_uri)) {
         'scope' => 'read_orders',
         'state' => 'orders_only'
     ];
-    $orders_url = 'https://api.thebase.in/oauth/authorize?' . http_build_query($orders_params);
+    $orders_url = 'https://api.thebase.in/1/oauth/authorize?' . http_build_query($orders_params);
     
     // items_only スコープ
     $items_params = [
@@ -38,7 +38,7 @@ if (isset($base_client_id) && isset($base_redirect_uri)) {
         'scope' => 'read_items',
         'state' => 'items_only'
     ];
-    $items_url = 'https://api.thebase.in/oauth/authorize?' . http_build_query($items_params);
+    $items_url = 'https://api.thebase.in/1/oauth/authorize?' . http_build_query($items_params);
     
     echo "<h3>注文情報取得用認証</h3>";
     echo "<p><strong>スコープ:</strong> read_orders</p>";
