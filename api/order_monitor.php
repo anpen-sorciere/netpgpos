@@ -24,7 +24,7 @@ try {
     $baseApi = new BaseApiClient();
     
     if ($baseApi->needsAuth()) {
-        $error_message = 'BASE API認証が必要です。';
+        $error_message = 'BASE API認証が必要です。注文管理権限で認証してください。';
         $orders = [];
     } else {
         // 注文データを取得
@@ -257,8 +257,8 @@ try {
             <div class="error-message">
                 <i class="fas fa-exclamation-triangle"></i> <?= htmlspecialchars($error_message) ?>
                 <br><br>
-                <a href="base_callback_debug.php" class="btn btn-primary">
-                    <i class="fas fa-sign-in-alt"></i> BASE API認証を実行
+                <a href="scope_switcher.php" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> 注文管理権限で認証
                 </a>
             </div>
         <?php else: ?>
