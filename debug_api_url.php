@@ -38,7 +38,7 @@ try {
         
         $endpoint = '/orders';
         $params = ['limit' => 1];
-        $url = $base_api_url . $endpoint;
+        $url = rtrim($base_api_url, '/') . '/' . ltrim($endpoint, '/');
         if (!empty($params)) {
             $url .= '?' . http_build_query($params);
         }
