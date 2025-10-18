@@ -78,7 +78,7 @@ class BaseApiClient {
      * 注文データを取得
      */
     public function getOrders($limit = 100, $offset = 0) {
-        $endpoint = "1/orders?limit={$limit}&offset={$offset}";
+        $endpoint = "orders?limit={$limit}&offset={$offset}";
         return $this->makeRequest($endpoint);
     }
     
@@ -86,7 +86,7 @@ class BaseApiClient {
      * 注文詳細を取得
      */
     public function getOrderDetail($unique_key) {
-        $endpoint = "1/orders/detail/{$unique_key}";
+        $endpoint = "orders/detail/{$unique_key}";
         return $this->makeRequest($endpoint);
     }
     
@@ -94,7 +94,7 @@ class BaseApiClient {
      * 注文ステータスを更新
      */
     public function updateOrderStatus($unique_key, $status) {
-        $endpoint = "1/orders/edit_status";
+        $endpoint = "orders/edit_status";
         $data = [
             'unique_key' => $unique_key,
             'status' => $status
@@ -106,7 +106,7 @@ class BaseApiClient {
      * 商品データを取得
      */
     public function getProducts($limit = 100, $offset = 0) {
-        $endpoint = "1/items?limit={$limit}&offset={$offset}";
+        $endpoint = "items?limit={$limit}&offset={$offset}";
         return $this->makeRequest($endpoint);
     }
     
@@ -114,7 +114,7 @@ class BaseApiClient {
      * 商品詳細を取得
      */
     public function getProductDetail($item_id) {
-        $endpoint = "1/items/detail/{$item_id}";
+        $endpoint = "items/detail/{$item_id}";
         return $this->makeRequest($endpoint);
     }
 
@@ -122,7 +122,7 @@ class BaseApiClient {
      * ショップ情報を取得
      */
     public function getShopInfo() {
-        $endpoint = "1/users/me";
+        $endpoint = "users/me";
         return $this->makeRequest($endpoint);
     }
 

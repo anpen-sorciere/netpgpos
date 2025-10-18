@@ -3,9 +3,9 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-require_once '../config.php';
-require_once '../functions.php';
-require_once 'base_api_client.php';
+require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../functions.php';
+require_once __DIR__ . '/base_api_client.php';
 
 session_start();
 
