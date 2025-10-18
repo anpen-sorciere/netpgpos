@@ -263,11 +263,15 @@ try {
             </div>
         <?php else: ?>
             <div class="auto-refresh">
-                <i class="fas fa-sync-alt"></i> 5秒間隔で自動更新中...
+                <i class="fas fa-sync-alt"></i> 30秒間隔で自動更新中...
             </div>
             
             <div class="order-monitor">
                 <h2><i class="fas fa-list"></i> 注文一覧（最新順）</h2>
+                <div style="background-color: #e7f3ff; padding: 10px; border-radius: 5px; margin-bottom: 20px; font-size: 0.9em;">
+                    <i class="fas fa-info-circle"></i> 
+                    <strong>自動更新:</strong> 30秒間隔でデータを更新します（API制限を考慮）
+                </div>
                 
                 <?php if (empty($orders)): ?>
                     <div class="no-orders">
@@ -553,6 +557,12 @@ try {
             <a href="../index.php?utype=<?= htmlspecialchars($utype) ?>" class="btn btn-secondary">
                 <i class="fas fa-home"></i> メニューに戻る
             </a>
+            <button onclick="refreshOrderData()" class="btn btn-info">
+                <i class="fas fa-sync-alt"></i> 手動更新
+            </button>
+            <a href="scope_switcher.php" class="btn btn-primary">
+                <i class="fas fa-key"></i> 権限切り替え
+            </a>
         </div>
     </div>
 
@@ -568,6 +578,13 @@ try {
                     return response.text();
                 })
                 .then(data => {
+                    // API制限エラーのチェック
+                    if (data.includes('hour_api_limit') || data.includes('APIの利用上限')) {
+                        console.warn('BASE API利用上限に達しました。更新を一時停止します。');
+                        showApiLimitMessage();
+                        return;
+                    }
+                    
                     // 現在展開されている詳細の状態を保存
                     var expandedOrders = [];
                     var detailRows = document.querySelectorAll('[id^="detail-"]');
@@ -624,8 +641,30 @@ try {
                 });
         }
         
-        // 5秒間隔でデータのみを更新
-        setInterval(refreshOrderData, 5000);
+        // API制限メッセージの表示
+        function showApiLimitMessage() {
+            var existingMessage = document.getElementById('api-limit-message');
+            if (existingMessage) {
+                return; // 既に表示されている場合は何もしない
+            }
+            
+            var messageDiv = document.createElement('div');
+            messageDiv.id = 'api-limit-message';
+            messageDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; border: 1px solid #ffeaa7; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000; max-width: 300px;';
+            messageDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <strong>BASE API利用上限</strong><br>1時間の利用上限に達しました。<br>30分後に自動更新を再開します。';
+            
+            document.body.appendChild(messageDiv);
+            
+            // 30分後にメッセージを削除
+            setTimeout(function() {
+                if (messageDiv.parentNode) {
+                    messageDiv.parentNode.removeChild(messageDiv);
+                }
+            }, 30 * 60 * 1000); // 30分
+        }
+        
+        // 30秒間隔でデータのみを更新（API制限を考慮）
+        setInterval(refreshOrderData, 30000);
         
         // ページ読み込み時に全ての詳細を自動展開（キッチン用）
         window.onload = function() {
