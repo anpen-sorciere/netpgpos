@@ -41,6 +41,7 @@ $alternative_scopes = [
     'read_users',
     'read_users_mail',
     'read_savings',
+    'write_users',
     'write_items',
     'write_orders',
     'read_orders,read_items',
@@ -65,6 +66,7 @@ echo "<h2>4. 注意事項</h2>";
 echo "<ul>";
 echo "<li>BASE API登録画面でコールバックURLを <code>" . htmlspecialchars($base_redirect_uri) . "</code> に設定してください</li>";
 echo "<li>認証後、コールバックページで認証コードが表示されるはずです</li>";
-echo "<li>認証が成功したら、BASEデータ同期機能が利用可能になります</li>";
+echo "<li>BASE APIでは単一スコープのみ使用可能です（組み合わせ不可）</li>";
+echo "<li>利用可能なスコープ: read_orders, read_items, read_users, read_users_mail</li>";
 echo "</ul>";
 ?>
