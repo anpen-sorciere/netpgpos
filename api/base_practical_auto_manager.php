@@ -305,7 +305,7 @@ class BasePracticalAutoManager {
         $token_data = $this->getScopeToken($scope_key);
         $access_token = $token_data['access_token'];
         
-        $url = $this->api_url . $endpoint;
+        $url = rtrim($this->api_url, '/') . '/' . ltrim($endpoint, '/');
         if (!empty($params)) {
             $url .= '?' . http_build_query($params);
         }
