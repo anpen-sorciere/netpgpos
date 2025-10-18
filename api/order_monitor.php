@@ -257,7 +257,7 @@ try {
                                         echo htmlspecialchars($date_value);
                                         ?>
                                     </td>
-                                    <td><?= htmlspecialchars(trim(($order['first_name'] ?? '') . ' ' . ($order['last_name'] ?? '')) ?: 'N/A') ?></td>
+                                    <td><?= htmlspecialchars(trim(($order['last_name'] ?? '') . ' ' . ($order['first_name'] ?? '')) ?: 'N/A') ?></td>
                                     <td>
                                         <?php
                                         $status = 'N/A';
