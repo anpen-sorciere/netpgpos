@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/base_api_client.php';
+require_once __DIR__ . '/base_practical_auto_manager.php';
 
 // セッション開始
 session_start();
@@ -76,8 +76,8 @@ $scope_groups = [
 // 権限テスト機能
 function testScopeGroup($group_key, $endpoint) {
     try {
-        $api = new BaseApiClient();
-        $response = $api->makeRequest($endpoint);
+        $manager = new BasePracticalAutoManager();
+        $response = $manager->getDataWithAutoAuth($group_key, $endpoint);
         return ['success' => true, 'message' => 'OK'];
     } catch (Exception $e) {
         return ['success' => false, 'message' => $e->getMessage()];
@@ -113,7 +113,8 @@ foreach ($scope_groups as $group_key => $group) {
         'response_type' => 'code',
         'client_id' => $base_client_id,
         'redirect_uri' => $base_redirect_uri,
-        'scope' => $group['primary_scope']
+        'scope' => $group['primary_scope'],
+        'state' => $group_key  // スコープキーをstateパラメータで渡す
     ]);
     
     echo '<a href="' . htmlspecialchars($auth_url) . '" style="background-color: #007bff; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin-right: 10px;">認証実行</a>';
@@ -129,9 +130,18 @@ echo '</div>';
 // 現在の認証状況
 echo '<h3>現在の認証状況:</h3>';
 try {
-    $api = new BaseApiClient();
+    $manager = new BasePracticalAutoManager();
+    $auth_status = $manager->getAuthStatus();
     
-    if ($api->needsAuth()) {
+    $has_valid_auth = false;
+    foreach ($auth_status as $scope => $status) {
+        if ($status['authenticated'] && $status['access_valid']) {
+            $has_valid_auth = true;
+            break;
+        }
+    }
+    
+    if (!$has_valid_auth) {
         echo '<p style="color: red;">❌ 認証が必要です</p>';
     } else {
         echo '<p style="color: green;">✅ 認証済み</p>';
