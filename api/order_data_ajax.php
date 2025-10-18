@@ -96,9 +96,7 @@ foreach ($orders as $order) {
         $order_id = htmlspecialchars($order['unique_key'] ?? 'N/A');
         $customer_name = htmlspecialchars(trim(($order['last_name'] ?? '') . ' ' . ($order['first_name'] ?? '')) ?: 'N/A');
         
-        // ニックネームとキャスト名はAJAXで個別取得するため、プレースホルダーを表示
-        $nickname_display = '<span class="nickname-placeholder" data-order-id="' . $order_id . '">読み込み中...</span>';
-        $cast_display = '<span class="cast-placeholder" data-order-id="' . $order_id . '">読み込み中...</span>';
+        // 商品ごとの情報はAJAXで動的に取得するため、ここでは何も表示しない
         
         // 注文日時
         $date_value = $order['ordered'] ?? 'N/A';
@@ -156,13 +154,12 @@ foreach ($orders as $order) {
         echo '<div class="order-date">' . htmlspecialchars($date_value) . '</div>';
         echo '<div class="order-status ' . $status_class . '">' . htmlspecialchars($status) . '</div>';
         echo '<div class="customer-name">' . $customer_name . '</div>';
-        if (!empty($nickname_display)) {
-            echo '<div class="nickname">ニックネーム: ' . $nickname_display . '</div>';
-        }
-        if (!empty($cast_display)) {
-            echo '<div class="cast-name">キャスト: ' . $cast_display . '</div>';
-        }
         echo '<div class="total-amount">' . $total_amount . '</div>';
+        
+        // 商品ごとの情報（AJAXで動的に追加）
+        echo '<div class="item-details" data-order-id="' . $order_id . '">';
+        echo '<span class="item-details-placeholder">商品情報読み込み中...</span>';
+        echo '</div>';
         
         // ポップアップボタン群
         echo '<div class="popup-buttons">';
@@ -178,10 +175,6 @@ foreach ($orders as $order) {
         echo '<button class="btn btn-xs btn-secondary" onclick="showOtherInfo(\'' . $order_id . '\')">';
         echo '<i class="fas fa-info"></i> その他';
         echo '</button>';
-        // 商品ボタンはJavaScriptで動的に追加
-        echo '<div class="item-buttons" data-order-id="' . $order_id . '">';
-        echo '<span class="item-buttons-placeholder">商品読み込み中...</span>';
-        echo '</div>';
         echo '</div>';
         
         echo '</div>';
