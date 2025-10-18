@@ -60,6 +60,9 @@ try {
 }
 
 echo "<h2>6. 認証コード処理</h2>";
+echo "GET パラメーター詳細: " . print_r($_GET, true) . "<br>";
+echo "state パラメーター: " . (isset($_GET['state']) ? htmlspecialchars($_GET['state']) : '未設定') . "<br>";
+
 if (isset($_GET['code'])) {
     $auth_code = $_GET['code'];
     echo "認証コード: " . htmlspecialchars($auth_code) . "<br>";
@@ -103,9 +106,13 @@ if (isset($_GET['code'])) {
                 $_SESSION['base_token_expires'] = time() + ($token_data['expires_in'] ?? 3600);
                 
                 // スコープ情報を保存（stateパラメータから）
+                echo "<h4>スコープ情報処理:</h4>";
+                echo "state パラメーター: " . (isset($_GET['state']) ? htmlspecialchars($_GET['state']) : '未設定') . "<br>";
+                
                 if (isset($_GET['state'])) {
                     $scope_key = $_GET['state'];
                     $_SESSION['base_current_scope'] = $scope_key;
+                    echo "処理するスコープキー: " . htmlspecialchars($scope_key) . "<br>";
                     
                 // スコープ別のトークンも保存（新しいシステム）
                 require_once __DIR__ . '/base_practical_auto_manager.php';
