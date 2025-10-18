@@ -225,8 +225,24 @@ try {
                                     <td class="order-date">
                                         <?php
                                         $date_value = $order['ordered'] ?? 'N/A';
+                                        
+                                        // デバッグ：元の値を表示
+                                        echo "<small style='color: #999;'>元値: " . htmlspecialchars($date_value) . "</small><br>";
+                                        
                                         if ($date_value !== 'N/A') {
-                                            $date_value = date('Y/m/d H:i', strtotime($date_value));
+                                            // タイムスタンプの形式を確認
+                                            if (is_numeric($date_value)) {
+                                                // Unix timestampの場合
+                                                $date_value = date('Y/m/d H:i', $date_value);
+                                            } else {
+                                                // 文字列の場合
+                                                $timestamp = strtotime($date_value);
+                                                if ($timestamp !== false) {
+                                                    $date_value = date('Y/m/d H:i', $timestamp);
+                                                } else {
+                                                    $date_value = '日時エラー';
+                                                }
+                                            }
                                         }
                                         echo htmlspecialchars($date_value);
                                         ?>
