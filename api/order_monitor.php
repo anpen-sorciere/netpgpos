@@ -350,6 +350,76 @@ try {
             text-align: center;
             padding: 20px;
         }
+        
+        /* ポップアップボタン用のスタイル */
+        .popup-buttons {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        
+        .btn-xs {
+            padding: 2px 6px;
+            font-size: 0.7em;
+            border-radius: 3px;
+        }
+        
+        /* ポップアップモーダル用のスタイル */
+        .popup-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .popup-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 500px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        
+        .popup-content h3 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 8px;
+        }
+        
+        .popup-content h4 {
+            color: #495057;
+            margin-top: 15px;
+            margin-bottom: 8px;
+        }
+        
+        .popup-content p {
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        
+        .popup-close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .popup-close:hover,
+        .popup-close:focus {
+            color: black;
+            text-decoration: none;
+        }
     </style>
 </head>
 <body>
@@ -955,6 +1025,67 @@ try {
                 updateIndicator = null;
             }
         }
+        
+        // ポップアップ表示関数
+        function showPaymentInfo(orderId) {
+            showPopup(orderId, 'payment', '決済・配送情報');
+        }
+        
+        function showCustomerInfo(orderId) {
+            showPopup(orderId, 'customer', 'お客様・配送先情報');
+        }
+        
+        function showShippingInfo(orderId) {
+            showPopup(orderId, 'shipping', '配送情報');
+        }
+        
+        function showOtherInfo(orderId) {
+            showPopup(orderId, 'other', 'その他の情報');
+        }
+        
+        function showPopup(orderId, type, title) {
+            // モーダル要素を作成
+            var modal = document.createElement('div');
+            modal.className = 'popup-modal';
+            modal.id = 'popup-modal-' + orderId + '-' + type;
+            
+            modal.innerHTML = '<div class="popup-content">' +
+                '<span class="popup-close" onclick="closePopup(\'' + orderId + '\', \'' + type + '\')">&times;</span>' +
+                '<div id="popup-content-' + orderId + '-' + type + '">' +
+                '<i class="fas fa-spinner fa-spin"></i> 読み込み中...' +
+                '</div>' +
+                '</div>';
+            
+            document.body.appendChild(modal);
+            modal.style.display = 'block';
+            
+            // AJAXでデータを取得
+            fetch('popup_info_ajax.php?order_id=' + encodeURIComponent(orderId) + '&type=' + encodeURIComponent(type))
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('popup-content-' + orderId + '-' + type).innerHTML = data;
+                })
+                .catch(error => {
+                    document.getElementById('popup-content-' + orderId + '-' + type).innerHTML = 
+                        '<div style="color: #dc3545;">エラー: ' + error.message + '</div>';
+                });
+        }
+        
+        function closePopup(orderId, type) {
+            var modal = document.getElementById('popup-modal-' + orderId + '-' + type);
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.removeChild(modal);
+            }
+        }
+        
+        // モーダル外クリックで閉じる
+        window.onclick = function(event) {
+            if (event.target.classList.contains('popup-modal')) {
+                event.target.style.display = 'none';
+                document.body.removeChild(event.target);
+            }
+        };
         
         // ページ読み込み時に全ての詳細を自動展開（キッチン用）
         window.onload = function() {

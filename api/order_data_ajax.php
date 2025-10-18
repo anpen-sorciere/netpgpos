@@ -110,10 +110,27 @@ try {
         echo '<div class="order-status ' . $status_class . '">' . htmlspecialchars($status) . '</div>';
         echo '<div class="customer-name">' . $customer_name . '</div>';
         echo '<div class="total-amount">' . $total_amount . '</div>';
+        
+        // ポップアップボタン群
+        echo '<div class="popup-buttons">';
+        echo '<button class="btn btn-xs btn-info" onclick="showPaymentInfo(\'' . $order_id . '\')">';
+        echo '<i class="fas fa-credit-card"></i> 決済';
+        echo '</button>';
+        echo '<button class="btn btn-xs btn-warning" onclick="showCustomerInfo(\'' . $order_id . '\')">';
+        echo '<i class="fas fa-user"></i> お客様';
+        echo '</button>';
+        echo '<button class="btn btn-xs btn-success" onclick="showShippingInfo(\'' . $order_id . '\')">';
+        echo '<i class="fas fa-truck"></i> 配送';
+        echo '</button>';
+        echo '<button class="btn btn-xs btn-secondary" onclick="showOtherInfo(\'' . $order_id . '\')">';
+        echo '<i class="fas fa-info"></i> その他';
+        echo '</button>';
+        echo '</div>';
+        
         echo '</div>';
         echo '</td>';
         
-        // 商品明細列
+        // 商品明細列（商品情報のみ）
         echo '<td class="order-items">';
         if (isset($order['order_items']) && is_array($order['order_items'])) {
             foreach ($order['order_items'] as $index => $item) {
