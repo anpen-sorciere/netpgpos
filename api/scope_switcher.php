@@ -77,7 +77,10 @@ $scope_groups = [
 function testScopeGroup($group_key, $endpoint) {
     try {
         $manager = new BasePracticalAutoManager();
-        $response = $manager->getDataWithAutoAuth($group_key, $endpoint);
+        // group_keyからprimary_scopeを取得して使用
+        global $scope_groups;
+        $scope = $scope_groups[$group_key]['primary_scope'];
+        $response = $manager->getDataWithAutoAuth($scope, $endpoint);
         return ['success' => true, 'message' => 'OK'];
     } catch (Exception $e) {
         return ['success' => false, 'message' => $e->getMessage()];
@@ -114,7 +117,7 @@ foreach ($scope_groups as $group_key => $group) {
         'client_id' => $base_client_id,
         'redirect_uri' => $base_redirect_uri,
         'scope' => $group['primary_scope'],
-        'state' => $group_key  // スコープキーをstateパラメータで渡す
+        'state' => $group['primary_scope']  // 実際のスコープ名をstateパラメータで渡す
     ]);
     
     echo '<a href="' . htmlspecialchars($auth_url) . '" style="background-color: #007bff; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; display: inline-block; margin-right: 10px;">認証実行</a>';
