@@ -61,71 +61,41 @@ try {
     // キッチン用の詳細表示コンテナ
     echo '<div class="order-detail-content">';
     
-    // 注文基本情報
-    echo '<div class="order-detail-section">';
-    echo '<h3><i class="fas fa-info-circle"></i> 注文基本情報</h3>';
-    echo '<table class="order-detail-table">';
-    echo '<tr><td>注文ID</td><td>' . htmlspecialchars($order_detail['unique_key'] ?? 'N/A') . '</td></tr>';
-    
-    // 注文日時の表示
-    $ordered_time = $order_detail['ordered'] ?? null;
-    if ($ordered_time) {
-        if (is_numeric($ordered_time)) {
-            $ordered_display = date('Y/m/d H:i', $ordered_time);
-        } else {
-            $timestamp = strtotime($ordered_time);
-            $ordered_display = $timestamp !== false ? date('Y/m/d H:i', $timestamp) : $ordered_time;
-        }
-    } else {
-        $ordered_display = 'N/A';
-    }
-    echo '<tr><td>注文日時</td><td>' . htmlspecialchars($ordered_display) . '</td></tr>';
-    
-    // ステータスの表示
-    $status = $order_detail['dispatch_status'] ?? 'N/A';
-    $status_labels = [
-        'unpaid' => '入金待ち',
-        'ordered' => '未対応',
-        'unshippable' => '対応開始前',
-        'shipping' => '配送中',
-        'dispatched' => '対応済',
-        'cancelled' => 'キャンセル'
-    ];
-    $status_display = $status_labels[$status] ?? $status;
-    echo '<tr><td>ステータス</td><td>' . htmlspecialchars($status_display) . '</td></tr>';
-    
-    // 決済方法の表示
-    $payment = $order_detail['payment'] ?? 'N/A';
-    $payment_labels = [
-        'creditcard' => 'クレジットカード',
-        'cod' => '代金引換',
-        'cvs' => 'コンビニ決済',
-        'base_bt' => '銀行振込(BASE口座)',
-        'atobarai' => '後払い決済',
-        'carrier_01' => 'キャリア決済(ドコモ)',
-        'carrier_02' => 'キャリア決済(au)',
-        'carrier_03' => 'キャリア決済(ソフトバンク)',
-        'paypal' => 'PayPal決済',
-        'coin' => 'コイン決済',
-        'amazon_pay' => 'Amazon Pay',
-        'bnpl' => 'Pay ID あと払い',
-        'bnpl_installment' => 'Pay ID 3回あと払い'
-    ];
-    $payment_display = $payment_labels[$payment] ?? $payment;
-    echo '<tr><td>決済方法</td><td>' . htmlspecialchars($payment_display) . '</td></tr>';
-    
-    echo '<tr><td>合計金額</td><td>¥' . number_format($order_detail['total'] ?? 0) . '</td></tr>';
-    
-    // 送料・手数料の表示
-    if (isset($order_detail['shipping_fee']) && $order_detail['shipping_fee'] > 0) {
-        echo '<tr><td>送料</td><td>¥' . number_format($order_detail['shipping_fee']) . '</td></tr>';
-    }
-    if (isset($order_detail['cod_fee']) && $order_detail['cod_fee'] > 0) {
-        echo '<tr><td>代引き手数料</td><td>¥' . number_format($order_detail['cod_fee']) . '</td></tr>';
-    }
-    
-    echo '</table>';
-    echo '</div>';
+       // 決済・配送情報（注文ヘッダーにない追加情報のみ）
+       echo '<div class="order-detail-section">';
+       echo '<h3><i class="fas fa-info-circle"></i> 決済・配送情報</h3>';
+       echo '<table class="order-detail-table">';
+       
+       // 決済方法の表示
+       $payment = $order_detail['payment'] ?? 'N/A';
+       $payment_labels = [
+           'creditcard' => 'クレジットカード',
+           'cod' => '代金引換',
+           'cvs' => 'コンビニ決済',
+           'base_bt' => '銀行振込(BASE口座)',
+           'atobarai' => '後払い決済',
+           'carrier_01' => 'キャリア決済(ドコモ)',
+           'carrier_02' => 'キャリア決済(au)',
+           'carrier_03' => 'キャリア決済(ソフトバンク)',
+           'paypal' => 'PayPal決済',
+           'coin' => 'コイン決済',
+           'amazon_pay' => 'Amazon Pay',
+           'bnpl' => 'Pay ID あと払い',
+           'bnpl_installment' => 'Pay ID 3回あと払い'
+       ];
+       $payment_display = $payment_labels[$payment] ?? $payment;
+       echo '<tr><td>決済方法</td><td>' . htmlspecialchars($payment_display) . '</td></tr>';
+       
+       // 送料・手数料の表示
+       if (isset($order_detail['shipping_fee']) && $order_detail['shipping_fee'] > 0) {
+           echo '<tr><td>送料</td><td>¥' . number_format($order_detail['shipping_fee']) . '</td></tr>';
+       }
+       if (isset($order_detail['cod_fee']) && $order_detail['cod_fee'] > 0) {
+           echo '<tr><td>代引き手数料</td><td>¥' . number_format($order_detail['cod_fee']) . '</td></tr>';
+       }
+       
+       echo '</table>';
+       echo '</div>';
     
        // お客様情報と配送先情報の統合表示
        echo '<div class="order-detail-section">';
