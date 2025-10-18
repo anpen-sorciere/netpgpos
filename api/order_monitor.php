@@ -523,11 +523,14 @@ try {
                                             $option_name = $option['option_name'] ?? '';
                                             $option_value = $option['option_value'] ?? '';
                                             
-                                            // ニックネーム関連のオプションを検索
+                                            // ニックネーム関連のオプションを検索（より柔軟に）
                                             if (stripos($option_name, 'ニックネーム') !== false || 
                                                 stripos($option_name, 'nickname') !== false ||
                                                 stripos($option_name, 'お名前') !== false ||
-                                                stripos($option_name, '名前') !== false) {
+                                                stripos($option_name, '名前') !== false ||
+                                                stripos($option_name, 'name') !== false ||
+                                                stripos($option_name, '呼び名') !== false ||
+                                                stripos($option_name, '愛称') !== false) {
                                                 if (!empty($option_value) && !in_array($option_value, $nicknames)) {
                                                     $nicknames[] = htmlspecialchars($option_value);
                                                 }
