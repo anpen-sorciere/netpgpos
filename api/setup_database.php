@@ -68,8 +68,16 @@ try {
                     try {
                         $pdo->exec($sql);
                         echo "✓ SQL実行成功: " . substr($sql, 0, 50) . "...<br>";
+                        
+                        // テーブル作成の確認
+                        if (preg_match('/CREATE TABLE.*?(\w+)/i', $sql, $matches)) {
+                            $table_name = $matches[1];
+                            echo "&nbsp;&nbsp;テーブル {$table_name} を作成しました<br>";
+                        }
+                        
                     } catch (PDOException $e) {
                         echo "⚠ SQL実行警告: " . $e->getMessage() . "<br>";
+                        echo "&nbsp;&nbsp;失敗したSQL: " . substr($sql, 0, 100) . "...<br>";
                     }
                 }
             }
@@ -78,6 +86,22 @@ try {
             echo "<br>テーブル最適化はスキップしました（バッファリングエラー回避）<br>";
             
             echo "<br>テーブル作成完了！<br>";
+            
+            // テーブル作成後の再確認
+            echo "<h3>テーブル作成後の確認</h3>";
+            foreach ($required_tables as $table) {
+                $sql = "SHOW TABLES LIKE ?";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([$table]);
+                
+                if ($stmt->fetch()) {
+                    echo "✓ {$table}: 作成成功<br>";
+                } else {
+                    echo "✗ {$table}: 作成失敗<br>";
+                }
+                $stmt->closeCursor();
+            }
+            
         } else {
             echo "❌ SQLファイルが見つかりません: {$sql_file}<br>";
         }
