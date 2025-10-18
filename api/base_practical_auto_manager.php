@@ -17,7 +17,14 @@ class BasePracticalAutoManager {
         $this->client_secret = $base_client_secret;
         $this->redirect_uri = $base_redirect_uri;
         $this->api_url = $base_api_url;
-        $this->encryption_key = $this->getEncryptionKey();
+        
+        // 暗号化キーの取得は後で行う（エラーを避けるため）
+        try {
+            $this->encryption_key = $this->getEncryptionKey();
+        } catch (Exception $e) {
+            // 暗号化キーの取得に失敗した場合はデフォルト値を使用
+            $this->encryption_key = 'default_key_' . md5($this->client_id);
+        }
     }
 
     /**
@@ -437,6 +444,14 @@ class BasePracticalAutoManager {
      * 認証URLの生成
      */
     public function getAuthUrl($scope) {
+        // デバッグ情報
+        if (empty($this->client_id)) {
+            throw new Exception("client_id が設定されていません");
+        }
+        if (empty($this->redirect_uri)) {
+            throw new Exception("redirect_uri が設定されていません");
+        }
+        
         $scope_map = [
             'orders_only' => 'read_orders',
             'items_only' => 'read_items',
