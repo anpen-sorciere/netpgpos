@@ -107,8 +107,16 @@ if (isset($_GET['code'])) {
                     $scope_key = $_GET['state'];
                     $_SESSION['base_current_scope'] = $scope_key;
                     
-                    // スコープ別のトークンも保存（新しいシステム）
-                    require_once __DIR__ . '/base_practical_auto_manager.php';
+                // スコープ別のトークンも保存（新しいシステム）
+                require_once __DIR__ . '/base_practical_auto_manager.php';
+                
+                // データベース接続情報の確認
+                echo "<h4>データベース接続情報確認:</h4>";
+                echo "host: " . (isset($host) ? $host : '未設定') . "<br>";
+                echo "user: " . (isset($user) ? $user : '未設定') . "<br>";
+                echo "dbname: " . (isset($dbname) ? $dbname : '未設定') . "<br>";
+                
+                try {
                     $practical_manager = new BasePracticalAutoManager();
                     $practical_manager->saveScopeToken(
                         $scope_key,
@@ -117,7 +125,10 @@ if (isset($_GET['code'])) {
                         $token_data['expires_in'] ?? 3600
                     );
                     
-                    echo "保存されたスコープ: " . $scope_key . "<br>";
+                    echo "✅ データベースに保存成功: " . $scope_key . "<br>";
+                } catch (Exception $e) {
+                    echo "❌ データベース保存エラー: " . $e->getMessage() . "<br>";
+                }
                 }
                 
                 echo "保存されたリフレッシュトークン: " . (isset($token_data['refresh_token']) ? 'あり' : 'なし') . "<br>";
