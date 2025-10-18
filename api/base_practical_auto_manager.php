@@ -205,6 +205,24 @@ class BasePracticalAutoManager {
         // アクセストークンの有効期限チェック
         if ($current_time >= $token_data['access_expires']) {
             $this->logSystemEvent("ACCESS_TOKEN_EXPIRED", "スコープ {$scope_key} のアクセストークンが期限切れ");
+            
+            // リフレッシュトークンが有効な場合は自動更新を試行
+            if ($current_time < $token_data['refresh_expires']) {
+                try {
+                    $this->logSystemEvent("AUTO_REFRESH_ATTEMPT", "スコープ {$scope_key} の自動リフレッシュを試行");
+                    $this->refreshScopeToken($scope_key);
+                    
+                    // 更新後のトークンデータを再取得
+                    $token_data = $this->getScopeToken($scope_key);
+                    if ($token_data && $current_time < $token_data['access_expires']) {
+                        $this->logSystemEvent("AUTO_REFRESH_SUCCESS", "スコープ {$scope_key} の自動リフレッシュ成功");
+                        return true;
+                    }
+                } catch (Exception $e) {
+                    $this->logSystemEvent("AUTO_REFRESH_FAILED", "スコープ {$scope_key} の自動リフレッシュ失敗: " . $e->getMessage());
+                }
+            }
+            
             return false;
         }
         
