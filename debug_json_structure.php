@@ -4,8 +4,8 @@
  * 注文データの詳細な構造を表示して、キャスト名とニックネームの場所を特定
  */
 session_start();
-require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/base_practical_auto_manager.php';
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/api/base_practical_auto_manager.php';
 
 echo "<h1>BASE API JSONデータ構造確認</h1>";
 echo "<p>注文データの詳細な構造を表示して、キャスト名とニックネームの場所を特定します</p>";
@@ -53,7 +53,7 @@ try {
     echo "<h2>3. 商品情報の詳細構造</h2>";
     if (isset($order['order_items']) && is_array($order['order_items'])) {
         foreach ($order['order_items'] as $index => $item) {
-            echo "<h3>商品 {$index + 1}</h3>";
+            echo "<h3>商品 " . ($index + 1) . "</h3>";
             echo "<div style='background: #e8f4fd; padding: 10px; border: 1px solid #b3d9ff; border-radius: 3px; margin-bottom: 10px;'>";
             
             if (isset($item['item_detail']) && is_array($item['item_detail'])) {
