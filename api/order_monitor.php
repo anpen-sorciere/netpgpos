@@ -328,28 +328,40 @@ try {
                                             echo '</small>';
                                         }
                                         
-                                        // 更新日時の表示
+                                        // 更新日時の表示（注文日時と異なる場合のみ）
                                         if (isset($order['modified']) && $order['modified'] !== null) {
-                                            echo '<br><small style="color: #6c757d;">更新: ';
                                             $modified_value = $order['modified'];
+                                            $modified_timestamp = null;
+                                            
+                                            // modifiedの日時を取得
                                             if (is_array($modified_value)) {
-                                                echo htmlspecialchars(json_encode($modified_value, JSON_UNESCAPED_UNICODE));
+                                                // 配列の場合はスキップ
                                             } else {
-                                                // Unix timestampかどうかチェック
                                                 if (is_numeric($modified_value)) {
-                                                    // Unix timestampの場合
-                                                    echo htmlspecialchars(date('Y/m/d H:i', $modified_value));
+                                                    $modified_timestamp = $modified_value;
                                                 } else {
-                                                    // 文字列の場合
-                                                    $timestamp = strtotime($modified_value);
-                                                    if ($timestamp !== false) {
-                                                        echo htmlspecialchars(date('Y/m/d H:i', $timestamp));
-                                                    } else {
-                                                        echo htmlspecialchars($modified_value);
-                                                    }
+                                                    $modified_timestamp = strtotime($modified_value);
                                                 }
                                             }
-                                            echo '</small>';
+                                            
+                                            // orderedの日時を取得
+                                            $ordered_timestamp = null;
+                                            $ordered_value = $order['ordered'] ?? null;
+                                            if ($ordered_value !== null) {
+                                                if (is_numeric($ordered_value)) {
+                                                    $ordered_timestamp = $ordered_value;
+                                                } else {
+                                                    $ordered_timestamp = strtotime($ordered_value);
+                                                }
+                                            }
+                                            
+                                            // 更新日時が注文日時と異なる場合のみ表示
+                                            if ($modified_timestamp !== null && $ordered_timestamp !== null && 
+                                                $modified_timestamp !== $ordered_timestamp) {
+                                                echo '<br><small style="color: #6c757d;">更新: ';
+                                                echo htmlspecialchars(date('Y/m/d H:i', $modified_timestamp));
+                                                echo '</small>';
+                                            }
                                         }
                                         ?>
                                     </td>
