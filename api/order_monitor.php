@@ -561,7 +561,12 @@ try {
         // AJAXでデータのみを更新（画面リロードなし）
         function refreshOrderData() {
             fetch('order_data_ajax.php')
-                .then(response => response.text())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('ネットワークエラー: ' + response.status);
+                    }
+                    return response.text();
+                })
                 .then(data => {
                     // 現在展開されている詳細の状態を保存
                     var expandedOrders = [];
@@ -576,36 +581,46 @@ try {
                     // テーブル部分のみを更新
                     var tableContainer = document.getElementById('orders-table-container');
                     if (tableContainer) {
-                        tableContainer.innerHTML = data;
+                        // 一時的に更新を無効化
+                        var oldContent = tableContainer.innerHTML;
                         
-                        // 展開されていた詳細を再展開
-                        expandedOrders.forEach(function(orderId) {
-                            var detailRow = document.getElementById('detail-' + orderId);
-                            var toggleButton = document.getElementById('toggle-' + orderId);
-                            if (detailRow && toggleButton) {
-                                detailRow.style.display = 'table-row';
-                                toggleButton.innerHTML = '<i class="fas fa-chevron-up"></i> 詳細を閉じる';
-                                
-                                // 詳細がまだ読み込まれていない場合は読み込む
-                                if (!detailRow.dataset.loaded) {
-                                    detailRow.innerHTML = '<td colspan="7" style="padding: 20px; text-align: center;"><i class="fas fa-spinner fa-spin"></i> 注文詳細を読み込み中...</td>';
+                        try {
+                            tableContainer.innerHTML = data;
+                            
+                            // 展開されていた詳細を再展開
+                            expandedOrders.forEach(function(orderId) {
+                                var detailRow = document.getElementById('detail-' + orderId);
+                                var toggleButton = document.getElementById('toggle-' + orderId);
+                                if (detailRow && toggleButton) {
+                                    detailRow.style.display = 'table-row';
+                                    toggleButton.innerHTML = '<i class="fas fa-chevron-up"></i> 詳細を閉じる';
                                     
-                                    fetch('order_detail_ajax.php?order_id=' + encodeURIComponent(orderId))
-                                        .then(response => response.text())
-                                        .then(detailData => {
-                                            detailRow.innerHTML = '<td colspan="7" style="padding: 0;">' + detailData + '</td>';
-                                            detailRow.dataset.loaded = 'true';
-                                        })
-                                        .catch(error => {
-                                            detailRow.innerHTML = '<td colspan="7" style="padding: 20px; color: #dc3545;">エラー: ' + error.message + '</td>';
-                                        });
+                                    // 詳細がまだ読み込まれていない場合は読み込む
+                                    if (!detailRow.dataset.loaded) {
+                                        detailRow.innerHTML = '<td colspan="6" style="padding: 20px; text-align: center;"><i class="fas fa-spinner fa-spin"></i> 注文詳細を読み込み中...</td>';
+                                        
+                                        fetch('order_detail_ajax.php?order_id=' + encodeURIComponent(orderId))
+                                            .then(response => response.text())
+                                            .then(detailData => {
+                                                detailRow.innerHTML = '<td colspan="6" style="padding: 0;">' + detailData + '</td>';
+                                                detailRow.dataset.loaded = 'true';
+                                            })
+                                            .catch(error => {
+                                                detailRow.innerHTML = '<td colspan="6" style="padding: 20px; color: #dc3545;">エラー: ' + error.message + '</td>';
+                                            });
+                                    }
                                 }
-                            }
-                        });
+                            });
+                        } catch (error) {
+                            // エラーが発生した場合は元の内容を復元
+                            console.error('テーブル更新エラー:', error);
+                            tableContainer.innerHTML = oldContent;
+                        }
                     }
                 })
                 .catch(error => {
                     console.error('データ更新エラー:', error);
+                    // エラー時は静かに失敗（画面を壊さない）
                 });
         }
         

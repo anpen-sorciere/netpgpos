@@ -6,7 +6,7 @@ require_once __DIR__ . '/base_api_client.php';
 header('Content-Type: text/html; charset=UTF-8');
 
 if (!isset($_SESSION['base_access_token'])) {
-    echo '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #dc3545;">BASE API認証が必要です。<br><a href="scope_switcher.php" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">BASE API認証を実行</a></td></tr>';
+    echo '<div class="no-orders" style="text-align: center; padding: 20px; color: #dc3545;">BASE API認証が必要です。<br><a href="scope_switcher.php" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">BASE API認証を実行</a></div>';
     exit;
 }
 
@@ -33,9 +33,23 @@ try {
     });
     
     if (empty($orders)) {
-        echo '<tr><td colspan="6" style="text-align: center; padding: 20px;">注文データがありません</td></tr>';
+        echo '<div class="no-orders"><i class="fas fa-inbox"></i><br>注文データがありません</div>';
         exit;
     }
+    
+    // テーブル全体を返す
+    echo '<table class="order-table">';
+    echo '<thead>';
+    echo '<tr>';
+    echo '<th>注文ID</th>';
+    echo '<th>注文日時</th>';
+    echo '<th>お客様名</th>';
+    echo '<th>ステータス</th>';
+    echo '<th>金額・決済</th>';
+    echo '<th>詳細</th>';
+    echo '</tr>';
+    echo '</thead>';
+    echo '<tbody>';
     
     foreach ($orders as $order) {
         echo '<tr>';
@@ -228,7 +242,10 @@ try {
         echo '</tr>';
     }
     
+    echo '</tbody>';
+    echo '</table>';
+    
 } catch (Exception $e) {
-    echo '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #dc3545;">エラー: ' . htmlspecialchars($e->getMessage()) . '</td></tr>';
+    echo '<div class="no-orders" style="text-align: center; padding: 20px; color: #dc3545;">エラー: ' . htmlspecialchars($e->getMessage()) . '</div>';
 }
 ?>
