@@ -31,12 +31,12 @@ try {
         $orders_data = $baseApi->getOrders(50, 0); // 最新50件
         $orders = $orders_data['orders'] ?? [];
         
-        // 最新の注文が上に来るようにソート（利用可能なキーでソート）
+        // 最新の注文が上に来るようにソート（注文日時順）
         if (!empty($orders)) {
-            $sort_key = 'unique_key'; // BASE APIの実際のキーを使用
-            if (!isset($orders[0]['unique_key'])) {
-                // unique_keyが存在しない場合、他のキーを試す
-                $possible_keys = ['ordered', 'modified', 'id', 'order_no', 'order_number', 'created_at', 'date'];
+            $sort_key = 'ordered'; // 注文日時でソート
+            if (!isset($orders[0]['ordered'])) {
+                // orderedが存在しない場合、他の日時キーを試す
+                $possible_keys = ['modified', 'created_at', 'date', 'order_date'];
                 foreach ($possible_keys as $key) {
                     if (isset($orders[0][$key])) {
                         $sort_key = $key;
@@ -52,11 +52,24 @@ try {
                         return 0; // キーが存在しない場合は順序を変更しない
                     }
                     
-                    if (is_numeric($a[$sort_key]) && is_numeric($b[$sort_key])) {
-                        return $b[$sort_key] - $a[$sort_key];
+                    $time_a = $a[$sort_key];
+                    $time_b = $b[$sort_key];
+                    
+                    // タイムスタンプに変換
+                    if (is_numeric($time_a)) {
+                        $timestamp_a = $time_a;
                     } else {
-                        return strcmp($b[$sort_key], $a[$sort_key]);
+                        $timestamp_a = strtotime($time_a);
                     }
+                    
+                    if (is_numeric($time_b)) {
+                        $timestamp_b = $time_b;
+                    } else {
+                        $timestamp_b = strtotime($time_b);
+                    }
+                    
+                    // 降順ソート（新しい日時が上に来る）
+                    return $timestamp_b - $timestamp_a;
                 });
             } catch (Exception $e) {
                 // ソートエラーは無視
@@ -225,9 +238,6 @@ try {
                                     <td class="order-date">
                                         <?php
                                         $date_value = $order['ordered'] ?? 'N/A';
-                                        
-                                        // デバッグ：元の値を表示
-                                        echo "<small style='color: #999;'>元値: " . htmlspecialchars($date_value) . "</small><br>";
                                         
                                         if ($date_value !== 'N/A') {
                                             // タイムスタンプの形式を確認
