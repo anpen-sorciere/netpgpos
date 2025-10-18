@@ -364,12 +364,12 @@ class BasePracticalAutoManager {
         try {
             // 注文データ取得
             $auth_log[] = "注文データ取得を開始...";
-            $orders_data = $this->getDataWithAutoAuth('注文のみ', '/orders', ['limit' => $limit]);
+            $orders_data = $this->getDataWithAutoAuth('orders_only', '/orders', ['limit' => $limit]);
             $auth_log[] = "注文データ取得成功: " . count($orders_data['orders']) . "件";
             
             // 商品データ取得
             $auth_log[] = "商品データ取得を開始...";
-            $items_data = $this->getDataWithAutoAuth('アイテムのみ', '/items', ['limit' => 100]);
+            $items_data = $this->getDataWithAutoAuth('items_only', '/items', ['limit' => 100]);
             $auth_log[] = "商品データ取得成功: " . count($items_data['items']) . "件";
             
             // データ合成
@@ -459,8 +459,8 @@ class BasePracticalAutoManager {
         }
         
         $scope_map = [
-            '注文のみ' => 'read_orders',
-            'アイテムのみ' => 'read_items',
+            'orders_only' => 'read_orders',
+            'items_only' => 'read_items',
             'users_only' => 'read_users',
             'users_mail_only' => 'read_users_mail',
             'savings_only' => 'read_savings',
@@ -486,7 +486,7 @@ class BasePracticalAutoManager {
      * 認証状態の確認
      */
     public function getAuthStatus() {
-        $scopes = ['注文のみ', 'アイテムのみ', 'users_only', 'users_mail_only', 'savings_only', 'write_items_only', 'write_orders_only'];
+        $scopes = ['orders_only', 'items_only', 'users_only', 'users_mail_only', 'savings_only', 'write_items_only', 'write_orders_only'];
         $status = [];
         
         foreach ($scopes as $scope) {
