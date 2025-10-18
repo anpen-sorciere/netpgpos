@@ -263,14 +263,14 @@ try {
             </div>
         <?php else: ?>
             <div class="auto-refresh">
-                <i class="fas fa-sync-alt"></i> 30秒間隔で自動更新中...
+                <i class="fas fa-sync-alt"></i> 60秒間隔で自動更新中...
             </div>
             
             <div class="order-monitor">
                 <h2><i class="fas fa-list"></i> 注文一覧（最新順）</h2>
                 <div style="background-color: #e7f3ff; padding: 10px; border-radius: 5px; margin-bottom: 20px; font-size: 0.9em;">
                     <i class="fas fa-info-circle"></i> 
-                    <strong>自動更新:</strong> 30秒間隔でデータを更新します（API制限を考慮）
+                    <strong>自動更新:</strong> 60秒間隔でデータを更新します（スムーズなアニメーション付き）
                 </div>
                 
                 <?php if (empty($orders)): ?>
@@ -568,8 +568,10 @@ try {
 
 
     <script>
-        // AJAXでデータのみを更新（画面リロードなし）
+        // AJAXでデータのみを更新（スムーズなアニメーション付き）
         function refreshOrderData() {
+            showUpdateIndicator(); // 更新開始を表示
+            
             fetch('order_data_ajax.php')
                 .then(response => {
                     if (!response.ok) {
@@ -582,6 +584,7 @@ try {
                     if (data.includes('アクセストークンが無効') || data.includes('再認証が必要') || data.includes('BASE API認証が必要')) {
                         console.warn('認証エラーが発生しました。再認証が必要です。');
                         showAuthError();
+                        hideUpdateIndicator();
                         return;
                     }
                     
@@ -589,6 +592,7 @@ try {
                     if (data.includes('hour_api_limit') || data.includes('APIの利用上限')) {
                         console.warn('BASE API利用上限に達しました。更新を一時停止します。');
                         showApiLimitMessage();
+                        hideUpdateIndicator();
                         return;
                     }
                     
@@ -602,50 +606,73 @@ try {
                         }
                     });
                     
-                    // テーブル部分のみを更新
-                    var tableContainer = document.getElementById('orders-table-container');
-                    if (tableContainer) {
-                        // 一時的に更新を無効化
-                        var oldContent = tableContainer.innerHTML;
-                        
-                        try {
-                            tableContainer.innerHTML = data;
-                            
-                            // 展開されていた詳細を再展開
-                            expandedOrders.forEach(function(orderId) {
-                                var detailRow = document.getElementById('detail-' + orderId);
-                                var toggleButton = document.getElementById('toggle-' + orderId);
-                                if (detailRow && toggleButton) {
-                                    detailRow.style.display = 'table-row';
-                                    toggleButton.innerHTML = '<i class="fas fa-chevron-up"></i> 詳細を閉じる';
-                                    
-                                    // 詳細がまだ読み込まれていない場合は読み込む
-                                    if (!detailRow.dataset.loaded) {
-                                        detailRow.innerHTML = '<td colspan="6" style="padding: 20px; text-align: center;"><i class="fas fa-spinner fa-spin"></i> 注文詳細を読み込み中...</td>';
-                                        
-                                        fetch('order_detail_ajax.php?order_id=' + encodeURIComponent(orderId))
-                                            .then(response => response.text())
-                                            .then(detailData => {
-                                                detailRow.innerHTML = '<td colspan="6" style="padding: 0;">' + detailData + '</td>';
-                                                detailRow.dataset.loaded = 'true';
-                                            })
-                                            .catch(error => {
-                                                detailRow.innerHTML = '<td colspan="6" style="padding: 20px; color: #dc3545;">エラー: ' + error.message + '</td>';
-                                            });
-                                    }
-                                }
-                            });
-                        } catch (error) {
-                            // エラーが発生した場合は元の内容を復元
-                            console.error('テーブル更新エラー:', error);
-                            tableContainer.innerHTML = oldContent;
-                        }
-                    }
+                    // スムーズな更新処理
+                    smoothUpdateTable(data, expandedOrders);
+                    
+                    // 更新完了後にインジケーターを非表示
+                    setTimeout(hideUpdateIndicator, 500);
                 })
                 .catch(error => {
                     console.error('データ更新エラー:', error);
+                    hideUpdateIndicator();
                     // エラー時は静かに失敗（画面を壊さない）
                 });
+        }
+        
+        // スムーズなテーブル更新
+        function smoothUpdateTable(newData, expandedOrders) {
+            var tableContainer = document.getElementById('orders-table-container');
+            if (!tableContainer) return;
+            
+            // フェードアウト効果
+            tableContainer.style.transition = 'opacity 0.3s ease-in-out';
+            tableContainer.style.opacity = '0.3';
+            
+            setTimeout(function() {
+                try {
+                    // データを更新
+                    tableContainer.innerHTML = newData;
+                    
+                    // フェードイン効果
+                    tableContainer.style.opacity = '1';
+                    
+                    // 展開されていた詳細を再展開
+                    expandedOrders.forEach(function(orderId) {
+                        var detailRow = document.getElementById('detail-' + orderId);
+                        var toggleButton = document.getElementById('toggle-' + orderId);
+                        if (detailRow && toggleButton) {
+                            detailRow.style.display = 'table-row';
+                            toggleButton.innerHTML = '<i class="fas fa-chevron-up"></i> 詳細を閉じる';
+                            
+                            // 詳細がまだ読み込まれていない場合は読み込む
+                            if (!detailRow.dataset.loaded) {
+                                detailRow.innerHTML = '<td colspan="6" style="padding: 20px; text-align: center;"><i class="fas fa-spinner fa-spin"></i> 注文詳細を読み込み中...</td>';
+                                
+                                fetch('order_detail_ajax.php?order_id=' + encodeURIComponent(orderId))
+                                    .then(response => response.text())
+                                    .then(detailData => {
+                                        detailRow.innerHTML = '<td colspan="6" style="padding: 0;">' + detailData + '</td>';
+                                        detailRow.dataset.loaded = 'true';
+                                    })
+                                    .catch(error => {
+                                        detailRow.innerHTML = '<td colspan="6" style="padding: 20px; color: #dc3545;">エラー: ' + error.message + '</td>';
+                                    });
+                            }
+                        }
+                    });
+                    
+                    // アニメーション完了後にtransitionをリセット
+                    setTimeout(function() {
+                        tableContainer.style.transition = '';
+                    }, 300);
+                    
+                } catch (error) {
+                    console.error('テーブル更新エラー:', error);
+                    // エラー時は元の状態に戻す
+                    tableContainer.style.opacity = '1';
+                    tableContainer.style.transition = '';
+                }
+            }, 150); // フェードアウトの半分の時間で更新
         }
         
         // 認証エラーメッセージの表示
@@ -692,8 +719,29 @@ try {
             }, 30 * 60 * 1000); // 30分
         }
         
-        // 30秒間隔でデータのみを更新（API制限を考慮）
-        setInterval(refreshOrderData, 30000);
+        // 60秒間隔でデータのみを更新（API制限を考慮、ちらつき軽減）
+        setInterval(refreshOrderData, 60000);
+        
+        // 更新インジケーターの管理
+        var updateIndicator = null;
+        
+        function showUpdateIndicator() {
+            if (updateIndicator) return; // 既に表示されている場合は何もしない
+            
+            updateIndicator = document.createElement('div');
+            updateIndicator.id = 'update-indicator';
+            updateIndicator.style.cssText = 'position: fixed; top: 10px; right: 10px; background-color: #007bff; color: white; padding: 8px 12px; border-radius: 20px; font-size: 0.8em; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.2);';
+            updateIndicator.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> 更新中...';
+            
+            document.body.appendChild(updateIndicator);
+        }
+        
+        function hideUpdateIndicator() {
+            if (updateIndicator && updateIndicator.parentNode) {
+                updateIndicator.parentNode.removeChild(updateIndicator);
+                updateIndicator = null;
+            }
+        }
         
         // ページ読み込み時に全ての詳細を自動展開（キッチン用）
         window.onload = function() {
