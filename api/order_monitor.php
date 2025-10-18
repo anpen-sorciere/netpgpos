@@ -29,45 +29,14 @@ try {
     } else {
         // 注文データを取得
         $orders_data = $baseApi->getOrders(50, 0); // 最新50件
-        
-        // デバッグ：実際のデータ構造を確認
-        echo "<div style='background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 8px;'>";
-        echo "<h3>デバッグ情報：BASE APIレスポンス</h3>";
-        echo "<pre>" . htmlspecialchars(print_r($orders_data, true)) . "</pre>";
-        echo "</div>";
-
         $orders = $orders_data['orders'] ?? [];
-
-        // データ構造を確認してからソート
-        if (!empty($orders)) {
-            $first_order = $orders[0];
-            echo "<div style='background: #e9ecef; padding: 15px; margin: 20px 0; border-radius: 8px;'>";
-            echo "<h3>デバッグ情報：最初の注文データ構造</h3>";
-            echo "<pre>" . htmlspecialchars(print_r($first_order, true)) . "</pre>";
-            echo "</div>";
-
-            // 利用可能なキーを確認
-            $available_keys = array_keys($first_order);
-            echo "<div style='background: #d4edda; padding: 15px; margin: 20px 0; border-radius: 8px;'>";
-            echo "<h3>利用可能なキー</h3>";
-            echo "<p>" . implode(', ', $available_keys) . "</p>";
-            echo "</div>";
-            
-            // 各注文のキーも確認
-            echo "<div style='background: #fff3cd; padding: 15px; margin: 20px 0; border-radius: 8px;'>";
-            echo "<h3>全注文のキー確認</h3>";
-            foreach ($orders as $index => $order) {
-                echo "<p>注文 " . ($index + 1) . ": " . implode(', ', array_keys($order)) . "</p>";
-            }
-            echo "</div>";
-        }
         
         // 最新の注文が上に来るようにソート（利用可能なキーでソート）
         if (!empty($orders)) {
-            $sort_key = 'order_id';
-            if (!isset($orders[0]['order_id'])) {
-                // order_idが存在しない場合、他のキーを試す
-                $possible_keys = ['id', 'order_no', 'order_number', 'created_at', 'date'];
+            $sort_key = 'unique_key'; // BASE APIの実際のキーを使用
+            if (!isset($orders[0]['unique_key'])) {
+                // unique_keyが存在しない場合、他のキーを試す
+                $possible_keys = ['ordered', 'modified', 'id', 'order_no', 'order_number', 'created_at', 'date'];
                 foreach ($possible_keys as $key) {
                     if (isset($orders[0][$key])) {
                         $sort_key = $key;
@@ -75,10 +44,6 @@ try {
                     }
                 }
             }
-            
-            echo "<div style='background: #cce5ff; padding: 15px; margin: 20px 0; border-radius: 8px;'>";
-            echo "<h3>ソートキー: " . $sort_key . "</h3>";
-            echo "</div>";
             
             try {
                 usort($orders, function($a, $b) use ($sort_key) {
@@ -94,9 +59,7 @@ try {
                     }
                 });
             } catch (Exception $e) {
-                echo "<div style='background: #f8d7da; padding: 15px; margin: 20px 0; border-radius: 8px;'>";
-                echo "<h3>ソートエラー: " . htmlspecialchars($e->getMessage()) . "</h3>";
-                echo "</div>";
+                // ソートエラーは無視
             }
         }
     }
@@ -257,52 +220,57 @@ try {
                             <?php foreach ($orders as $order): ?>
                                 <tr>
                                     <td class="order-id">
-                                        #<?= htmlspecialchars($order['order_id'] ?? $order['id'] ?? $order['order_no'] ?? 'N/A') ?>
+                                        #<?= htmlspecialchars($order['unique_key'] ?? 'N/A') ?>
                                     </td>
                                     <td class="order-date">
                                         <?php
-                                        $date_key = 'order_date';
-                                        if (!isset($order[$date_key])) {
-                                            $possible_date_keys = ['created_at', 'date', 'order_created_at'];
-                                            foreach ($possible_date_keys as $key) {
-                                                if (isset($order[$key])) {
-                                                    $date_key = $key;
-                                                    break;
-                                                }
-                                            }
+                                        $date_value = $order['ordered'] ?? 'N/A';
+                                        if ($date_value !== 'N/A') {
+                                            $date_value = date('Y/m/d H:i', strtotime($date_value));
                                         }
-                                        echo isset($order[$date_key]) ? date('Y/m/d H:i', strtotime($order[$date_key])) : 'N/A';
+                                        echo htmlspecialchars($date_value);
                                         ?>
                                     </td>
-                                    <td><?= htmlspecialchars($order['customer_name'] ?? $order['customer'] ?? $order['buyer_name'] ?? '未設定') ?></td>
+                                    <td><?= htmlspecialchars(trim(($order['first_name'] ?? '') . ' ' . ($order['last_name'] ?? '')) ?: 'N/A') ?></td>
                                     <td>
                                         <?php
-                                        $status = $order['status'] ?? $order['order_status'] ?? 'unknown';
+                                        $status = 'N/A';
+                                        $status_class = 'status-unpaid';
+                                        
+                                        // paymentキーで支払い状況を判定
+                                        if (isset($order['payment'])) {
+                                            if ($order['payment'] === 'paid' || $order['payment'] === true) {
+                                                $status = '支払済';
+                                                $status_class = 'status-paid';
+                                            } else {
+                                                $status = '未払い';
+                                                $status_class = 'status-unpaid';
+                                            }
+                                        }
+                                        
+                                        // dispatch_statusキーで配送状況を判定
+                                        if (isset($order['dispatch_status'])) {
+                                            if ($order['dispatch_status'] === 'dispatched' || $order['dispatch_status'] === true) {
+                                                $status = '発送済';
+                                                $status_class = 'status-shipped';
+                                            }
+                                        }
+                                        
+                                        // cancelledキーでキャンセル状況を判定
+                                        if (isset($order['cancelled']) && $order['cancelled'] === true) {
+                                            $status = 'キャンセル';
+                                            $status_class = 'status-cancelled';
+                                        }
                                         ?>
-                                        <span class="order-status status-<?= htmlspecialchars($status) ?>">
+                                        <span class="order-status <?= $status_class ?>">
                                             <?= htmlspecialchars($status) ?>
                                         </span>
                                     </td>
                                     <td>
-                                        <?php
-                                        $total_key = 'total';
-                                        if (!isset($order[$total_key])) {
-                                            $possible_total_keys = ['amount', 'price', 'order_total', 'total_amount'];
-                                            foreach ($possible_total_keys as $key) {
-                                                if (isset($order[$key])) {
-                                                    $total_key = $key;
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                        echo isset($order[$total_key]) ? '¥' . number_format($order[$total_key]) : 'N/A';
-                                        ?>
+                                        ¥<?= number_format($order['total'] ?? 0) ?>
                                     </td>
                                     <td>
-                                        <?php
-                                        $order_id = $order['order_id'] ?? $order['id'] ?? $order['order_no'] ?? 'N/A';
-                                        ?>
-                                        <button class="btn btn-sm btn-secondary" onclick="showOrderDetail('<?= htmlspecialchars($order_id) ?>')">
+                                        <button class="btn btn-sm btn-secondary" onclick="showOrderDetail('<?= htmlspecialchars($order['unique_key'] ?? 'N/A') ?>')">
                                             <i class="fas fa-eye"></i> 詳細
                                         </button>
                                     </td>
