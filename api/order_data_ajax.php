@@ -17,6 +17,10 @@ try {
     $practical_manager = new BasePracticalAutoManager();
     $combined_data = $practical_manager->getCombinedOrderData(50);
     $orders = $combined_data['merged_orders'] ?? [];
+} catch (Exception $e) {
+    echo '<div class="no-orders" style="text-align: center; padding: 20px; color: #dc3545;">データ取得エラー: ' . htmlspecialchars($e->getMessage()) . '</div>';
+    exit;
+}
     
     // 注文を日時で降順ソート
     usort($orders, function($a, $b) {

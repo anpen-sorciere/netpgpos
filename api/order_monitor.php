@@ -24,14 +24,15 @@ try {
     $practical_manager = new BasePracticalAutoManager();
     
     // 自動でデータを取得・合成
-    $combined_data = $practical_manager->getCombinedOrderData(50);
-    
-    if ($combined_data['error']) {
-        $error_message = $combined_data['error'];
-        $orders = [];
-    } else {
+    try {
+        $combined_data = $practical_manager->getCombinedOrderData(50);
         $orders_data = $combined_data['merged_orders'];
         $orders = $orders_data['orders'] ?? [];
+        $error_message = '';
+    } catch (Exception $e) {
+        $error_message = $e->getMessage();
+        $orders = [];
+    }
         
         // 最新の注文が上に来るようにソート（注文日時順）
         if (!empty($orders)) {
