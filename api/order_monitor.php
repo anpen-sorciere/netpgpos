@@ -1046,11 +1046,56 @@ try {
             }
         };
         
+        // 注文ステータス更新機能
+        function updateOrderStatus(uniqueKey, status, message, videoUrl) {
+            if (!confirm("注文ステータスを更新しますか？")) {
+                return;
+            }
+            
+            const data = {
+                unique_key: uniqueKey,
+                status: status,
+                message: message || "",
+                video_url: videoUrl || ""
+            };
+            
+            fetch("update_order_status.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert("注文ステータスを更新しました");
+                    // ページを再読み込みして最新データを表示
+                    location.reload();
+                } else {
+                    alert("エラー: " + result.error);
+                }
+            })
+            .catch(error => {
+                alert("エラーが発生しました: " + error.message);
+            });
+        }
+        
+        function showShippingModal(uniqueKey) {
+            const message = prompt("発送通知メッセージを入力してください（省略可）:");
+            if (message === null) return; // キャンセル
+            
+            const videoUrl = prompt("動画URLを入力してください（省略可）:");
+            if (videoUrl === null) return; // キャンセル
+            
+            updateOrderStatus(uniqueKey, "dispatched", message, videoUrl);
+        }
+        
         // 認証エラー表示
         function showAuthError() {
             var errorDiv = document.createElement('div');
             errorDiv.className = 'error-message';
-            errorDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i><br>BASE API認証が必要です。<br><a href="scope_switcher.php" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-top: 10px; display: inline-block;">BASE API認証を実行</a>';
+            errorDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i><br>BASE API認証が必要です。<br><a href="test_practical_auto.php" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-top: 10px; display: inline-block;">BASE API認証を実行</a>';
             
             var container = document.getElementById('orders-container');
             if (container) {
