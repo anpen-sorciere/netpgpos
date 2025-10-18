@@ -541,6 +541,27 @@ try {
                             }
                             $nickname_display = !empty($nicknames) ? implode(', ', $nicknames) : '';
                             
+                            // デバッグ情報（開発時のみ）
+                            if (isset($_GET['debug']) && $_GET['debug'] === 'nickname') {
+                                echo '<div style="background: #f0f0f0; padding: 10px; margin: 5px 0; border: 1px solid #ccc;">';
+                                echo '<strong>デバッグ情報 (注文ID: ' . $order_id . '):</strong><br>';
+                                echo '抽出されたニックネーム: ' . ($nickname_display ?: 'なし') . '<br>';
+                                if (isset($order['order_items']) && is_array($order['order_items'])) {
+                                    foreach ($order['order_items'] as $itemIndex => $item) {
+                                        echo '商品' . ($itemIndex + 1) . 'のオプション: ';
+                                        if (isset($item['options']) && is_array($item['options'])) {
+                                            foreach ($item['options'] as $option) {
+                                                echo '[' . htmlspecialchars($option['option_name'] ?? '') . '=' . htmlspecialchars($option['option_value'] ?? '') . '] ';
+                                            }
+                                        } else {
+                                            echo 'なし';
+                                        }
+                                        echo '<br>';
+                                    }
+                                }
+                                echo '</div>';
+                            }
+                            
                             // 注文日時
                             $date_value = $order['ordered'] ?? 'N/A';
                             if ($date_value !== 'N/A') {
