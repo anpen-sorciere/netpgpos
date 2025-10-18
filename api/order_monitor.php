@@ -283,10 +283,23 @@ try {
                                         // キャンセル日時の表示
                                         if (isset($order['cancelled']) && $order['cancelled'] !== null) {
                                             echo '<br><small style="color: #dc3545;">キャンセル: ';
-                                            if (is_array($order['cancelled'])) {
-                                                echo htmlspecialchars(json_encode($order['cancelled'], JSON_UNESCAPED_UNICODE));
+                                            $cancelled_value = $order['cancelled'];
+                                            if (is_array($cancelled_value)) {
+                                                echo htmlspecialchars(json_encode($cancelled_value, JSON_UNESCAPED_UNICODE));
                                             } else {
-                                                echo htmlspecialchars($order['cancelled']);
+                                                // Unix timestampかどうかチェック
+                                                if (is_numeric($cancelled_value)) {
+                                                    // Unix timestampの場合
+                                                    echo htmlspecialchars(date('Y/m/d H:i', $cancelled_value));
+                                                } else {
+                                                    // 文字列の場合
+                                                    $timestamp = strtotime($cancelled_value);
+                                                    if ($timestamp !== false) {
+                                                        echo htmlspecialchars(date('Y/m/d H:i', $timestamp));
+                                                    } else {
+                                                        echo htmlspecialchars($cancelled_value);
+                                                    }
+                                                }
                                             }
                                             echo '</small>';
                                         }
@@ -294,10 +307,23 @@ try {
                                         // 発送日時の表示
                                         if (isset($order['dispatched']) && $order['dispatched'] !== null) {
                                             echo '<br><small style="color: #28a745;">発送: ';
-                                            if (is_array($order['dispatched'])) {
-                                                echo htmlspecialchars(json_encode($order['dispatched'], JSON_UNESCAPED_UNICODE));
+                                            $dispatched_value = $order['dispatched'];
+                                            if (is_array($dispatched_value)) {
+                                                echo htmlspecialchars(json_encode($dispatched_value, JSON_UNESCAPED_UNICODE));
                                             } else {
-                                                echo htmlspecialchars($order['dispatched']);
+                                                // Unix timestampかどうかチェック
+                                                if (is_numeric($dispatched_value)) {
+                                                    // Unix timestampの場合
+                                                    echo htmlspecialchars(date('Y/m/d H:i', $dispatched_value));
+                                                } else {
+                                                    // 文字列の場合
+                                                    $timestamp = strtotime($dispatched_value);
+                                                    if ($timestamp !== false) {
+                                                        echo htmlspecialchars(date('Y/m/d H:i', $timestamp));
+                                                    } else {
+                                                        echo htmlspecialchars($dispatched_value);
+                                                    }
+                                                }
                                             }
                                             echo '</small>';
                                         }
@@ -305,10 +331,23 @@ try {
                                         // 更新日時の表示
                                         if (isset($order['modified']) && $order['modified'] !== null) {
                                             echo '<br><small style="color: #6c757d;">更新: ';
-                                            if (is_array($order['modified'])) {
-                                                echo htmlspecialchars(json_encode($order['modified'], JSON_UNESCAPED_UNICODE));
+                                            $modified_value = $order['modified'];
+                                            if (is_array($modified_value)) {
+                                                echo htmlspecialchars(json_encode($modified_value, JSON_UNESCAPED_UNICODE));
                                             } else {
-                                                echo htmlspecialchars($order['modified']);
+                                                // Unix timestampかどうかチェック
+                                                if (is_numeric($modified_value)) {
+                                                    // Unix timestampの場合
+                                                    echo htmlspecialchars(date('Y/m/d H:i', $modified_value));
+                                                } else {
+                                                    // 文字列の場合
+                                                    $timestamp = strtotime($modified_value);
+                                                    if ($timestamp !== false) {
+                                                        echo htmlspecialchars(date('Y/m/d H:i', $timestamp));
+                                                    } else {
+                                                        echo htmlspecialchars($modified_value);
+                                                    }
+                                                }
                                             }
                                             echo '</small>';
                                         }
