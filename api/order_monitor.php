@@ -23,30 +23,46 @@ if ($utype == 1024) {
 try {
     $practical_manager = new BasePracticalAutoManager();
     
+    // ページング設定
+    $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
+    $limit = 50;
+    $offset = ($page - 1) * $limit;
+    
     // 自動でデータを取得・合成
     try {
-        $combined_data = $practical_manager->getCombinedOrderData(50);
+        $combined_data = $practical_manager->getCombinedOrderData(1000); // 全件取得してページング処理
         $orders_data = $combined_data['merged_orders'];
         
         // データ構造を確認して適切に注文データを取得
         if (isset($orders_data['orders'])) {
             // 従来の構造: merged_orders.orders
-            $orders = $orders_data['orders'];
+            $all_orders = $orders_data['orders'];
         } else {
             // 新しい構造: merged_orders自体が注文配列
-            $orders = $orders_data;
+            $all_orders = $orders_data;
         }
+        
+        // 注文日時で並び替え（新しいものが先頭）
+        usort($all_orders, function($a, $b) {
+            $date_a = $a['ordered'] ?? 0;
+            $date_b = $b['ordered'] ?? 0;
+            return $date_b - $date_a; // 降順（新しいものが先頭）
+        });
+        
+        // ページング処理
+        $total_orders = count($all_orders);
+        $total_pages = ceil($total_orders / $limit);
+        $orders = array_slice($all_orders, $offset, $limit);
         
         // $error_message = ''; // 空文字列を設定しない
         
         // デバッグ: データ構造を確認
         echo '<div style="background-color: #fff3cd; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
         echo '<strong>DEBUG order_monitor.php:</strong> ';
-        echo 'merged_orders存在: ' . (isset($combined_data['merged_orders']) ? 'Yes' : 'No') . ' | ';
-        echo 'orders_data型: ' . gettype($orders_data) . ' | ';
-        echo 'orders配列数: ' . count($orders) . ' | ';
-        echo 'データ構造: ' . (isset($orders_data['orders']) ? 'merged_orders.orders' : 'merged_orders直接') . ' | ';
-        echo '最初の注文キー: ' . (count($orders) > 0 ? htmlspecialchars(json_encode(array_keys($orders[0]), JSON_UNESCAPED_UNICODE)) : 'なし');
+        echo '全注文数: ' . $total_orders . ' | ';
+        echo '現在ページ: ' . $page . '/' . $total_pages . ' | ';
+        echo '表示件数: ' . count($orders) . ' | ';
+        echo 'オフセット: ' . $offset;
         echo '</div>';
         
         // デバッグ: 認証状況を確認
@@ -414,6 +430,43 @@ try {
             font-size: 0.8em;
         }
         
+        .pagination-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .pagination-stats {
+            font-size: 0.9em;
+            color: #6c757d;
+            font-weight: 500;
+        }
+        
+        .pagination-nav {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        
+        .pagination-nav a,
+        .pagination-nav span {
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.9em;
+            transition: all 0.2s ease;
+        }
+        
+        .pagination-nav a:hover {
+            background-color: #e9ecef;
+            transform: translateY(-1px);
+        }
+        
         .popup-buttons {
             display: flex;
             gap: 5px;
@@ -630,7 +683,38 @@ try {
                     注文データがありません
                 </div>
             <?php else: ?>
-                <div id="orders-table-container">
+                <div class="pagination-info">
+            <div class="pagination-stats">
+                全 <?= $total_orders ?> 件中 <?= $offset + 1 ?>-<?= min($offset + $limit, $total_orders) ?> 件を表示 (<?= $page ?>/<?= $total_pages ?> ページ)
+            </div>
+            <div class="pagination-nav">
+                <?php if ($page > 1): ?>
+                    <a href="?page=1" class="btn btn-sm btn-outline-primary">最初</a>
+                    <a href="?page=<?= $page - 1 ?>" class="btn btn-sm btn-outline-primary">前へ</a>
+                <?php endif; ?>
+                
+                <?php
+                // ページ番号の表示範囲を計算
+                $start_page = max(1, $page - 2);
+                $end_page = min($total_pages, $page + 2);
+                
+                for ($i = $start_page; $i <= $end_page; $i++):
+                ?>
+                    <?php if ($i == $page): ?>
+                        <span class="btn btn-sm btn-primary"><?= $i ?></span>
+                    <?php else: ?>
+                        <a href="?page=<?= $i ?>" class="btn btn-sm btn-outline-primary"><?= $i ?></a>
+                    <?php endif; ?>
+                <?php endfor; ?>
+                
+                <?php if ($page < $total_pages): ?>
+                    <a href="?page=<?= $page + 1 ?>" class="btn btn-sm btn-outline-primary">次へ</a>
+                    <a href="?page=<?= $total_pages ?>" class="btn btn-sm btn-outline-primary">最後</a>
+                <?php endif; ?>
+            </div>
+        </div>
+        
+        <div id="orders-table-container">
                 <table class="order-table">
                     <thead>
                         <tr>
@@ -820,6 +904,38 @@ try {
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+                
+                <!-- 下部ページングナビゲーション -->
+                <div class="pagination-info">
+                    <div class="pagination-stats">
+                        全 <?= $total_orders ?> 件中 <?= $offset + 1 ?>-<?= min($offset + $limit, $total_orders) ?> 件を表示 (<?= $page ?>/<?= $total_pages ?> ページ)
+                    </div>
+                    <div class="pagination-nav">
+                        <?php if ($page > 1): ?>
+                            <a href="?page=1" class="btn btn-sm btn-outline-primary">最初</a>
+                            <a href="?page=<?= $page - 1 ?>" class="btn btn-sm btn-outline-primary">前へ</a>
+                        <?php endif; ?>
+                        
+                        <?php
+                        // ページ番号の表示範囲を計算
+                        $start_page = max(1, $page - 2);
+                        $end_page = min($total_pages, $page + 2);
+                        
+                        for ($i = $start_page; $i <= $end_page; $i++):
+                        ?>
+                            <?php if ($i == $page): ?>
+                                <span class="btn btn-sm btn-primary"><?= $i ?></span>
+                            <?php else: ?>
+                                <a href="?page=<?= $i ?>" class="btn btn-sm btn-outline-primary"><?= $i ?></a>
+                            <?php endif; ?>
+                        <?php endfor; ?>
+                        
+                        <?php if ($page < $total_pages): ?>
+                            <a href="?page=<?= $page + 1 ?>" class="btn btn-sm btn-outline-primary">次へ</a>
+                            <a href="?page=<?= $total_pages ?>" class="btn btn-sm btn-outline-primary">最後</a>
+                        <?php endif; ?>
+                    </div>
+                </div>
                 </div>
             <?php endif; ?>
         </div>
