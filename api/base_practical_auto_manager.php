@@ -364,12 +364,12 @@ class BasePracticalAutoManager {
         try {
             // 注文データ取得
             $auth_log[] = "注文データ取得を開始...";
-            $orders_data = $this->getDataWithAutoAuth('orders_only', '/orders', ['limit' => $limit]);
+            $orders_data = $this->getDataWithAutoAuth('read_orders', '/orders', ['limit' => $limit]);
             $auth_log[] = "注文データ取得成功: " . count($orders_data['orders']) . "件";
             
             // 商品データ取得
             $auth_log[] = "商品データ取得を開始...";
-            $items_data = $this->getDataWithAutoAuth('items_only', '/items', ['limit' => 100]);
+            $items_data = $this->getDataWithAutoAuth('read_items', '/items', ['limit' => 100]);
             $auth_log[] = "商品データ取得成功: " . count($items_data['items']) . "件";
             
             // データ合成
@@ -459,13 +459,13 @@ class BasePracticalAutoManager {
         }
         
         $scope_map = [
-            'orders_only' => 'read_orders',
-            'items_only' => 'read_items',
-            'users_only' => 'read_users',
-            'users_mail_only' => 'read_users_mail',
-            'savings_only' => 'read_savings',
-            'write_items_only' => 'write_items',
-            'write_orders_only' => 'write_orders'
+            'read_orders' => 'read_orders',
+            'read_items' => 'read_items',
+            'read_users' => 'read_users',
+            'read_users_mail' => 'read_users_mail',
+            'read_savings' => 'read_savings',
+            'write_items' => 'write_items',
+            'write_orders' => 'write_orders'
         ];
         
         $api_scope = $scope_map[$scope] ?? $scope;
@@ -486,7 +486,7 @@ class BasePracticalAutoManager {
      * 認証状態の確認
      */
     public function getAuthStatus() {
-        $scopes = ['orders_only', 'items_only', 'users_only', 'users_mail_only', 'savings_only', 'write_items_only', 'write_orders_only'];
+        $scopes = ['read_orders', 'read_items', 'read_users', 'read_users_mail', 'read_savings', 'write_items', 'write_orders'];
         $status = [];
         
         foreach ($scopes as $scope) {
