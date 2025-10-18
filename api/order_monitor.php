@@ -270,7 +270,7 @@ try {
                 <h2><i class="fas fa-list"></i> 注文一覧（最新順）</h2>
                 <div style="background-color: #e7f3ff; padding: 10px; border-radius: 5px; margin-bottom: 20px; font-size: 0.9em;">
                     <i class="fas fa-info-circle"></i> 
-                    <strong>自動更新:</strong> 60秒間隔でデータを更新します（スムーズなアニメーション付き）
+                    <strong>賢い自動更新:</strong> 60秒間隔でデータをチェックし、変更がある場合のみ更新します
                 </div>
                 
                 <?php if (empty($orders)): ?>
@@ -568,7 +568,10 @@ try {
 
 
     <script>
-        // AJAXでデータのみを更新（スムーズなアニメーション付き）
+        // 現在のデータを保存する変数
+        var currentOrderData = null;
+        
+        // AJAXでデータのみを更新（データ変更検知付き）
         function refreshOrderData() {
             showUpdateIndicator(); // 更新開始を表示
             
@@ -596,27 +599,105 @@ try {
                         return;
                     }
                     
-                    // 現在展開されている詳細の状態を保存
-                    var expandedOrders = [];
-                    var detailRows = document.querySelectorAll('[id^="detail-"]');
-                    detailRows.forEach(function(row) {
-                        if (row.style.display !== 'none') {
-                            var orderId = row.id.replace('detail-', '');
-                            expandedOrders.push(orderId);
-                        }
-                    });
+                    // データ変更の検知
+                    if (hasDataChanged(data)) {
+                        console.log('データに変更を検知しました。更新を実行します。');
+                        
+                        // 現在展開されている詳細の状態を保存
+                        var expandedOrders = [];
+                        var detailRows = document.querySelectorAll('[id^="detail-"]');
+                        detailRows.forEach(function(row) {
+                            if (row.style.display !== 'none') {
+                                var orderId = row.id.replace('detail-', '');
+                                expandedOrders.push(orderId);
+                            }
+                        });
+                        
+                        // スムーズな更新処理
+                        smoothUpdateTable(data, expandedOrders);
+                        
+                        // 現在のデータを更新
+                        currentOrderData = data;
+                    } else {
+                        console.log('データに変更はありません。更新をスキップします。');
+                        hideUpdateIndicator(); // 更新インジケーターを非表示
+                        showNoChangeIndicator(); // 変更なしインジケーターを表示
+                        setTimeout(hideUpdateIndicator, 1500); // 1.5秒後に非表示
+                    }
                     
-                    // スムーズな更新処理
-                    smoothUpdateTable(data, expandedOrders);
-                    
-                    // 更新完了後にインジケーターを非表示
-                    setTimeout(hideUpdateIndicator, 500);
+                    // データ変更があった場合のみ更新完了後にインジケーターを非表示
+                    if (hasDataChanged(data)) {
+                        setTimeout(hideUpdateIndicator, 500);
+                    }
                 })
                 .catch(error => {
                     console.error('データ更新エラー:', error);
                     hideUpdateIndicator();
                     // エラー時は静かに失敗（画面を壊さない）
                 });
+        }
+        
+        // より詳細なデータ比較機能
+        function hasDataChanged(newData) {
+            if (!currentOrderData) {
+                // 初回は必ず更新
+                return true;
+            }
+            
+            // JSONデータとして比較（より確実）
+            try {
+                var currentOrders = extractOrderData(currentOrderData);
+                var newOrders = extractOrderData(newData);
+                
+                // 注文数が変わった場合
+                if (currentOrders.length !== newOrders.length) {
+                    return true;
+                }
+                
+                // 各注文の詳細を比較
+                for (var i = 0; i < currentOrders.length; i++) {
+                    if (currentOrders[i].id !== newOrders[i].id || 
+                        currentOrders[i].status !== newOrders[i].status ||
+                        currentOrders[i].total !== newOrders[i].total) {
+                        return true;
+                    }
+                }
+                
+                return false;
+            } catch (error) {
+                console.warn('データ比較エラー:', error);
+                // エラー時は安全のため更新を実行
+                return true;
+            }
+        }
+        
+        // テーブルデータから注文情報を抽出
+        function extractOrderData(htmlData) {
+            var orders = [];
+            var tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlData;
+            
+            var rows = tempDiv.querySelectorAll('tbody tr');
+            rows.forEach(function(row) {
+                // 詳細行はスキップ
+                if (row.id && row.id.startsWith('detail-')) {
+                    return;
+                }
+                
+                var orderIdCell = row.querySelector('.order-id');
+                var statusCell = row.querySelector('.order-status');
+                var totalCell = row.querySelector('td:nth-child(5)'); // 合計金額の列
+                
+                if (orderIdCell && statusCell && totalCell) {
+                    orders.push({
+                        id: orderIdCell.textContent.trim(),
+                        status: statusCell.textContent.trim(),
+                        total: totalCell.textContent.trim()
+                    });
+                }
+            });
+            
+            return orders;
         }
         
         // スムーズなテーブル更新
@@ -732,6 +813,17 @@ try {
             updateIndicator.id = 'update-indicator';
             updateIndicator.style.cssText = 'position: fixed; top: 10px; right: 10px; background-color: #007bff; color: white; padding: 8px 12px; border-radius: 20px; font-size: 0.8em; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.2);';
             updateIndicator.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> 更新中...';
+            
+            document.body.appendChild(updateIndicator);
+        }
+        
+        function showNoChangeIndicator() {
+            if (updateIndicator) return; // 既に表示されている場合は何もしない
+            
+            updateIndicator = document.createElement('div');
+            updateIndicator.id = 'update-indicator';
+            updateIndicator.style.cssText = 'position: fixed; top: 10px; right: 10px; background-color: #28a745; color: white; padding: 8px 12px; border-radius: 20px; font-size: 0.8em; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.2);';
+            updateIndicator.innerHTML = '<i class="fas fa-check"></i> データに変更なし';
             
             document.body.appendChild(updateIndicator);
         }
