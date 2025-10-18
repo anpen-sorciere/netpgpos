@@ -78,8 +78,12 @@ try {
     
     $scopes = ['orders_only', 'items_only'];
     foreach ($scopes as $scope) {
-        $auth_url = $practical_manager->getAuthUrl($scope);
-        echo "<p><a href='{$auth_url}' style='background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px;' target='_blank'>{$scope} 認証を実行</a></p>";
+        try {
+            $auth_url = $practical_manager->getAuthUrl($scope);
+            echo "<p><a href='{$auth_url}' style='background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px;' target='_blank'>{$scope} 認証を実行</a></p>";
+        } catch (Exception $e) {
+            echo "<p style='color: red;'>✗ {$scope} 認証URL生成エラー: " . htmlspecialchars($e->getMessage()) . "</p>";
+        }
     }
     echo "</div>";
     

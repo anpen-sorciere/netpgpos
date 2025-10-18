@@ -434,6 +434,34 @@ class BasePracticalAutoManager {
     }
 
     /**
+     * 認証URLの生成
+     */
+    public function getAuthUrl($scope) {
+        $scope_map = [
+            'orders_only' => 'read_orders',
+            'items_only' => 'read_items',
+            'users_only' => 'read_users',
+            'users_mail_only' => 'read_users_mail',
+            'savings_only' => 'read_savings',
+            'write_items_only' => 'write_items',
+            'write_orders_only' => 'write_orders'
+        ];
+        
+        $api_scope = $scope_map[$scope] ?? $scope;
+        $state = $scope; // スコープをstateとして使用
+        
+        $params = [
+            'response_type' => 'code',
+            'client_id' => $this->client_id,
+            'redirect_uri' => $this->redirect_uri,
+            'scope' => $api_scope,
+            'state' => $state
+        ];
+        
+        return 'https://api.thebase.in/oauth/authorize?' . http_build_query($params);
+    }
+
+    /**
      * 認証状態の確認
      */
     public function getAuthStatus() {
