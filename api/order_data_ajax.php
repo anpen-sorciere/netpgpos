@@ -1,20 +1,22 @@
 <?php
 session_start();
 require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/base_api_client.php';
+require_once __DIR__ . '/base_practical_auto_manager.php';
 
-// 認証チェック
-if (!isset($_SESSION['base_access_token'])) {
-    echo '<div class="no-orders" style="text-align: center; padding: 20px; color: #dc3545;">BASE API認証が必要です。<br><a href="scope_switcher.php" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">BASE API認証を実行</a></div>';
+// 認証チェック（新しいシステム）
+$auth_status = (new BasePracticalAutoManager())->getAuthStatus();
+$orders_ok = isset($auth_status['orders_only']['authenticated']) && $auth_status['orders_only']['authenticated'];
+$items_ok = isset($auth_status['items_only']['authenticated']) && $auth_status['items_only']['authenticated'];
+
+if (!$orders_ok || !$items_ok) {
+    echo '<div class="no-orders" style="text-align: center; padding: 20px; color: #dc3545;">BASE API認証が必要です。<br><a href="test_practical_auto.php" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">BASE API認証を実行</a></div>';
     exit;
 }
 
 try {
-    $api = new BaseApiClient($_SESSION['base_access_token']);
-    
-    // 注文データを取得
-    $orders_data = $api->getOrders(50, 0);
-    $orders = $orders_data['orders'] ?? [];
+    $practical_manager = new BasePracticalAutoManager();
+    $combined_data = $practical_manager->getCombinedOrderData(50);
+    $orders = $combined_data['merged_orders'] ?? [];
     
     // 注文を日時で降順ソート
     usort($orders, function($a, $b) {
@@ -61,8 +63,9 @@ try {
                         $option_name = $option['option_name'] ?? '';
                         $option_value = $option['option_value'] ?? '';
                         
-                        // ニックネーム関連のオプションを検索（より柔軟に）
-                        if (stripos($option_name, 'ニックネーム') !== false || 
+                        // ニックネーム関連のオプションを検索（お客様名を追加）
+                        if (stripos($option_name, 'お客様名') !== false ||
+                            stripos($option_name, 'ニックネーム') !== false || 
                             stripos($option_name, 'nickname') !== false ||
                             stripos($option_name, 'お名前') !== false ||
                             stripos($option_name, '名前') !== false ||

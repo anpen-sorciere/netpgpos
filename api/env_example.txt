@@ -1,0 +1,18 @@
+# BASE API 事前認証コード設定
+# このファイルを .env として保存し、事前認証コードを設定してください
+
+# BASE API 事前認証コード（各スコープ用）
+# BASE管理画面で事前に生成した認証コードを設定
+BASE_PRE_AUTH_CODE_ORDERS=your_pre_auth_code_for_orders
+BASE_PRE_AUTH_CODE_ITEMS=your_pre_auth_code_for_items
+BASE_PRE_AUTH_CODE_USERS=your_pre_auth_code_for_users
+BASE_PRE_AUTH_CODE_USERS_MAIL=your_pre_auth_code_for_users_mail
+BASE_PRE_AUTH_CODE_SAVINGS=your_pre_auth_code_for_savings
+BASE_PRE_AUTH_CODE_WRITE_ITEMS=your_pre_auth_code_for_write_items
+BASE_PRE_AUTH_CODE_WRITE_ORDERS=your_pre_auth_code_for_write_orders
+
+# 注意事項：
+# 1. 事前認証コードはBASE管理画面で生成してください
+# 2. 各スコープごとに個別の認証コードが必要です
+# 3. 認証コードは機密情報のため、適切に管理してください
+# 4. このファイルは .gitignore に追加することを推奨します

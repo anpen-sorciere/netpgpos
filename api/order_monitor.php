@@ -5,7 +5,7 @@ ini_set('display_errors', 1);
 
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../functions.php';
-require_once __DIR__ . '/base_api_client.php';
+require_once __DIR__ . '/base_practical_auto_manager.php';
 
 session_start();
 
@@ -21,14 +21,16 @@ if ($utype == 1024) {
 
 // BASE API認証チェック
 try {
-    $baseApi = new BaseApiClient();
+    $practical_manager = new BasePracticalAutoManager();
     
-    if ($baseApi->needsAuth()) {
-        $error_message = 'BASE API認証が必要です。注文管理権限で認証してください。';
+    // 自動でデータを取得・合成
+    $combined_data = $practical_manager->getCombinedOrderData(50);
+    
+    if ($combined_data['error']) {
+        $error_message = $combined_data['error'];
         $orders = [];
     } else {
-        // 注文データを取得
-        $orders_data = $baseApi->getOrders(50, 0); // 最新50件
+        $orders_data = $combined_data['merged_orders'];
         $orders = $orders_data['orders'] ?? [];
         
         // 最新の注文が上に来るようにソート（注文日時順）
@@ -523,8 +525,9 @@ try {
                                             $option_name = $option['option_name'] ?? '';
                                             $option_value = $option['option_value'] ?? '';
                                             
-                                            // ニックネーム関連のオプションを検索（より柔軟に）
-                                            if (stripos($option_name, 'ニックネーム') !== false || 
+                                            // ニックネーム関連のオプションを検索（お客様名を追加）
+                                            if (stripos($option_name, 'お客様名') !== false ||
+                                                stripos($option_name, 'ニックネーム') !== false || 
                                                 stripos($option_name, 'nickname') !== false ||
                                                 stripos($option_name, 'お名前') !== false ||
                                                 stripos($option_name, '名前') !== false ||
@@ -546,7 +549,7 @@ try {
                                 echo '<div style="background: #f0f0f0; padding: 10px; margin: 5px 0; border: 1px solid #ccc;">';
                                 echo '<strong>デバッグ情報 (注文ID: ' . $order_id . '):</strong><br>';
                                 echo '抽出されたニックネーム: ' . ($nickname_display ?: 'なし') . '<br>';
-                                echo '検索キーワード: ニックネーム, nickname, お名前, 名前, name, 呼び名, 愛称<br>';
+                                echo '検索キーワード: お客様名, ニックネーム, nickname, お名前, 名前, name, 呼び名, 愛称<br>';
                                 if (isset($order['order_items']) && is_array($order['order_items'])) {
                                     foreach ($order['order_items'] as $itemIndex => $item) {
                                         echo '商品' . ($itemIndex + 1) . ' (' . htmlspecialchars($item['title'] ?? 'N/A') . ') のオプション: ';
@@ -558,6 +561,7 @@ try {
                                                 
                                                 // 各キーワードでのマッチングテスト
                                                 $matches = [];
+                                                if (stripos($option_name, 'お客様名') !== false) $matches[] = 'お客様名';
                                                 if (stripos($option_name, 'ニックネーム') !== false) $matches[] = 'ニックネーム';
                                                 if (stripos($option_name, 'nickname') !== false) $matches[] = 'nickname';
                                                 if (stripos($option_name, 'お名前') !== false) $matches[] = 'お名前';

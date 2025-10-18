@@ -31,7 +31,7 @@ class BaseApiClient {
             'response_type' => 'code',
             'client_id' => $this->client_id,
             'redirect_uri' => 'https://purplelion51.sakura.ne.jp/netpgpos/api/base_callback_debug.php',
-            'scope' => 'read_orders,read_products'
+            'scope' => 'read_orders,read_items'
         ];
 
         return 'https://api.thebase.in/1/oauth/authorize?' . http_build_query($params);

@@ -102,6 +102,27 @@ if (isset($_GET['code'])) {
                 $_SESSION['base_refresh_token'] = $token_data['refresh_token'] ?? '';
                 $_SESSION['base_token_expires'] = time() + ($token_data['expires_in'] ?? 3600);
                 
+                // スコープ情報を保存（stateパラメータから）
+                if (isset($_GET['state'])) {
+                    $scope_key = $_GET['state'];
+                    $_SESSION['base_current_scope'] = $scope_key;
+                    
+                    // スコープ別のトークンも保存（新しいシステム）
+                    require_once __DIR__ . '/base_practical_auto_manager.php';
+                    $practical_manager = new BasePracticalAutoManager();
+                    $practical_manager->saveScopeToken(
+                        $scope_key,
+                        $token_data['access_token'],
+                        $token_data['refresh_token'] ?? '',
+                        $token_data['expires_in'] ?? 3600
+                    );
+                    
+                    echo "保存されたスコープ: " . $scope_key . "<br>";
+                }
+                
+                echo "保存されたリフレッシュトークン: " . (isset($token_data['refresh_token']) ? 'あり' : 'なし') . "<br>";
+                echo "トークン有効期限: " . ($token_data['expires_in'] ?? '不明') . "秒<br>";
+                
                 echo "<h3>認証成功！</h3>";
                 echo '<a href="../base_data_sync_top.php?utype=1024">BASEデータ同期に戻る</a>';
             } else {
