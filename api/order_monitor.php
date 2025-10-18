@@ -1201,9 +1201,25 @@ try {
                         console.log('行' + index + ' ステータス:', statusText, 'クラス:', statusClass);
                         
                         activeFilters.status.forEach(function(filterStatus) {
+                            // CSSクラスでマッチをチェック
                             if (statusClass.includes('status-' + filterStatus)) {
                                 statusMatch = true;
-                                console.log('マッチ:', filterStatus);
+                                console.log('CSSクラスでマッチ:', filterStatus);
+                            }
+                            
+                            // ステータステキストでマッチをチェック（フォールバック）
+                            var statusTextMap = {
+                                'unpaid': '入金待ち',
+                                'unshippable': '対応開始前',
+                                'ordered': '未対応',
+                                'shipping': '対応中',
+                                'dispatched': '対応済',
+                                'cancelled': 'キャンセル'
+                            };
+                            
+                            if (statusText === statusTextMap[filterStatus]) {
+                                statusMatch = true;
+                                console.log('ステータステキストでマッチ:', filterStatus);
                             }
                         });
                         
