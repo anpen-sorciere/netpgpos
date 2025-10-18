@@ -3,8 +3,7 @@ session_start();
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/base_api_client.php';
 
-header('Content-Type: text/html; charset=UTF-8');
-
+// 認証チェック
 if (!isset($_SESSION['base_access_token'])) {
     echo '<div class="no-orders" style="text-align: center; padding: 20px; color: #dc3545;">BASE API認証が必要です。<br><a href="scope_switcher.php" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">BASE API認証を実行</a></div>';
     exit;

@@ -49,35 +49,35 @@ try {
                 usort($orders, function($a, $b) use ($sort_key) {
                     // キーの存在確認を追加
                     if (!isset($a[$sort_key]) || !isset($b[$sort_key])) {
-                        return 0; // キーが存在しない場合は順序を変更しない
+                        return 0;
                     }
                     
                     $time_a = $a[$sort_key];
                     $time_b = $b[$sort_key];
                     
-                    // タイムスタンプに変換
-                    if (is_numeric($time_a)) {
-                        $timestamp_a = $time_a;
-                    } else {
-                        $timestamp_a = strtotime($time_a);
+                    // 数値の場合はそのまま比較
+                    if (is_numeric($time_a) && is_numeric($time_b)) {
+                        return $time_b - $time_a; // 降順
                     }
                     
-                    if (is_numeric($time_b)) {
-                        $timestamp_b = $time_b;
-                    } else {
-                        $timestamp_b = strtotime($time_b);
+                    // 文字列の場合はタイムスタンプに変換して比較
+                    $timestamp_a = strtotime($time_a);
+                    $timestamp_b = strtotime($time_b);
+                    
+                    if ($timestamp_a === false || $timestamp_b === false) {
+                        return 0;
                     }
                     
-                    // 降順ソート（新しい日時が上に来る）
-                    return $timestamp_b - $timestamp_a;
+                    return $timestamp_b - $timestamp_a; // 降順
                 });
             } catch (Exception $e) {
-                // ソートエラーは無視
+                // ソートエラーが発生した場合はそのまま
+                error_log('ソートエラー: ' . $e->getMessage());
             }
         }
     }
 } catch (Exception $e) {
-    $error_message = 'エラー: ' . $e->getMessage();
+    $error_message = 'BASE API接続エラー: ' . $e->getMessage();
     $orders = [];
 }
 ?>
@@ -87,261 +87,252 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>リアルタイム注文監視 - <?= htmlspecialchars($shop_name) ?></title>
+    <title>リアルタイム注文監視システム - <?= htmlspecialchars($shop_name) ?></title>
     <link href="https://use.fontawesome.com/releases/v5.6.1/css/all.css" rel="stylesheet">
     <link href="https://unpkg.com/sanitize.css" rel="stylesheet"/>
-    <link rel="stylesheet" href="../css/style.css">
     <style>
-        .order-monitor {
-            background-color: #f8f9fa;
-            border-radius: 12px;
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
             padding: 20px;
-            margin-bottom: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2em;
+            font-weight: 300;
+        }
+        
+        .header .shop-name {
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+        
+        .controls {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .refresh-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 0.9em;
+            color: #6c757d;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9em;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+        
+        .btn-xs {
+            padding: 4px 8px;
+            font-size: 0.75em;
+        }
+        
+        .btn-info {
+            background-color: #17a2b8;
+            color: white;
+        }
+        
+        .btn-warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        
+        .btn-success {
+            background-color: #28a745;
+            color: white;
         }
         
         .order-table {
             width: 100%;
             border-collapse: collapse;
-            background-color: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin: 0;
         }
         
         .order-table th {
-            background-color: #3498db;
+            background-color: #343a40;
             color: white;
             padding: 15px;
             text-align: left;
-            font-weight: bold;
+            font-weight: 600;
+            border: none;
         }
         
         .order-table td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #e9ecef;
+            padding: 15px;
+            border-bottom: 1px solid #dee2e6;
+            vertical-align: top;
         }
         
         .order-table tr:hover {
             background-color: #f8f9fa;
         }
         
-        .order-table tr:last-child td {
-            border-bottom: none;
+        .order-header {
+            min-width: 300px;
+        }
+        
+        .order-header-info {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
         
         .order-id {
             font-weight: bold;
-            color: #2c3e50;
+            font-size: 1.1em;
+            color: #007bff;
         }
         
         .order-date {
-            color: #6c757d;
             font-size: 0.9em;
+            color: #6c757d;
         }
         
         .order-status {
+            font-weight: bold;
             padding: 4px 8px;
             border-radius: 4px;
-            font-size: 0.8em;
-            font-weight: bold;
+            font-size: 0.85em;
+            display: inline-block;
+            width: fit-content;
         }
         
         .status-unpaid {
-            background-color: #fff3cd;
-            color: #856404;
+            background-color: #f8d7da;
+            color: #721c24;
         }
         
         .status-paid {
-            background-color: #d1ecf1;
-            color: #0c5460;
-        }
-        
-        .status-shipped {
             background-color: #d4edda;
             color: #155724;
         }
         
+        .status-shipped {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        
         .status-cancelled {
-            background-color: #f8d7da;
+            background-color: #f5c6cb;
             color: #721c24;
         }
         
-        .auto-refresh {
-            background-color: #28a745;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: inline-block;
+        .customer-name {
+            font-weight: 500;
         }
         
-        .error-message {
-            background-color: #f8d7da;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .no-orders {
-            text-align: center;
-            padding: 40px;
-            color: #6c757d;
-            font-style: italic;
-        }
-        
-        /* キッチン用の詳細表示スタイル */
-        .order-detail-content {
-            background-color: #f8f9fa;
-            border-top: 2px solid #dee2e6;
-            padding: 15px;
-        }
-        
-        .order-detail-section {
-            background-color: white;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-        
-        .order-detail-section h3 {
-            margin-top: 0;
-            margin-bottom: 10px;
-            color: #2c3e50;
+        .total-amount {
+            font-weight: bold;
+            color: #28a745;
             font-size: 1.1em;
         }
         
-        .order-detail-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9em;
-        }
-        
-        .order-detail-table td {
-            padding: 8px;
-            border-bottom: 1px solid #e9ecef;
-        }
-        
-        .order-detail-table td:first-child {
-            font-weight: bold;
-            background-color: #f8f9fa;
-            width: 30%;
-        }
-        
-        .items-table {
-            width: 100%;
-            border-collapse: collapse;
+        .popup-buttons {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
             margin-top: 10px;
         }
         
-        .items-table th,
-        .items-table td {
-            padding: 8px;
-            border: 1px solid #dee2e6;
-            text-align: left;
-        }
-        
-        .items-table th {
-            background-color: #e9ecef;
-            font-weight: bold;
-        }
-        
-        /* 簡潔な表示用のスタイル */
-        .order-header {
-            width: 25%;
-            vertical-align: top;
-        }
-        
-        .order-header-info {
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            padding: 15px;
-            border-left: 4px solid #007bff;
-        }
-        
-        .order-header-info .order-id {
-            font-weight: bold;
-            font-size: 1.1em;
-            color: #007bff;
-            margin-bottom: 8px;
-        }
-        
-        .order-header-info .order-date {
-            font-size: 0.9em;
-            color: #6c757d;
-            margin-bottom: 8px;
-        }
-        
-        .order-header-info .order-status {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.8em;
-            font-weight: bold;
-            margin-bottom: 8px;
-        }
-        
-        .order-header-info .customer-name {
-            font-weight: bold;
-            margin-bottom: 8px;
-        }
-        
-        .order-header-info .total-amount {
-            font-weight: bold;
-            font-size: 1.1em;
-            color: #28a745;
-        }
-        
         .order-items {
-            width: 60%;
-            vertical-align: top;
+            min-width: 400px;
         }
         
         .item-detail {
-            background-color: #ffffff;
-            border: 1px solid #dee2e6;
-            border-radius: 6px;
-            padding: 12px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
             margin-bottom: 10px;
         }
         
         .item-name {
             font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 6px;
+            color: #495057;
+            margin-bottom: 5px;
         }
         
         .item-variation {
-            font-size: 0.9em;
+            font-size: 0.85em;
             color: #6c757d;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
         
-        .item-quantity,
-        .item-price,
-        .item-total,
-        .item-status {
+        .item-quantity, .item-price, .item-total, .item-status {
             font-size: 0.9em;
-            margin-bottom: 3px;
+            margin-bottom: 2px;
         }
         
         .item-options {
             margin-top: 8px;
             padding-top: 8px;
-            border-top: 1px solid #e9ecef;
+            border-top: 1px solid #dee2e6;
         }
         
         .option-item {
             font-size: 0.8em;
-            color: #495057;
+            color: #6c757d;
             margin-bottom: 2px;
         }
         
         .item-separator {
-            margin: 8px 0;
+            margin: 10px 0;
             border: none;
-            border-top: 1px solid #e9ecef;
+            border-top: 1px solid #dee2e6;
         }
         
         .no-items {
@@ -351,21 +342,28 @@ try {
             padding: 20px;
         }
         
-        /* ポップアップボタン用のスタイル */
-        .popup-buttons {
-            margin-top: 10px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
+        .no-orders {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+            font-size: 1.2em;
         }
         
-        .btn-xs {
-            padding: 2px 6px;
-            font-size: 0.7em;
-            border-radius: 3px;
+        .no-orders i {
+            font-size: 3em;
+            margin-bottom: 20px;
+            opacity: 0.5;
         }
         
-        /* ポップアップモーダル用のスタイル */
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px;
+            text-align: center;
+        }
+        
         .popup-modal {
             display: none;
             position: fixed;
@@ -378,365 +376,266 @@ try {
         }
         
         .popup-content {
-            background-color: #fefefe;
-            margin: 15% auto;
+            background-color: white;
+            margin: 5% auto;
             padding: 20px;
-            border: 1px solid #888;
             border-radius: 8px;
             width: 80%;
-            max-width: 500px;
-            max-height: 70vh;
+            max-width: 600px;
+            max-height: 80vh;
             overflow-y: auto;
-        }
-        
-        .popup-content h3 {
-            margin-top: 0;
-            color: #2c3e50;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 8px;
-        }
-        
-        .popup-content h4 {
-            color: #495057;
-            margin-top: 15px;
-            margin-bottom: 8px;
-        }
-        
-        .popup-content p {
-            margin-bottom: 8px;
-            line-height: 1.4;
+            position: relative;
         }
         
         .popup-close {
-            color: #aaa;
-            float: right;
+            position: absolute;
+            right: 15px;
+            top: 15px;
             font-size: 28px;
             font-weight: bold;
             cursor: pointer;
+            color: #aaa;
         }
         
-        .popup-close:hover,
-        .popup-close:focus {
-            color: black;
-            text-decoration: none;
+        .popup-close:hover {
+            color: #000;
+        }
+        
+        .popup-detail-content {
+            margin-top: 20px;
+        }
+        
+        .popup-detail-content h4 {
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 5px;
+            margin-top: 20px;
+        }
+        
+        .popup-detail-content p {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+        
+        .popup-detail-content strong {
+            color: #343a40;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                margin: 0;
+                border-radius: 0;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .refresh-info {
+                justify-content: center;
+            }
+            
+            .order-table {
+                font-size: 0.9em;
+            }
+            
+            .order-table th,
+            .order-table td {
+                padding: 10px 8px;
+            }
+            
+            .popup-content {
+                width: 95%;
+                margin: 10% auto;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1><i class="fas fa-shopping-cart"></i> リアルタイム注文監視</h1>
-        <p class="shop-name"><?= htmlspecialchars($shop_name) ?></p>
+        <div class="header">
+            <h1><i class="fas fa-chart-line"></i> リアルタイム注文監視システム</h1>
+            <div class="shop-name"><?= htmlspecialchars($shop_name) ?></div>
+        </div>
         
-        <?php if (isset($error_message)): ?>
-            <div class="error-message">
-                <i class="fas fa-exclamation-triangle"></i> <?= htmlspecialchars($error_message) ?>
-                <br><br>
-                <a href="scope_switcher.php" class="btn btn-primary">
-                    <i class="fas fa-sign-in-alt"></i> 注文管理権限で認証
+        <div class="controls">
+            <div class="refresh-info">
+                <span><i class="fas fa-sync-alt"></i> 自動更新: 30秒間隔</span>
+                <span><i class="fas fa-clock"></i> 最終更新: <span id="last-update">-</span></span>
+                <span><i class="fas fa-list"></i> 表示件数: <span id="order-count">-</span>件</span>
+            </div>
+            <div>
+                <button class="btn btn-primary" onclick="refreshOrderData()">
+                    <i class="fas fa-sync-alt"></i> 手動更新
+                </button>
+                <a href="scope_switcher.php" class="btn btn-secondary">
+                    <i class="fas fa-cog"></i> API設定
                 </a>
             </div>
-        <?php else: ?>
-            <div class="auto-refresh">
-                <i class="fas fa-sync-alt"></i> 30秒間隔で自動更新中...
-            </div>
-            
-            <div class="order-monitor">
-                <h2><i class="fas fa-list"></i> 注文一覧（最新順）</h2>
-                <div style="background-color: #e7f3ff; padding: 10px; border-radius: 5px; margin-bottom: 20px; font-size: 0.9em;">
-                    <i class="fas fa-info-circle"></i> 
-                    <strong>賢い自動更新:</strong> 30秒間隔でデータをチェックし、変更がある場合のみ更新します
-                </div>
-                
-                <?php if (empty($orders)): ?>
-                    <div class="no-orders">
-                        <i class="fas fa-inbox"></i><br>
-                        注文データがありません
-                    </div>
-                <?php else: ?>
-                    <div id="orders-table-container">
-                    <table class="order-table">
-                        <thead>
-                            <tr>
-                                <th>注文ヘッダー</th>
-                                <th>商品明細</th>
-                                <th>詳細</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($orders as $order): ?>
-                                <tr>
-                                    <td class="order-id">
-                                        #<?= htmlspecialchars($order['unique_key'] ?? 'N/A') ?>
-                                    </td>
-                                    <td class="order-date">
-                                        <?php
-                                        $date_value = $order['ordered'] ?? 'N/A';
-                                        
-                                        if ($date_value !== 'N/A') {
-                                            // タイムスタンプの形式を確認
-                                            if (is_numeric($date_value)) {
-                                                // Unix timestampの場合
-                                                $date_value = date('Y/m/d H:i', $date_value);
-                                            } else {
-                                                // 文字列の場合
-                                                $timestamp = strtotime($date_value);
-                                                if ($timestamp !== false) {
-                                                    $date_value = date('Y/m/d H:i', $timestamp);
-                                                } else {
-                                                    $date_value = '日時エラー';
-                                                }
-                                            }
-                                        }
-                                        echo htmlspecialchars($date_value);
-                                        
-                                        // 配送日時の表示
-                                        if (isset($order['delivery_date']) && $order['delivery_date'] !== null) {
-                                            echo '<br><small style="color: #6c757d;">配送: ';
-                                            if (is_array($order['delivery_date'])) {
-                                                echo htmlspecialchars(json_encode($order['delivery_date'], JSON_UNESCAPED_UNICODE));
-                                            } else {
-                                                echo htmlspecialchars($order['delivery_date']);
-                                            }
-                                            if (isset($order['delivery_time_zone']) && $order['delivery_time_zone'] !== null) {
-                                                $time_zone = $order['delivery_time_zone'];
-                                                $time_zones = [
-                                                    '0812' => '午前中',
-                                                    '1214' => '12時~14時',
-                                                    '1416' => '14時~16時',
-                                                    '1618' => '16時~18時',
-                                                    '1820' => '18時~20時',
-                                                    '2021' => '20時~21時'
-                                                ];
-                                                $time_display = $time_zones[$time_zone] ?? $time_zone;
-                                                echo ' ' . htmlspecialchars($time_display);
-                                            }
-                                            echo '</small>';
-                                        }
-                                        
-                                        // キャンセル日時の表示
-                                        if (isset($order['cancelled']) && $order['cancelled'] !== null) {
-                                            echo '<br><small style="color: #dc3545;">キャンセル: ';
-                                            $cancelled_value = $order['cancelled'];
-                                            if (is_array($cancelled_value)) {
-                                                echo htmlspecialchars(json_encode($cancelled_value, JSON_UNESCAPED_UNICODE));
-                                            } else {
-                                                // Unix timestampかどうかチェック
-                                                if (is_numeric($cancelled_value)) {
-                                                    // Unix timestampの場合
-                                                    echo htmlspecialchars(date('Y/m/d H:i', $cancelled_value));
-                                                } else {
-                                                    // 文字列の場合
-                                                    $timestamp = strtotime($cancelled_value);
-                                                    if ($timestamp !== false) {
-                                                        echo htmlspecialchars(date('Y/m/d H:i', $timestamp));
-                                                    } else {
-                                                        echo htmlspecialchars($cancelled_value);
-                                                    }
-                                                }
-                                            }
-                                            echo '</small>';
-                                        }
-                                        
-                                        // 発送日時の表示
-                                        if (isset($order['dispatched']) && $order['dispatched'] !== null) {
-                                            echo '<br><small style="color: #28a745;">発送: ';
-                                            $dispatched_value = $order['dispatched'];
-                                            if (is_array($dispatched_value)) {
-                                                echo htmlspecialchars(json_encode($dispatched_value, JSON_UNESCAPED_UNICODE));
-                                            } else {
-                                                // Unix timestampかどうかチェック
-                                                if (is_numeric($dispatched_value)) {
-                                                    // Unix timestampの場合
-                                                    echo htmlspecialchars(date('Y/m/d H:i', $dispatched_value));
-                                                } else {
-                                                    // 文字列の場合
-                                                    $timestamp = strtotime($dispatched_value);
-                                                    if ($timestamp !== false) {
-                                                        echo htmlspecialchars(date('Y/m/d H:i', $timestamp));
-                                                    } else {
-                                                        echo htmlspecialchars($dispatched_value);
-                                                    }
-                                                }
-                                            }
-                                            echo '</small>';
-                                        }
-                                        
-                                        // 更新日時の表示（注文日時と異なる場合のみ）
-                                        if (isset($order['modified']) && $order['modified'] !== null) {
-                                            $modified_value = $order['modified'];
-                                            $modified_timestamp = null;
-                                            
-                                            // modifiedの日時を取得
-                                            if (is_array($modified_value)) {
-                                                // 配列の場合はスキップ
-                                            } else {
-                                                if (is_numeric($modified_value)) {
-                                                    $modified_timestamp = $modified_value;
-                                                } else {
-                                                    $modified_timestamp = strtotime($modified_value);
-                                                }
-                                            }
-                                            
-                                            // orderedの日時を取得
-                                            $ordered_timestamp = null;
-                                            $ordered_value = $order['ordered'] ?? null;
-                                            if ($ordered_value !== null) {
-                                                if (is_numeric($ordered_value)) {
-                                                    $ordered_timestamp = $ordered_value;
-                                                } else {
-                                                    $ordered_timestamp = strtotime($ordered_value);
-                                                }
-                                            }
-                                            
-                                            // 更新日時が注文日時と異なる場合のみ表示
-                                            if ($modified_timestamp !== null && $ordered_timestamp !== null && 
-                                                $modified_timestamp !== $ordered_timestamp) {
-                                                echo '<br><small style="color: #6c757d;">更新: ';
-                                                echo htmlspecialchars(date('Y/m/d H:i', $modified_timestamp));
-                                                echo '</small>';
-                                            }
-                                        }
-                                        ?>
-                                    </td>
-                                    <td><?= htmlspecialchars(trim(($order['last_name'] ?? '') . ' ' . ($order['first_name'] ?? '')) ?: 'N/A') ?></td>
-                                    <td>
-                                        <?php
-                                        $status = 'N/A';
-                                        $status_class = 'status-unpaid';
-                                        
-                                        // BASE APIの正確なdispatch_statusに基づく判定
-                                        if (isset($order['dispatch_status'])) {
-                                            switch ($order['dispatch_status']) {
-                                                case 'unpaid':
-                                                    $status = '入金待ち';
-                                                    $status_class = 'status-unpaid';
-                                                    break;
-                                                case 'ordered':
-                                                    $status = '未対応';
-                                                    $status_class = 'status-unpaid';
-                                                    break;
-                                                case 'unshippable':
-                                                    $status = '対応開始前';
-                                                    $status_class = 'status-paid';
-                                                    break;
-                                                case 'shipping':
-                                                    $status = '配送中';
-                                                    $status_class = 'status-paid';
-                                                    break;
-                                                case 'dispatched':
-                                                    $status = '対応済';
-                                                    $status_class = 'status-shipped';
-                                                    break;
-                                                case 'cancelled':
-                                                    $status = 'キャンセル';
-                                                    $status_class = 'status-cancelled';
-                                                    break;
-                                                default:
-                                                    $status = '未対応';
-                                                    $status_class = 'status-unpaid';
-                                                    break;
-                                            }
-                                        }
-                                        // dispatch_statusがない場合のフォールバック
-                                        else {
-                                            // cancelledキーでキャンセルをチェック
-                                            if (isset($order['cancelled']) && $order['cancelled'] !== null) {
-                                                $status = 'キャンセル';
-                                                $status_class = 'status-cancelled';
-                                            }
-                                            // dispatchedキーで発送済みをチェック
-                                            elseif (isset($order['dispatched']) && $order['dispatched'] !== null) {
-                                                $status = '対応済';
-                                                $status_class = 'status-shipped';
-                                            }
-                                            // paymentキーで支払い状況をチェック
-                                            elseif (isset($order['payment'])) {
-                                                if ($order['payment'] === 'paid' || $order['payment'] === true) {
-                                                    $status = '対応開始前';
-                                                    $status_class = 'status-paid';
-                                                } else {
-                                                    $status = '入金待ち';
-                                                    $status_class = 'status-unpaid';
-                                                }
-                                            }
-                                            // デフォルト
-                                            else {
-                                                $status = '未対応';
-                                                $status_class = 'status-unpaid';
-                                            }
-                                        }
-                                        ?>
-                                        <span class="order-status <?= $status_class ?>">
-                                            <?= htmlspecialchars($status) ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        ¥<?= number_format($order['total'] ?? 0) ?>
-                                        <?php if (isset($order['payment']) && $order['payment'] !== null): ?>
-                                            <br><small style="color: #6c757d;">
-                                                <?php
-                                                $payment_value = $order['payment'];
-                                                if (is_array($payment_value)) {
-                                                    // 配列の場合は最初の要素を表示
-                                                    $payment_value = $payment_value[0] ?? json_encode($payment_value, JSON_UNESCAPED_UNICODE);
-                                                }
-                                                
-                                                $payment_methods = [
-                                                    'creditcard' => 'クレジットカード',
-                                                    'cod' => '代金引換',
-                                                    'cvs' => 'コンビニ決済',
-                                                    'base_bt' => '銀行振込(BASE口座)',
-                                                    'atobarai' => '後払い決済',
-                                                    'carrier_01' => 'キャリア決済(ドコモ)',
-                                                    'carrier_02' => 'キャリア決済(au)',
-                                                    'carrier_03' => 'キャリア決済(ソフトバンク)',
-                                                    'paypal' => 'PayPal決済',
-                                                    'coin' => 'コイン決済',
-                                                    'amazon_pay' => 'Amazon Pay',
-                                                    'bnpl' => 'Pay ID あと払い',
-                                                    'bnpl_installment' => 'Pay ID 3回あと払い'
-                                                ];
-                                                echo htmlspecialchars($payment_methods[$payment_value] ?? $payment_value);
-                                                ?>
-                                            </small>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <button class="btn btn-sm btn-secondary" id="toggle-<?= htmlspecialchars($order['unique_key'] ?? 'N/A') ?>" onclick="toggleOrderDetail('<?= htmlspecialchars($order['unique_key'] ?? 'N/A') ?>')">
-                                            <i class="fas fa-chevron-down"></i> 詳細を見る
-                                        </button>
-                                    </td>
-                                </tr>
-                                <!-- 注文詳細行 -->
-                                <tr id="detail-<?= htmlspecialchars($order['unique_key'] ?? 'N/A') ?>" style="display: none;">
-                                    <td colspan="7" style="padding: 0;">
-                                        <!-- 注文詳細内容がここに表示されます -->
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                    </div>
-                <?php endif; ?>
-            </div>
-        <?php endif; ?>
+        </div>
         
-        <div class="control-buttons">
-            <a href="../base_data_sync_top.php?utype=<?= htmlspecialchars($utype) ?>" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> BASEデータ同期に戻る
-            </a>
-            <a href="../index.php?utype=<?= htmlspecialchars($utype) ?>" class="btn btn-secondary">
-                <i class="fas fa-home"></i> メニューに戻る
-            </a>
-            <button onclick="refreshOrderData()" class="btn btn-info">
-                <i class="fas fa-sync-alt"></i> 手動更新
-            </button>
-            <a href="scope_switcher.php" class="btn btn-primary">
-                <i class="fas fa-key"></i> 権限切り替え
-            </a>
+        <div id="orders-container">
+            <?php if (isset($error_message)): ?>
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i><br>
+                    <?= htmlspecialchars($error_message) ?><br>
+                    <a href="scope_switcher.php" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-top: 10px; display: inline-block;">BASE API認証を実行</a>
+                </div>
+            <?php elseif (empty($orders)): ?>
+                <div class="no-orders">
+                    <i class="fas fa-inbox"></i><br>
+                    注文データがありません
+                </div>
+            <?php else: ?>
+                <div id="orders-table-container">
+                <table class="order-table">
+                    <thead>
+                        <tr>
+                            <th>注文ヘッダー</th>
+                            <th>商品明細</th>
+                            <th>詳細</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($orders as $order): ?>
+                            <?php
+                            // 注文ヘッダー情報
+                            $order_id = htmlspecialchars($order['unique_key'] ?? 'N/A');
+                            $customer_name = htmlspecialchars(trim(($order['last_name'] ?? '') . ' ' . ($order['first_name'] ?? '')) ?: 'N/A');
+                            
+                            // 注文日時
+                            $date_value = $order['ordered'] ?? 'N/A';
+                            if ($date_value !== 'N/A') {
+                                if (is_numeric($date_value)) {
+                                    $date_value = date('Y/m/d H:i', $date_value);
+                                } else {
+                                    $timestamp = strtotime($date_value);
+                                    if ($timestamp !== false) {
+                                        $date_value = date('Y/m/d H:i', $timestamp);
+                                    } else {
+                                        $date_value = '日時エラー';
+                                    }
+                                }
+                            }
+                            
+                            // ステータス
+                            $status = 'N/A';
+                            $status_class = 'status-unpaid';
+                            if (isset($order['dispatch_status'])) {
+                                switch ($order['dispatch_status']) {
+                                    case 'unpaid': $status = '入金待ち'; $status_class = 'status-unpaid'; break;
+                                    case 'ordered': $status = '未対応'; $status_class = 'status-unpaid'; break;
+                                    case 'unshippable': $status = '対応開始前'; $status_class = 'status-paid'; break;
+                                    case 'shipping': $status = '配送中'; $status_class = 'status-paid'; break;
+                                    case 'dispatched': $status = '対応済'; $status_class = 'status-shipped'; break;
+                                    case 'cancelled': $status = 'キャンセル'; $status_class = 'status-cancelled'; break;
+                                    default: $status = '未対応'; $status_class = 'status-unpaid'; break;
+                                }
+                            } else {
+                                if (isset($order['cancelled']) && $order['cancelled'] !== null) {
+                                    $status = 'キャンセル'; $status_class = 'status-cancelled';
+                                } elseif (isset($order['dispatched']) && $order['dispatched'] !== null) {
+                                    $status = '対応済'; $status_class = 'status-shipped';
+                                } elseif (isset($order['payment'])) {
+                                    if ($order['payment'] === 'paid' || $order['payment'] === true) {
+                                        $status = '対応開始前'; $status_class = 'status-paid';
+                                    } else {
+                                        $status = '入金待ち'; $status_class = 'status-unpaid';
+                                    }
+                                } else {
+                                    $status = '未対応'; $status_class = 'status-unpaid';
+                                }
+                            }
+                            
+                            // 合計金額
+                            $total_amount = '¥' . number_format($order['total'] ?? 0);
+                            ?>
+                            <tr>
+                                <!-- 注文ヘッダー列 -->
+                                <td class="order-header">
+                                    <div class="order-header-info">
+                                        <div class="order-id">#<?= $order_id ?></div>
+                                        <div class="order-date"><?= htmlspecialchars($date_value) ?></div>
+                                        <div class="order-status <?= $status_class ?>"><?= htmlspecialchars($status) ?></div>
+                                        <div class="customer-name"><?= $customer_name ?></div>
+                                        <div class="total-amount"><?= $total_amount ?></div>
+                                        
+                                        <!-- ポップアップボタン群 -->
+                                        <div class="popup-buttons">
+                                            <button class="btn btn-xs btn-info" onclick="showPaymentInfo('<?= $order_id ?>')">
+                                                <i class="fas fa-credit-card"></i> 決済
+                                            </button>
+                                            <button class="btn btn-xs btn-warning" onclick="showCustomerInfo('<?= $order_id ?>')">
+                                                <i class="fas fa-user"></i> お客様
+                                            </button>
+                                            <button class="btn btn-xs btn-success" onclick="showShippingInfo('<?= $order_id ?>')">
+                                                <i class="fas fa-truck"></i> 配送
+                                            </button>
+                                            <button class="btn btn-xs btn-secondary" onclick="showOtherInfo('<?= $order_id ?>')">
+                                                <i class="fas fa-info"></i> その他
+                                            </button>
+                                        </div>
+                                    </div>
+                                </td>
+                                
+                                <!-- 商品明細列（商品情報のみ） -->
+                                <td class="order-items">
+                                    <?php if (isset($order['order_items']) && is_array($order['order_items'])): ?>
+                                        <?php foreach ($order['order_items'] as $index => $item): ?>
+                                            <div class="item-detail">
+                                                <div class="item-name"><?= htmlspecialchars($item['title'] ?? 'N/A') ?></div>
+                                                
+                                                <?php if (!empty($item['variation'])): ?>
+                                                    <div class="item-variation">バリエーション: <?= htmlspecialchars($item['variation']) ?></div>
+                                                <?php endif; ?>
+                                                
+                                                <div class="item-quantity">数量: <?= htmlspecialchars($item['amount'] ?? 'N/A') ?></div>
+                                                <div class="item-price">単価: ¥<?= number_format($item['price'] ?? 0) ?></div>
+                                                <div class="item-total">小計: ¥<?= number_format($item['total'] ?? 0) ?></div>
+                                                <div class="item-status">ステータス: <?= htmlspecialchars($item['status'] ?? 'N/A') ?></div>
+                                                
+                                                <!-- オプション情報 -->
+                                                <?php if (isset($item['options']) && is_array($item['options']) && !empty($item['options'])): ?>
+                                                    <div class="item-options">
+                                                        <?php foreach ($item['options'] as $option): ?>
+                                                            <div class="option-item">
+                                                                <?= htmlspecialchars($option['option_name'] ?? 'N/A') ?>: <?= htmlspecialchars($option['option_value'] ?? 'N/A') ?>
+                                                            </div>
+                                                        <?php endforeach; ?>
+                                                    </div>
+                                                <?php endif; ?>
+                                            </div>
+                                            <?php if ($index < count($order['order_items']) - 1): ?>
+                                                <hr class="item-separator">
+                                            <?php endif; ?>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <div class="no-items">商品情報なし</div>
+                                    <?php endif; ?>
+                                </td>
+                                
+                                <!-- 詳細ボタン列 -->
+                                <td>
+                                    <button class="btn btn-sm btn-secondary" id="toggle-<?= $order_id ?>" onclick="toggleOrderDetail('<?= $order_id ?>')">
+                                        <i class="fas fa-chevron-down"></i> 全詳細
+                                    </button>
+                                </td>
+                            </tr>
+                            
+                            <!-- 注文詳細行（全情報表示用） -->
+                            <tr id="detail-<?= $order_id ?>" style="display: none;">
+                                <td colspan="3" style="padding: 0;">
+                                    <!-- 全詳細内容がここに表示されます -->
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
-
 
     <script>
         // 現在のデータを保存する変数
@@ -770,7 +669,7 @@ try {
                         return;
                     }
                     
-                    // データ変更の検知
+                    // データ変更の検知（1回だけ実行）
                     var dataChanged = hasDataChanged(data);
                     
                     if (dataChanged) {
@@ -874,7 +773,7 @@ try {
                 
                 var orderIdCell = row.querySelector('.order-id');
                 var statusCell = row.querySelector('.order-status');
-                var totalCell = row.querySelector('td:nth-child(5)'); // 合計金額の列
+                var totalCell = row.querySelector('.total-amount'); // 変更: total-amount クラスを使用
                 
                 if (orderIdCell && statusCell && totalCell) {
                     orders.push({
@@ -887,109 +786,6 @@ try {
             
             return orders;
         }
-        
-        // スムーズなテーブル更新
-        function smoothUpdateTable(newData, expandedOrders) {
-            var tableContainer = document.getElementById('orders-table-container');
-            if (!tableContainer) return;
-            
-            // フェードアウト効果
-            tableContainer.style.transition = 'opacity 0.3s ease-in-out';
-            tableContainer.style.opacity = '0.3';
-            
-            setTimeout(function() {
-                try {
-                    // データを更新
-                    tableContainer.innerHTML = newData;
-                    
-                    // フェードイン効果
-                    tableContainer.style.opacity = '1';
-                    
-                    // 展開されていた詳細を再展開
-                    expandedOrders.forEach(function(orderId) {
-                        var detailRow = document.getElementById('detail-' + orderId);
-                        var toggleButton = document.getElementById('toggle-' + orderId);
-                        if (detailRow && toggleButton) {
-                            detailRow.style.display = 'table-row';
-                            toggleButton.innerHTML = '<i class="fas fa-chevron-up"></i> 詳細を閉じる';
-                            
-                            // 詳細がまだ読み込まれていない場合は読み込む
-                            if (!detailRow.dataset.loaded) {
-                                detailRow.innerHTML = '<td colspan="6" style="padding: 20px; text-align: center;"><i class="fas fa-spinner fa-spin"></i> 注文詳細を読み込み中...</td>';
-                                
-                                fetch('order_detail_ajax.php?order_id=' + encodeURIComponent(orderId))
-                                    .then(response => response.text())
-                                    .then(detailData => {
-                                        detailRow.innerHTML = '<td colspan="6" style="padding: 0;">' + detailData + '</td>';
-                                        detailRow.dataset.loaded = 'true';
-                                    })
-                                    .catch(error => {
-                                        detailRow.innerHTML = '<td colspan="6" style="padding: 20px; color: #dc3545;">エラー: ' + error.message + '</td>';
-                                    });
-                            }
-                        }
-                    });
-                    
-                    // アニメーション完了後にtransitionをリセット
-                    setTimeout(function() {
-                        tableContainer.style.transition = '';
-                    }, 300);
-                    
-                } catch (error) {
-                    console.error('テーブル更新エラー:', error);
-                    // エラー時は元の状態に戻す
-                    tableContainer.style.opacity = '1';
-                    tableContainer.style.transition = '';
-                }
-            }, 150); // フェードアウトの半分の時間で更新
-        }
-        
-        // 認証エラーメッセージの表示
-        function showAuthError() {
-            var existingMessage = document.getElementById('auth-error-message');
-            if (existingMessage) {
-                return; // 既に表示されている場合は何もしない
-            }
-            
-            var messageDiv = document.createElement('div');
-            messageDiv.id = 'auth-error-message';
-            messageDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; border: 1px solid #f5c6cb; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000; max-width: 350px;';
-            messageDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <strong>認証エラー</strong><br>アクセストークンが無効です。<br><a href="scope_switcher.php" style="color: #721c24; text-decoration: underline;">再認証を実行</a>';
-            
-            document.body.appendChild(messageDiv);
-            
-            // 10秒後にメッセージを削除
-            setTimeout(function() {
-                if (messageDiv.parentNode) {
-                    messageDiv.parentNode.removeChild(messageDiv);
-                }
-            }, 10000); // 10秒
-        }
-        
-        // API制限メッセージの表示
-        function showApiLimitMessage() {
-            var existingMessage = document.getElementById('api-limit-message');
-            if (existingMessage) {
-                return; // 既に表示されている場合は何もしない
-            }
-            
-            var messageDiv = document.createElement('div');
-            messageDiv.id = 'api-limit-message';
-            messageDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; border: 1px solid #ffeaa7; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000; max-width: 300px;';
-            messageDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <strong>BASE API利用上限</strong><br>1時間の利用上限に達しました。<br>30分後に自動更新を再開します。';
-            
-            document.body.appendChild(messageDiv);
-            
-            // 30分後にメッセージを削除
-            setTimeout(function() {
-                if (messageDiv.parentNode) {
-                    messageDiv.parentNode.removeChild(messageDiv);
-                }
-            }, 30 * 60 * 1000); // 30分
-        }
-        
-        // 30秒間隔でデータのみを更新（API制限を考慮、適切な間隔）
-        setInterval(refreshOrderData, 30000);
         
         // 更新インジケーターの管理
         var updateIndicator = null;
@@ -1020,6 +816,90 @@ try {
             if (updateIndicator && updateIndicator.parentNode) {
                 updateIndicator.parentNode.removeChild(updateIndicator);
                 updateIndicator = null;
+            }
+        }
+        
+        // スムーズなテーブル更新（フェードアウト/イン効果付き）
+        function smoothUpdateTable(newData, expandedOrders) {
+            var container = document.getElementById('orders-table-container');
+            if (!container) return;
+            
+            // フェードアウト
+            container.style.opacity = '0.3';
+            container.style.transition = 'opacity 0.3s ease';
+            
+            setTimeout(function() {
+                // テーブル内容を更新
+                container.innerHTML = newData;
+                
+                // 展開状態を復元
+                expandedOrders.forEach(function(orderId) {
+                    var detailRow = document.getElementById('detail-' + orderId);
+                    if (detailRow) {
+                        detailRow.style.display = '';
+                        var toggleButton = document.getElementById('toggle-' + orderId);
+                        if (toggleButton) {
+                            toggleButton.innerHTML = '<i class="fas fa-chevron-up"></i> 全詳細';
+                        }
+                    }
+                });
+                
+                // フェードイン
+                container.style.opacity = '1';
+                
+                // 最終更新時刻を更新
+                updateLastUpdateTime();
+                updateOrderCount();
+                
+            }, 300);
+        }
+        
+        // 最終更新時刻を更新
+        function updateLastUpdateTime() {
+            var now = new Date();
+            var timeString = now.getHours().toString().padStart(2, '0') + ':' + 
+                           now.getMinutes().toString().padStart(2, '0') + ':' + 
+                           now.getSeconds().toString().padStart(2, '0');
+            document.getElementById('last-update').textContent = timeString;
+        }
+        
+        // 注文数を更新
+        function updateOrderCount() {
+            var rows = document.querySelectorAll('.order-table tbody tr');
+            var orderRows = 0;
+            rows.forEach(function(row) {
+                if (!row.id || !row.id.startsWith('detail-')) {
+                    orderRows++;
+                }
+            });
+            document.getElementById('order-count').textContent = orderRows;
+        }
+        
+        // 注文詳細の表示/非表示切り替え
+        function toggleOrderDetail(orderId) {
+            var detailRow = document.getElementById('detail-' + orderId);
+            var toggleButton = document.getElementById('toggle-' + orderId);
+            
+            if (!detailRow || !toggleButton) return;
+            
+            if (detailRow.style.display === 'none' || detailRow.style.display === '') {
+                // 詳細を表示
+                detailRow.style.display = '';
+                toggleButton.innerHTML = '<i class="fas fa-chevron-up"></i> 全詳細';
+                
+                // AJAXで詳細データを取得
+                fetch('order_detail_ajax.php?order_id=' + encodeURIComponent(orderId))
+                    .then(response => response.text())
+                    .then(data => {
+                        detailRow.innerHTML = '<td colspan="3" style="padding: 15px;">' + data + '</td>';
+                    })
+                    .catch(error => {
+                        detailRow.innerHTML = '<td colspan="3" style="padding: 15px; color: #dc3545;">エラー: ' + error.message + '</td>';
+                    });
+            } else {
+                // 詳細を非表示
+                detailRow.style.display = 'none';
+                toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i> 全詳細';
             }
         }
         
@@ -1084,46 +964,47 @@ try {
             }
         };
         
-        // ページ読み込み時に全ての詳細を自動展開（キッチン用）
-        window.onload = function() {
-            // 全ての詳細ボタンをクリックして展開
-            var toggleButtons = document.querySelectorAll('[id^="toggle-"]');
-            toggleButtons.forEach(function(button) {
-                var orderId = button.id.replace('toggle-', '');
-                toggleOrderDetail(orderId);
-            });
-        };
-        
-        // 注文詳細の表示/非表示切り替え
-        function toggleOrderDetail(orderId) {
-            var detailRow = document.getElementById('detail-' + orderId);
-            var toggleButton = document.getElementById('toggle-' + orderId);
+        // 認証エラー表示
+        function showAuthError() {
+            var errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i><br>BASE API認証が必要です。<br><a href="scope_switcher.php" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-top: 10px; display: inline-block;">BASE API認証を実行</a>';
             
-            if (detailRow.style.display === 'none' || detailRow.style.display === '') {
-                // 詳細を表示
-                detailRow.style.display = 'table-row';
-                toggleButton.innerHTML = '<i class="fas fa-chevron-up"></i> 詳細を閉じる';
-                
-                // 詳細がまだ読み込まれていない場合は読み込む
-                if (!detailRow.dataset.loaded) {
-                    detailRow.innerHTML = '<td colspan="7" style="padding: 20px; text-align: center;"><i class="fas fa-spinner fa-spin"></i> 注文詳細を読み込み中...</td>';
-                    
-                    fetch('order_detail_ajax.php?order_id=' + encodeURIComponent(orderId))
-                        .then(response => response.text())
-                        .then(data => {
-                            detailRow.innerHTML = '<td colspan="7" style="padding: 0;">' + data + '</td>';
-                            detailRow.dataset.loaded = 'true';
-                        })
-                        .catch(error => {
-                            detailRow.innerHTML = '<td colspan="7" style="padding: 20px; color: #dc3545;">エラー: ' + error.message + '</td>';
-                        });
-                }
-            } else {
-                // 詳細を非表示
-                detailRow.style.display = 'none';
-                toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i> 詳細を見る';
+            var container = document.getElementById('orders-container');
+            if (container) {
+                container.innerHTML = '';
+                container.appendChild(errorDiv);
             }
         }
+        
+        // API制限メッセージ表示
+        function showApiLimitMessage() {
+            var limitDiv = document.createElement('div');
+            limitDiv.className = 'error-message';
+            limitDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i><br>BASE API利用上限に達しました。<br>しばらく時間をおいてから再度お試しください。';
+            
+            var container = document.getElementById('orders-container');
+            if (container) {
+                container.innerHTML = '';
+                container.appendChild(limitDiv);
+            }
+        }
+        
+        // ページ読み込み時の初期化
+        window.onload = function() {
+            // 初期データを保存
+            var initialData = document.getElementById('orders-table-container');
+            if (initialData) {
+                currentOrderData = initialData.innerHTML;
+            }
+            
+            // 最終更新時刻と注文数を設定
+            updateLastUpdateTime();
+            updateOrderCount();
+            
+            // 30秒間隔で自動更新
+            setInterval(refreshOrderData, 30000);
+        };
     </script>
 </body>
 </html>
