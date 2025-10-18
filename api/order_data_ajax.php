@@ -9,16 +9,24 @@ try {
     $orders_ok = isset($auth_status['orders_only']['authenticated']) && $auth_status['orders_only']['authenticated'];
     $items_ok = isset($auth_status['items_only']['authenticated']) && $auth_status['items_only']['authenticated'];
     
-    // デバッグ情報をログに記録
-    error_log('認証チェック結果: orders_ok=' . ($orders_ok ? 'true' : 'false') . ', items_ok=' . ($items_ok ? 'true' : 'false'));
-    
+    // デバッグ情報を画面に表示
     if (!$orders_ok || !$items_ok) {
-        echo '<div class="no-orders" style="text-align: center; padding: 20px; color: #dc3545;">BASE API認証が必要です。<br><a href="test_practical_auto.php" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">BASE API認証を実行</a></div>';
+        echo '<div class="no-orders" style="text-align: center; padding: 20px; color: #dc3545;">';
+        echo '<h3>認証状況デバッグ情報</h3>';
+        echo '<p>orders_only: ' . (isset($auth_status['orders_only']['authenticated']) ? ($auth_status['orders_only']['authenticated'] ? '認証済み' : '未認証') : 'データなし') . '</p>';
+        echo '<p>items_only: ' . (isset($auth_status['items_only']['authenticated']) ? ($auth_status['items_only']['authenticated'] ? '認証済み' : '未認証') : 'データなし') . '</p>';
+        echo '<p>認証データ: ' . htmlspecialchars(json_encode($auth_status, JSON_UNESCAPED_UNICODE)) . '</p>';
+        echo '<br><a href="test_practical_auto.php" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">BASE API認証を実行</a>';
+        echo '</div>';
         exit;
     }
 } catch (Exception $e) {
-    error_log('認証チェックエラー: ' . $e->getMessage());
-    echo '<div class="no-orders" style="text-align: center; padding: 20px; color: #dc3545;">認証チェックエラー: ' . htmlspecialchars($e->getMessage()) . '</div>';
+    echo '<div class="no-orders" style="text-align: center; padding: 20px; color: #dc3545;">';
+    echo '<h3>認証チェックエラー</h3>';
+    echo '<p>エラー: ' . htmlspecialchars($e->getMessage()) . '</p>';
+    echo '<p>ファイル: ' . htmlspecialchars($e->getFile()) . '</p>';
+    echo '<p>行: ' . htmlspecialchars($e->getLine()) . '</p>';
+    echo '</div>';
     exit;
 }
 
