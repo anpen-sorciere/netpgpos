@@ -6,15 +6,15 @@ require_once __DIR__ . '/base_practical_auto_manager.php';
 // 認証チェック（新しいシステム）
 try {
     $auth_status = (new BasePracticalAutoManager())->getAuthStatus();
-    $orders_ok = isset($auth_status['orders_only']['authenticated']) && $auth_status['orders_only']['authenticated'];
-    $items_ok = isset($auth_status['items_only']['authenticated']) && $auth_status['items_only']['authenticated'];
+    $orders_ok = isset($auth_status['注文のみ']['authenticated']) && $auth_status['注文のみ']['authenticated'];
+    $items_ok = isset($auth_status['アイテムのみ']['authenticated']) && $auth_status['アイテムのみ']['authenticated'];
     
     // デバッグ情報を画面に表示
     if (!$orders_ok || !$items_ok) {
         echo '<div class="no-orders" style="text-align: center; padding: 20px; color: #dc3545;">';
         echo '<h3>認証状況デバッグ情報</h3>';
-        echo '<p>orders_only: ' . (isset($auth_status['orders_only']['authenticated']) ? ($auth_status['orders_only']['authenticated'] ? '認証済み' : '未認証') : 'データなし') . '</p>';
-        echo '<p>items_only: ' . (isset($auth_status['items_only']['authenticated']) ? ($auth_status['items_only']['authenticated'] ? '認証済み' : '未認証') : 'データなし') . '</p>';
+        echo '<p>注文のみ: ' . (isset($auth_status['注文のみ']['authenticated']) ? ($auth_status['注文のみ']['authenticated'] ? '認証済み' : '未認証') : 'データなし') . '</p>';
+        echo '<p>アイテムのみ: ' . (isset($auth_status['アイテムのみ']['authenticated']) ? ($auth_status['アイテムのみ']['authenticated'] ? '認証済み' : '未認証') : 'データなし') . '</p>';
         echo '<p>認証データ: ' . htmlspecialchars(json_encode($auth_status, JSON_UNESCAPED_UNICODE)) . '</p>';
         echo '<br><a href="test_practical_auto.php" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">BASE API認証を実行</a>';
         echo '</div>';
