@@ -1,5 +1,5 @@
 ﻿<?php
-require("./dbconnect.php");
+require("../common/dbconnect.php");
 session_start();
 
 /* 会員登録の手続き以外のアクセスを飛ばす */

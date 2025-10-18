@@ -1,5 +1,5 @@
 ﻿<?php
-require_once('./dbconnect.php');
+require_once('../common/dbconnect.php');
 // ログイン処理
 session_start();
 

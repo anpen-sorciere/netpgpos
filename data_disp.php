@@ -1,5 +1,5 @@
 ﻿<?php 
-require_once('./dbconnect.php');
+require_once('../common/dbconnect.php');
 session_cache_limiter('none');
 session_start();
     $uid = $_SESSION['user_id'];

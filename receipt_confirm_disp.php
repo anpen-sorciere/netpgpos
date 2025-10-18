@@ -1,5 +1,5 @@
 ﻿<?php
-require("./dbconnect.php");
+require("../common/dbconnect.php");
 session_start();
 
 

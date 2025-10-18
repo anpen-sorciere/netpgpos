@@ -1,6 +1,6 @@
 ﻿<?php
-require_once('./dbconnect.php');
-require_once('./functions.php');
+require_once('../common/dbconnect.php');
+require_once('../common/functions.php');
 session_start();
 
 $pdo = connect();

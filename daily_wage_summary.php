@@ -8,8 +8,8 @@ error_reporting(E_ALL);
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/log/error.log');
 
-require("./dbconnect.php");
-require("./functions.php");
+require("../common/dbconnect.php");
+require("../common/functions.php");
 
 session_start();
 

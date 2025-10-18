@@ -2,7 +2,7 @@
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-require("./dbconnect.php");
+require("../common/dbconnect.php");
 session_start();
 
 // timecard_input.phpから渡されたセッションデータを取得

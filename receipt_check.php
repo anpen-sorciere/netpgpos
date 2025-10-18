@@ -2,8 +2,8 @@
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-require("./dbconnect.php");
-require("./functions.php");
+require("../common/dbconnect.php");
+require("../common/functions.php");
 session_cache_limiter('none');
 session_start();
 

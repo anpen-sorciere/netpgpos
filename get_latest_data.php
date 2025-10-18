@@ -1,6 +1,6 @@
 ﻿<?php
-require_once('./dbconnect.php');
-require_once('./functions.php');
+require_once('../common/dbconnect.php');
+require_once('../common/functions.php');
 header('Content-Type: application/json; charset=UTF-8');
 
 $pdo = connect();

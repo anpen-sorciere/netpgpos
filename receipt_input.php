@@ -5,8 +5,8 @@ error_reporting(E_ALL);
 session_cache_limiter('none');
 session_start();
 
-require("./dbconnect.php");
-require("./functions.php");
+require("../common/dbconnect.php");
+require("../common/functions.php");
 
 $uid = null;
 $utype = 0;

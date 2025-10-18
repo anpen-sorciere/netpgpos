@@ -3,8 +3,8 @@
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-require_once('./dbconnect.php');
-require_once('./functions.php');
+require_once('../common/dbconnect.php');
+require_once('../common/functions.php');
 session_start();
 
 $receipt_id = $_GET['receipt_id'] ?? null;

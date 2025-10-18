@@ -155,6 +155,64 @@ if ($utype == 1024) {
     <div class="container">
         <h1><i class="fas fa-sync-alt"></i> BASEデータ同期</h1>
         
+        <?php
+        // BASE API認証チェック
+        try {
+            require_once 'api/base_api_client.php';
+            $baseApi = new BaseApiClient();
+
+            if ($baseApi->needsAuth()) {
+                // 認証が必要な場合
+                echo '<div class="sync-section">';
+                echo '<h2><i class="fas fa-key"></i> BASE API認証</h2>';
+                echo '<p>BASE APIを使用するには認証が必要です。以下のボタンをクリックして認証を行ってください。</p>';
+                echo '<div class="control-buttons">';
+                echo '<a href="' . $baseApi->getAuthUrl() . '" class="btn btn-primary">';
+                echo '<i class="fas fa-sign-in-alt"></i> BASE API認証を開始';
+                echo '</a>';
+                echo '</div>';
+                echo '</div>';
+            } else {
+                // 認証済みの場合
+                echo '<div class="sync-section">';
+                echo '<h2><i class="fas fa-check-circle"></i> BASE API認証済み</h2>';
+                echo '<p>BASE API認証が完了しています。以下の機能をご利用いただけます。</p>';
+                echo '<div class="feature-grid">';
+                echo '<div class="feature-card">';
+                echo '<h3><i class="fas fa-shopping-cart"></i> 注文データ同期</h3>';
+                echo '<p>BASEから注文情報を取得し、売上データとして管理します。</p>';
+                echo '<a href="api/base_order_sync.php?utype=' . htmlspecialchars($utype) . '" class="btn btn-primary">同期実行</a>';
+                echo '</div>';
+                echo '<div class="feature-card">';
+                echo '<h3><i class="fas fa-chart-line"></i> 売上データ分析</h3>';
+                echo '<p>同期した注文データを基に、売上分析レポートを表示します。</p>';
+                echo '<a href="api/base_sales_analysis.php?utype=' . htmlspecialchars($utype) . '" class="btn btn-primary">分析表示</a>';
+                echo '</div>';
+                echo '<div class="feature-card">';
+                echo '<h3><i class="fas fa-file-csv"></i> CSVデータ同期</h3>';
+                echo '<p>BASE管理画面からCSVファイルをエクスポートして、商品詳細を含むデータを同期します。</p>';
+                echo '<a href="api/base_csv_sync.php?utype=' . htmlspecialchars($utype) . '" class="btn btn-primary">CSV同期</a>';
+                echo '</div>';
+                // 商品データ同期は権限の問題で一時的に無効化
+                /*
+                echo '<div class="feature-card">';
+                echo '<h3><i class="fas fa-box"></i> 商品データ同期</h3>';
+                echo '<p>商品マスタ情報をBASEから同期し、在庫管理に活用します。</p>';
+                echo '<a href="api/base_product_sync.php?utype=' . htmlspecialchars($utype) . '" class="btn btn-primary">同期実行</a>';
+                echo '</div>';
+                */
+                echo '</div>';
+                echo '</div>';
+            }
+        } catch (Exception $e) {
+            // エラーが発生した場合
+            echo '<div class="sync-section">';
+            echo '<h2><i class="fas fa-exclamation-triangle"></i> エラー</h2>';
+            echo '<p>BASE API連携でエラーが発生しました: ' . htmlspecialchars($e->getMessage()) . '</p>';
+            echo '</div>';
+        }
+        ?>
+
         <div class="sync-section">
             <h2><i class="fas fa-info-circle"></i> 機能概要</h2>
             <p>BASEというECシステムで運営しているサイトの売り上げデータを自前で管理するための同期機能です。</p>

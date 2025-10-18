@@ -1,5 +1,5 @@
 ﻿<?php
-require_once('./dbconnect.php');
+require_once('../common/dbconnect.php');
 session_start();
 
 $pdo = connect();
