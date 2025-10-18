@@ -143,10 +143,58 @@ class BaseApiClient {
 
         // トークンの有効期限をチェック
         if (isset($_SESSION['base_token_expires'])) {
-            return time() < $_SESSION['base_token_expires'];
+            $is_valid = time() < $_SESSION['base_token_expires'];
+            
+            // 期限切れの場合は自動的にリフレッシュを試行
+            if (!$is_valid && isset($_SESSION['base_refresh_token'])) {
+                $this->refreshAccessToken();
+                // リフレッシュ後の再チェック
+                return isset($_SESSION['base_token_expires']) && time() < $_SESSION['base_token_expires'];
+            }
+            
+            return $is_valid;
         }
 
         return true;
+    }
+    
+    /**
+     * アクセストークンをリフレッシュ
+     */
+    private function refreshAccessToken() {
+        if (!isset($_SESSION['base_refresh_token'])) {
+            return false;
+        }
+        
+        try {
+            $data = [
+                'grant_type' => 'refresh_token',
+                'refresh_token' => $_SESSION['base_refresh_token'],
+                'client_id' => $this->client_id,
+                'client_secret' => $this->client_secret
+            ];
+            
+            $response = $this->makeRequest('oauth/token', 'POST', $data);
+            
+            if (isset($response['access_token'])) {
+                $_SESSION['base_access_token'] = $response['access_token'];
+                $_SESSION['base_token_expires'] = time() + ($response['expires_in'] ?? 3600);
+                
+                if (isset($response['refresh_token'])) {
+                    $_SESSION['base_refresh_token'] = $response['refresh_token'];
+                }
+                
+                $this->access_token = $response['access_token'];
+                return true;
+            }
+        } catch (Exception $e) {
+            // リフレッシュに失敗した場合は認証が必要
+            unset($_SESSION['base_access_token']);
+            unset($_SESSION['base_refresh_token']);
+            unset($_SESSION['base_token_expires']);
+        }
+        
+        return false;
     }
 }
 ?>

@@ -11,6 +11,7 @@ echo '<h2>本番環境 BASE API認証状況確認</h2>';
 echo '<h3>現在のセッション状況:</h3>';
 echo '<pre>';
 echo 'base_access_token: ' . (isset($_SESSION['base_access_token']) ? '設定済み' : '未設定') . "\n";
+echo 'base_refresh_token: ' . (isset($_SESSION['base_refresh_token']) ? '設定済み' : '未設定') . "\n";
 echo 'base_token_expires: ' . (isset($_SESSION['base_token_expires']) ? date('Y-m-d H:i:s', $_SESSION['base_token_expires']) : '未設定') . "\n";
 echo '現在時刻: ' . date('Y-m-d H:i:s') . "\n";
 if (isset($_SESSION['base_token_expires'])) {
