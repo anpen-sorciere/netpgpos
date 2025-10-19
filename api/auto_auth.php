@@ -36,6 +36,23 @@ try {
     // 認証URLを生成（return_urlをstateに含める）
     $auth_url = $manager->getAuthUrl($needs_auth[0], $return_url);
     
+    // デバッグ情報を一時的に追加
+    if (isset($_GET['debug_url']) && $_GET['debug_url'] === '1') {
+        echo json_encode([
+            'success' => true,
+            'needs_auth' => true,
+            'auth_url' => $auth_url,
+            'required_scopes' => $needs_auth,
+            'message' => '認証が必要です: ' . implode(', ', $needs_auth),
+            'debug_info' => [
+                'generated_auth_url' => $auth_url,
+                'redirect_uri_check' => 'https://purplelion51.sakura.ne.jp/netpgpos/api/base_callback_debug.php',
+                'return_url' => $return_url
+            ]
+        ]);
+        exit;
+    }
+    
     echo json_encode([
         'success' => true,
         'needs_auth' => true,
