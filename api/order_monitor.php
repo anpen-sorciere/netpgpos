@@ -1085,27 +1085,15 @@ try {
             // 認証中インジケーターを表示
             showAuthIndicator();
             
-            // デバッグ情報を表示
-            const currentUrl = window.location.href;
-            console.log('現在のURL:', currentUrl);
-            console.log('エンコード後のURL:', encodeURIComponent(currentUrl));
-            
             // 必要なスコープを確認（return_urlは既にauto_auth.phpで設定済み）
-            fetch('auto_auth.php?scopes=read_orders,read_items&return_url=' + encodeURIComponent(currentUrl))
+            fetch('auto_auth.php?scopes=read_orders,read_items&return_url=' + encodeURIComponent(window.location.href))
                 .then(response => response.json())
                 .then(data => {
                     hideAuthIndicator();
                     
-                    // デバッグ情報を表示
-                    console.log('auto_auth.php レスポンス:', data);
-                    if (data.debug_info) {
-                        console.log('デバッグ情報:', data.debug_info);
-                    }
-                    
                     if (data.success && data.needs_auth) {
                         // 認証が必要な場合、認証URLにリダイレクト
                         if (data.auth_url) {
-                            console.log('認証URL:', data.auth_url);
                             // auto_auth.phpで既にreturn_urlが設定されているので、そのまま使用
                             window.location.href = data.auth_url;
                         } else {

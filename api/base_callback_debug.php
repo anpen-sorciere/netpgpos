@@ -177,22 +177,6 @@ if (isset($_GET['code'])) {
             $return_url = urldecode($_GET['return_url']);
         }
                 
-                // デバッグ情報を表示（一時的）
-                echo "<div style='background-color: #f0f0f0; padding: 10px; margin: 10px 0; border: 1px solid #ccc;'>";
-                echo "<h4>デバッグ情報:</h4>";
-                echo "GET パラメータ: " . print_r($_GET, true) . "<br>";
-                echo "state パラメータ: " . (isset($_GET['state']) ? htmlspecialchars($_GET['state']) : '未設定') . "<br>";
-                if (isset($_GET['state'])) {
-                    try {
-                        $state_data = json_decode(base64_decode($_GET['state']), true);
-                        echo "state デコード結果: " . print_r($state_data, true) . "<br>";
-                    } catch (Exception $e) {
-                        echo "state デコードエラー: " . $e->getMessage() . "<br>";
-                    }
-                }
-                echo "return_url パラメータ: " . (isset($_GET['return_url']) ? htmlspecialchars($_GET['return_url']) : '未設定') . "<br>";
-                echo "デコード後の return_url: " . htmlspecialchars($return_url) . "<br>";
-                echo "</div>";
                 
                 if ($debug_mode) {
                     echo "<h3>認証成功！</h3>";
@@ -200,27 +184,11 @@ if (isset($_GET['code'])) {
                     echo '<a href="' . htmlspecialchars($return_url) . '">元のページに戻る</a><br>';
                     echo '<a href="../base_data_sync_top.php?utype=1024">BASEデータ同期に戻る</a>';
                 } else {
-                    // 本番環境では自動リダイレクト（一時的に無効化）
+                    // 本番環境では自動リダイレクト
                     echo "<h2>認証完了</h2>";
-                    echo "<p>認証が完了しました。</p>";
-                    
-                    // 自動リダイレクトを一時的にコメントアウト
-                    // echo '<script>setTimeout(function() { window.location.href = "' . htmlspecialchars($return_url) . '"; }, 2000);</script>';
-                    
+                    echo "<p>認証が完了しました。元のページに戻ります...</p>";
+                    echo '<script>setTimeout(function() { window.location.href = "' . htmlspecialchars($return_url) . '"; }, 2000);</script>';
                     echo '<p><a href="' . htmlspecialchars($return_url) . '">すぐに戻る</a></p>';
-                    
-                    // 手動リンクも追加
-                    echo '<div style="margin-top: 20px; padding: 15px; background-color: #e9ecef; border-radius: 4px;">';
-                    echo '<h4>手動で戻る場合:</h4>';
-                    echo '<a href="../api/order_monitor.php" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px;">注文監視に戻る</a>';
-                    echo '<a href="../base_data_sync_top.php?utype=1024" style="background-color: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">BASEデータ同期に戻る</a>';
-                    echo '</div>';
-                    
-                    // 自動リダイレクトを有効にするボタンを追加
-                    echo '<div style="margin-top: 20px; padding: 15px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;">';
-                    echo '<h4>自動リダイレクトを有効にする:</h4>';
-                    echo '<button onclick="window.location.href=\'' . htmlspecialchars($return_url) . '\'" style="background-color: #ffc107; color: black; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">自動で戻る</button>';
-                    echo '</div>';
                 }
             } else {
                 echo "<h3>認証エラー</h3>";
