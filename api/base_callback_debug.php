@@ -1,30 +1,156 @@
 <?php
-// BASE API OAuth認証コールバック処理（パス修正版）
+// BASE API OAuth認証コールバック処理
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 // デバッグ情報（開発時のみ表示）
 $debug_mode = isset($_GET['debug']) && $_GET['debug'] === '1';
 
-if ($debug_mode) {
-    echo "<h1>BASE API コールバック デバッグ</h1>";
-    
-    echo "<h2>1. 基本情報</h2>";
-    echo "GET パラメーター: " . print_r($_GET, true) . "<br>";
-    echo "POST パラメーター: " . print_r($_POST, true) . "<br>";
-    
-    echo "<h2>2. ファイル存在確認</h2>";
-    echo "../common/config.php: " . (file_exists('../common/config.php') ? '存在' : '不存在') . "<br>";
-    echo "../../common/config.php: " . (file_exists('../../common/config.php') ? '存在' : '不存在') . "<br>";
-    echo "../common/dbconnect.php: " . (file_exists('../common/dbconnect.php') ? '存在' : '不存在') . "<br>";
-    echo "../../common/dbconnect.php: " . (file_exists('../../common/dbconnect.php') ? '存在' : '不存在') . "<br>";
-    
-    echo "<h2>3. ディレクトリ構造確認</h2>";
-    echo "現在のディレクトリ: " . getcwd() . "<br>";
-    echo "スクリプトのパス: " . __FILE__ . "<br>";
-    
-    echo "<h2>4. config.php読み込みテスト</h2>";
-}
+// HTMLヘッダーとスタイル
+?>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BASE API 認証完了</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .success-icon {
+            font-size: 4rem;
+            color: #28a745;
+            margin-bottom: 20px;
+        }
+        
+        .title {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        
+        .message {
+            font-size: 1.1rem;
+            color: #6c757d;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 8px;
+            border: none;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #545b62;
+            transform: translateY(-2px);
+        }
+        
+        .debug-section {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .debug-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #495057;
+            margin-bottom: 15px;
+        }
+        
+        .debug-content {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <?php if ($debug_mode): ?>
+            <div class="debug-section">
+                <div class="debug-title">
+                    <i class="fas fa-bug"></i> デバッグ情報
+                </div>
+                <div class="debug-content">
+                    <strong>GET パラメーター:</strong><br>
+                    <?= htmlspecialchars(print_r($_GET, true)) ?><br><br>
+                    
+                    <strong>POST パラメーター:</strong><br>
+                    <?= htmlspecialchars(print_r($_POST, true)) ?><br><br>
+                    
+                    <strong>現在のディレクトリ:</strong> <?= htmlspecialchars(getcwd()) ?><br>
+                    <strong>スクリプトのパス:</strong> <?= htmlspecialchars(__FILE__) ?>
+                </div>
+            </div>
+        <?php endif; ?>
 
 try {
     // 複数のパスを試行
@@ -195,31 +321,100 @@ if (isset($_GET['code'])) {
                 
                 
                 if ($debug_mode) {
-                    echo "<h3>認証成功！</h3>";
-                    echo "戻り先URL: " . htmlspecialchars($return_url) . "<br>";
-                    echo '<a href="' . htmlspecialchars($return_url) . '">元のページに戻る</a><br>';
-                    echo '<a href="../base_data_sync_top.php?utype=1024">BASEデータ同期に戻る</a>';
+                    echo '<div class="debug-section">';
+                    echo '<div class="debug-title"><i class="fas fa-check-circle"></i> 認証成功</div>';
+                    echo '<div class="debug-content">';
+                    echo '<strong>戻り先URL:</strong> ' . htmlspecialchars($return_url) . '<br>';
+                    echo '<strong>スコープ:</strong> ' . htmlspecialchars($scope_key) . '<br>';
+                    echo '<strong>アクセストークン:</strong> ' . htmlspecialchars(substr($token_data['access_token'], 0, 20)) . '...<br>';
+                    echo '</div>';
+                    echo '</div>';
+                    
+                    echo '<div class="message">認証が完了しました。以下のボタンで移動してください。</div>';
+                    echo '<a href="' . htmlspecialchars($return_url) . '" class="btn btn-primary">';
+                    echo '<i class="fas fa-arrow-left"></i> 元のページに戻る';
+                    echo '</a>';
+                    echo '<a href="../base_data_sync_top.php?utype=1024" class="btn btn-secondary">';
+                    echo '<i class="fas fa-sync"></i> BASEデータ同期に戻る';
+                    echo '</a>';
                 } else {
                     // 本番環境では自動リダイレクト
-                    echo "<h2>認証完了</h2>";
-                    echo "<p>認証が完了しました。元のページに戻ります...</p>";
+                    echo '<div class="success-icon">';
+                    echo '<i class="fas fa-check-circle"></i>';
+                    echo '</div>';
+                    echo '<div class="title">認証完了</div>';
+                    echo '<div class="message">認証が完了しました。<br>元のページに戻ります...</div>';
+                    echo '<div class="loading"></div><span>リダイレクト中...</span>';
                     echo '<script>setTimeout(function() { window.location.href = "' . htmlspecialchars($return_url) . '"; }, 2000);</script>';
-                    echo '<p><a href="' . htmlspecialchars($return_url) . '">すぐに戻る</a></p>';
+                    echo '<div style="margin-top: 20px;">';
+                    echo '<a href="' . htmlspecialchars($return_url) . '" class="btn btn-primary">';
+                    echo '<i class="fas fa-arrow-left"></i> すぐに戻る';
+                    echo '</a>';
+                    echo '</div>';
                 }
             } else {
-                echo "<h3>認証エラー</h3>";
-                echo "エラー: " . htmlspecialchars($response) . "<br>";
+                echo '<div class="success-icon" style="color: #dc3545;">';
+                echo '<i class="fas fa-exclamation-triangle"></i>';
+                echo '</div>';
+                echo '<div class="title" style="color: #dc3545;">認証エラー</div>';
+                echo '<div class="message">エラーが発生しました。</div>';
+                echo '<div class="debug-section">';
+                echo '<div class="debug-title"><i class="fas fa-bug"></i> エラー詳細</div>';
+                echo '<div class="debug-content">' . htmlspecialchars($response) . '</div>';
+                echo '</div>';
+                echo '<a href="../api/order_monitor.php" class="btn btn-primary">';
+                echo '<i class="fas fa-home"></i> 注文監視に戻る';
+                echo '</a>';
             }
             
         } catch (Exception $e) {
-            echo "アクセストークン取得エラー: " . $e->getMessage() . "<br>";
+            echo '<div class="success-icon" style="color: #dc3545;">';
+            echo '<i class="fas fa-exclamation-triangle"></i>';
+            echo '</div>';
+            echo '<div class="title" style="color: #dc3545;">アクセストークン取得エラー</div>';
+            echo '<div class="message">エラーが発生しました。</div>';
+            echo '<div class="debug-section">';
+            echo '<div class="debug-title"><i class="fas fa-bug"></i> エラー詳細</div>';
+            echo '<div class="debug-content">' . htmlspecialchars($e->getMessage()) . '</div>';
+            echo '</div>';
+            echo '<a href="../api/order_monitor.php" class="btn btn-primary">';
+            echo '<i class="fas fa-home"></i> 注文監視に戻る';
+            echo '</a>';
         }
     } else {
-        echo "BASE API設定が不完全です<br>";
+        echo '<div class="success-icon" style="color: #ffc107;">';
+        echo '<i class="fas fa-exclamation-triangle"></i>';
+        echo '</div>';
+        echo '<div class="title" style="color: #ffc107;">BASE API設定が不完全です</div>';
+        echo '<div class="message">設定を確認してください。</div>';
+        echo '<a href="../base_data_sync_top.php?utype=1024" class="btn btn-primary">';
+        echo '<i class="fas fa-sync"></i> BASEデータ同期に戻る';
+        echo '</a>';
     }
 } elseif (isset($_GET['error'])) {
-    echo "認証エラー: " . htmlspecialchars($_GET['error']) . "<br>";
+    echo '<div class="success-icon" style="color: #dc3545;">';
+    echo '<i class="fas fa-exclamation-triangle"></i>';
+    echo '</div>';
+    echo '<div class="title" style="color: #dc3545;">認証エラー</div>';
+    echo '<div class="message">エラーが発生しました。</div>';
+    echo '<div class="debug-section">';
+    echo '<div class="debug-title"><i class="fas fa-bug"></i> エラー詳細</div>';
+    echo '<div class="debug-content">' . htmlspecialchars($_GET['error']) . '</div>';
+    echo '</div>';
+    echo '<a href="../api/order_monitor.php" class="btn btn-primary">';
+    echo '<i class="fas fa-home"></i> 注文監視に戻る';
+    echo '</a>';
 } else {
-    echo "認証コードが取得できませんでした。<br>";
+    echo '<div class="success-icon" style="color: #ffc107;">';
+    echo '<i class="fas fa-question-circle"></i>';
+    echo '</div>';
+    echo '<div class="title" style="color: #ffc107;">認証コードが取得できませんでした</div>';
+    echo '<div class="message">認証プロセスに問題があります。</div>';
+    echo '<a href="../api/order_monitor.php" class="btn btn-primary">';
+    echo '<i class="fas fa-home"></i> 注文監視に戻る';
+    echo '</a>';
 }
 ?>
+    </div>
+</body>
+</html>
