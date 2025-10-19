@@ -15,6 +15,12 @@ if (isset($_GET['force_debug']) && $_GET['force_debug'] === '1') {
     $debug_mode = true;
 }
 
+// 強制デバッグモード（500エラー調査用）
+if (isset($_GET['error_debug']) && $_GET['error_debug'] === '1') {
+    $debug_mode = true;
+    echo "<!-- 強制デバッグモード有効 -->\n";
+}
+
 // HTMLヘッダーとスタイル
 ?>
 <!DOCTYPE html>
