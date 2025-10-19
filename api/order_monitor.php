@@ -1223,30 +1223,6 @@ try {
                             }
                         });
                         
-                        // デバッグ用：最初の3行の詳細情報を表示
-                        if (index < 3) {
-                            var matchDetails = '';
-                            activeFilters.status.forEach(function(filterStatus) {
-                                var statusTextMap = {
-                                    'unpaid': '入金待ち',
-                                    'unshippable': '対応開始前',
-                                    'ordered': '未対応',
-                                    'shipping': '対応中',
-                                    'dispatched': '対応済',
-                                    'cancelled': 'キャンセル'
-                                };
-                                
-                                if (statusText === statusTextMap[filterStatus]) {
-                                    matchDetails += 'テキストマッチ: ' + filterStatus + ' ';
-                                }
-                                if (statusClass.includes('status-' + filterStatus)) {
-                                    matchDetails += 'クラスマッチ: ' + filterStatus + ' ';
-                                }
-                            });
-                            
-                            alert('行' + index + ' ステータス: ' + statusText + '\nクラス: ' + statusClass + '\nマッチ: ' + statusMatch + '\n詳細: ' + matchDetails);
-                        }
-                        
                         if (!statusMatch) {
                             shouldShow = false;
                             console.log('行' + index + ' 非表示');
@@ -1803,7 +1779,6 @@ try {
             document.querySelectorAll('.filter-btn[data-status]').forEach(function(button) {
                 button.addEventListener('click', function() {
                     var status = this.getAttribute('data-status');
-                    alert('イベントリスナー: ' + status);
                     toggleFilter(status);
                 });
             });
