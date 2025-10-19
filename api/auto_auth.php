@@ -39,12 +39,20 @@ try {
         $auth_url .= (strpos($auth_url, '?') !== false ? '&' : '?') . 'return_url=' . urlencode($return_url);
     }
     
+    // デバッグ情報を追加
+    $debug_info = [
+        'received_return_url' => $return_url,
+        'auth_url_with_return_url' => $auth_url,
+        'get_params' => $_GET
+    ];
+    
     echo json_encode([
         'success' => true,
         'needs_auth' => true,
         'auth_url' => $auth_url,
         'required_scopes' => $needs_auth,
-        'message' => '認証が必要です: ' . implode(', ', $needs_auth)
+        'message' => '認証が必要です: ' . implode(', ', $needs_auth),
+        'debug_info' => $debug_info
     ]);
     
 } catch (Exception $e) {

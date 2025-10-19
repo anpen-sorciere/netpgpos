@@ -1085,9 +1085,8 @@ try {
             // 認証中インジケーターを表示
             showAuthIndicator();
             
-            // 必要なスコープを確認
-            const returnUrl = encodeURIComponent(window.location.href);
-            fetch('auto_auth.php?scopes=read_orders,read_items&return_url=' + returnUrl)
+            // 必要なスコープを確認（return_urlは既にauto_auth.phpで設定済み）
+            fetch('auto_auth.php?scopes=read_orders,read_items&return_url=' + encodeURIComponent(window.location.href))
                 .then(response => response.json())
                 .then(data => {
                     hideAuthIndicator();
@@ -1095,12 +1094,8 @@ try {
                     if (data.success && data.needs_auth) {
                         // 認証が必要な場合、認証URLにリダイレクト
                         if (data.auth_url) {
-                            // 認証完了後に戻るURLを設定
-                            const returnUrl = encodeURIComponent(window.location.href);
-                            const authUrl = data.auth_url + (data.auth_url.includes('?') ? '&' : '?') + 'return_url=' + returnUrl;
-                            
-                            // 認証ページに移動
-                            window.location.href = authUrl;
+                            // auto_auth.phpで既にreturn_urlが設定されているので、そのまま使用
+                            window.location.href = data.auth_url;
                         } else {
                             alert('認証URLの生成に失敗しました。手動設定をお試しください。');
                         }
