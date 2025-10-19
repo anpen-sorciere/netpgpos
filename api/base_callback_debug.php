@@ -181,6 +181,13 @@ if (isset($_GET['code'])) {
                     echo "<p>認証が完了しました。元のページに戻ります...</p>";
                     echo '<script>setTimeout(function() { window.location.href = "' . htmlspecialchars($return_url) . '"; }, 2000);</script>';
                     echo '<p><a href="' . htmlspecialchars($return_url) . '">すぐに戻る</a></p>';
+                    
+                    // 手動リンクも追加
+                    echo '<div style="margin-top: 20px; padding: 15px; background-color: #e9ecef; border-radius: 4px;">';
+                    echo '<h4>手動で戻る場合:</h4>';
+                    echo '<a href="../api/order_monitor.php" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px;">注文監視に戻る</a>';
+                    echo '<a href="../base_data_sync_top.php?utype=1024" style="background-color: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">BASEデータ同期に戻る</a>';
+                    echo '</div>';
                 }
             } else {
                 echo "<h3>認証エラー</h3>";
