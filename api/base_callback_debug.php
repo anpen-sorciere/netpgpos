@@ -154,18 +154,42 @@ if (isset($_GET['code'])) {
                 echo "保存されたリフレッシュトークン: " . (isset($token_data['refresh_token']) ? 'あり' : 'なし') . "<br>";
                 echo "トークン有効期限: " . ($token_data['expires_in'] ?? '不明') . "秒<br>";
                 
-                // 動的な戻り先を設定
-                $return_url = '../base_data_sync_top.php?utype=1024'; // デフォルト
-                
-                // return_urlパラメータが指定されている場合はそれを使用
-                if (isset($_GET['return_url'])) {
-                    $return_url = urldecode($_GET['return_url']);
+        // 動的な戻り先を設定
+        $return_url = '../base_data_sync_top.php?utype=1024'; // デフォルト
+        
+        // stateパラメータからreturn_urlを復元
+        if (isset($_GET['state'])) {
+            try {
+                $state_data = json_decode(base64_decode($_GET['state']), true);
+                if (isset($state_data['return_url']) && !empty($state_data['return_url'])) {
+                    $return_url = $state_data['return_url'];
                 }
+            } catch (Exception $e) {
+                // stateの復元に失敗した場合はデフォルトを使用
+                if ($debug_mode) {
+                    echo "state復元エラー: " . $e->getMessage() . "<br>";
+                }
+            }
+        }
+        
+        // return_urlパラメータが指定されている場合はそれを使用（従来の方法）
+        if (isset($_GET['return_url'])) {
+            $return_url = urldecode($_GET['return_url']);
+        }
                 
                 // デバッグ情報を表示（一時的）
                 echo "<div style='background-color: #f0f0f0; padding: 10px; margin: 10px 0; border: 1px solid #ccc;'>";
                 echo "<h4>デバッグ情報:</h4>";
                 echo "GET パラメータ: " . print_r($_GET, true) . "<br>";
+                echo "state パラメータ: " . (isset($_GET['state']) ? htmlspecialchars($_GET['state']) : '未設定') . "<br>";
+                if (isset($_GET['state'])) {
+                    try {
+                        $state_data = json_decode(base64_decode($_GET['state']), true);
+                        echo "state デコード結果: " . print_r($state_data, true) . "<br>";
+                    } catch (Exception $e) {
+                        echo "state デコードエラー: " . $e->getMessage() . "<br>";
+                    }
+                }
                 echo "return_url パラメータ: " . (isset($_GET['return_url']) ? htmlspecialchars($_GET['return_url']) : '未設定') . "<br>";
                 echo "デコード後の return_url: " . htmlspecialchars($return_url) . "<br>";
                 echo "</div>";

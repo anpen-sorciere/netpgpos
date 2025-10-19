@@ -467,7 +467,7 @@ class BasePracticalAutoManager {
     /**
      * 認証URLの生成
      */
-    public function getAuthUrl($scope) {
+    public function getAuthUrl($scope, $return_url = null) {
         // デバッグ情報
         if (empty($this->client_id)) {
             throw new Exception("client_id が設定されていません");
@@ -487,7 +487,13 @@ class BasePracticalAutoManager {
         ];
         
         $api_scope = $scope_map[$scope] ?? $scope;
-        $state = $scope; // スコープをstateとして使用
+        
+        // stateパラメータにスコープとreturn_urlを含める
+        $state_data = [
+            'scope' => $scope,
+            'return_url' => $return_url
+        ];
+        $state = base64_encode(json_encode($state_data));
         
         $params = [
             'response_type' => 'code',

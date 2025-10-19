@@ -29,11 +29,8 @@ if (isset($_GET['debug']) && $_GET['debug'] === 'html') {
         }
         
         if (!empty($needs_auth)) {
-            $auth_url = $manager->getAuthUrl($needs_auth[0]);
             $return_url = $_GET['return_url'] ?? '';
-            if ($return_url) {
-                $auth_url .= (strpos($auth_url, '?') !== false ? '&' : '?') . 'return_url=' . urlencode($return_url);
-            }
+            $auth_url = $manager->getAuthUrl($needs_auth[0], $return_url);
             
             echo '<h3>生成された認証URL:</h3>';
             echo '<p><a href="' . htmlspecialchars($auth_url) . '" target="_blank">' . htmlspecialchars($auth_url) . '</a></p>';
@@ -76,14 +73,11 @@ try {
         exit;
     }
     
-    // 認証URLを生成
-    $auth_url = $manager->getAuthUrl($needs_auth[0]); // 最初のスコープで認証
-    
-    // return_urlパラメータを追加
+    // return_urlパラメータを取得
     $return_url = $_GET['return_url'] ?? '';
-    if ($return_url) {
-        $auth_url .= (strpos($auth_url, '?') !== false ? '&' : '?') . 'return_url=' . urlencode($return_url);
-    }
+    
+    // 認証URLを生成（return_urlをstateに含める）
+    $auth_url = $manager->getAuthUrl($needs_auth[0], $return_url);
     
     // デバッグ情報を追加
     $debug_info = [
