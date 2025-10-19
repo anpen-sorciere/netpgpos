@@ -162,6 +162,14 @@ if (isset($_GET['code'])) {
                     $return_url = urldecode($_GET['return_url']);
                 }
                 
+                // デバッグ情報を表示（一時的）
+                echo "<div style='background-color: #f0f0f0; padding: 10px; margin: 10px 0; border: 1px solid #ccc;'>";
+                echo "<h4>デバッグ情報:</h4>";
+                echo "GET パラメータ: " . print_r($_GET, true) . "<br>";
+                echo "return_url パラメータ: " . (isset($_GET['return_url']) ? htmlspecialchars($_GET['return_url']) : '未設定') . "<br>";
+                echo "デコード後の return_url: " . htmlspecialchars($return_url) . "<br>";
+                echo "</div>";
+                
                 if ($debug_mode) {
                     echo "<h3>認証成功！</h3>";
                     echo "戻り先URL: " . htmlspecialchars($return_url) . "<br>";
