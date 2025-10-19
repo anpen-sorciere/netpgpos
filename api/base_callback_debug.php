@@ -176,10 +176,13 @@ if (isset($_GET['code'])) {
                     echo '<a href="' . htmlspecialchars($return_url) . '">元のページに戻る</a><br>';
                     echo '<a href="../base_data_sync_top.php?utype=1024">BASEデータ同期に戻る</a>';
                 } else {
-                    // 本番環境では自動リダイレクト
+                    // 本番環境では自動リダイレクト（一時的に無効化）
                     echo "<h2>認証完了</h2>";
-                    echo "<p>認証が完了しました。元のページに戻ります...</p>";
-                    echo '<script>setTimeout(function() { window.location.href = "' . htmlspecialchars($return_url) . '"; }, 2000);</script>';
+                    echo "<p>認証が完了しました。</p>";
+                    
+                    // 自動リダイレクトを一時的にコメントアウト
+                    // echo '<script>setTimeout(function() { window.location.href = "' . htmlspecialchars($return_url) . '"; }, 2000);</script>';
+                    
                     echo '<p><a href="' . htmlspecialchars($return_url) . '">すぐに戻る</a></p>';
                     
                     // 手動リンクも追加
@@ -187,6 +190,12 @@ if (isset($_GET['code'])) {
                     echo '<h4>手動で戻る場合:</h4>';
                     echo '<a href="../api/order_monitor.php" style="background-color: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-right: 10px;">注文監視に戻る</a>';
                     echo '<a href="../base_data_sync_top.php?utype=1024" style="background-color: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">BASEデータ同期に戻る</a>';
+                    echo '</div>';
+                    
+                    // 自動リダイレクトを有効にするボタンを追加
+                    echo '<div style="margin-top: 20px; padding: 15px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;">';
+                    echo '<h4>自動リダイレクトを有効にする:</h4>';
+                    echo '<button onclick="window.location.href=\'' . htmlspecialchars($return_url) . '\'" style="background-color: #ffc107; color: black; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">自動で戻る</button>';
                     echo '</div>';
                 }
             } else {
