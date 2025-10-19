@@ -744,8 +744,11 @@ try {
                 <button class="btn btn-primary" onclick="refreshOrderData()">
                     <i class="fas fa-sync-alt"></i> 手動更新
                 </button>
-                <a href="scope_switcher.php" class="btn btn-secondary">
-                    <i class="fas fa-cog"></i> API設定
+                <button class="btn btn-secondary" onclick="autoAuth()">
+                    <i class="fas fa-key"></i> 自動認証
+                </button>
+                <a href="scope_switcher.php" class="btn btn-outline-secondary">
+                    <i class="fas fa-cog"></i> 手動設定
                 </a>
             </div>
         </div>
@@ -765,7 +768,12 @@ try {
                 <div class="error-message">
                     <i class="fas fa-exclamation-triangle"></i><br>
                     <?= htmlspecialchars($error_message) ?><br>
-                    <a href="scope_switcher.php" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-top: 10px; display: inline-block;">BASE API認証を実行</a>
+                    <button onclick="autoAuth()" style="background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; display: inline-block;">
+                        <i class="fas fa-key"></i> 自動認証を実行
+                    </button>
+                    <a href="scope_switcher.php" style="background-color: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-top: 10px; margin-left: 10px; display: inline-block;">
+                        <i class="fas fa-cog"></i> 手動設定
+                    </a>
                 </div>
             <?php elseif (empty($orders)): ?>
                 <div class="no-orders">
@@ -1071,6 +1079,66 @@ try {
             status: ['all'],
             customer: false
         };
+        
+        // 自動認証機能
+        function autoAuth() {
+            // 認証中インジケーターを表示
+            showAuthIndicator();
+            
+            // 必要なスコープを確認
+            fetch('auto_auth.php?scopes=read_orders,read_items')
+                .then(response => response.json())
+                .then(data => {
+                    hideAuthIndicator();
+                    
+                    if (data.success && data.needs_auth) {
+                        // 認証が必要な場合、認証URLにリダイレクト
+                        if (data.auth_url) {
+                            // 認証完了後に戻るURLを設定
+                            const returnUrl = encodeURIComponent(window.location.href);
+                            const authUrl = data.auth_url + (data.auth_url.includes('?') ? '&' : '?') + 'return_url=' + returnUrl;
+                            
+                            // 認証ページに移動
+                            window.location.href = authUrl;
+                        } else {
+                            alert('認証URLの生成に失敗しました。手動設定をお試しください。');
+                        }
+                    } else if (data.success && !data.needs_auth) {
+                        // 認証が不要な場合
+                        alert('認証は不要です。ページを更新してください。');
+                        window.location.reload();
+                    } else {
+                        // エラーの場合
+                        alert('認証チェックでエラーが発生しました: ' + (data.error || '不明なエラー'));
+                    }
+                })
+                .catch(error => {
+                    hideAuthIndicator();
+                    console.error('認証チェックエラー:', error);
+                    alert('認証チェックでエラーが発生しました。手動設定をお試しください。');
+                });
+        }
+        
+        // 認証中インジケーター
+        var authIndicator = null;
+        
+        function showAuthIndicator() {
+            if (authIndicator) return;
+            
+            authIndicator = document.createElement('div');
+            authIndicator.id = 'auth-indicator';
+            authIndicator.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 8px; z-index: 10000; text-align: center;';
+            authIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i><br>認証を確認中...';
+            
+            document.body.appendChild(authIndicator);
+        }
+        
+        function hideAuthIndicator() {
+            if (authIndicator && authIndicator.parentNode) {
+                authIndicator.parentNode.removeChild(authIndicator);
+                authIndicator = null;
+            }
+        }
         
         // 現在のページ番号を取得する関数
         function getCurrentPage() {
