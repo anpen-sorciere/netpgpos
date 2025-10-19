@@ -13,6 +13,39 @@ if (isset($_GET['debug']) && $_GET['debug'] === 'html') {
     echo '<p>' . htmlspecialchars($_GET['return_url'] ?? '未設定') . '</p>';
     echo '<h3>scopes パラメータ:</h3>';
     echo '<p>' . htmlspecialchars($_GET['scopes'] ?? '未設定') . '</p>';
+    
+    // 実際の認証URL生成をテスト
+    try {
+        $manager = new BasePracticalAutoManager();
+        $required_scopes = $_GET['scopes'] ?? 'read_orders,read_items';
+        $scopes_array = explode(',', $required_scopes);
+        
+        $needs_auth = [];
+        foreach ($scopes_array as $scope) {
+            $scope = trim($scope);
+            if (!$manager->isTokenValid($scope)) {
+                $needs_auth[] = $scope;
+            }
+        }
+        
+        if (!empty($needs_auth)) {
+            $auth_url = $manager->getAuthUrl($needs_auth[0]);
+            $return_url = $_GET['return_url'] ?? '';
+            if ($return_url) {
+                $auth_url .= (strpos($auth_url, '?') !== false ? '&' : '?') . 'return_url=' . urlencode($return_url);
+            }
+            
+            echo '<h3>生成された認証URL:</h3>';
+            echo '<p><a href="' . htmlspecialchars($auth_url) . '" target="_blank">' . htmlspecialchars($auth_url) . '</a></p>';
+        } else {
+            echo '<h3>認証不要:</h3>';
+            echo '<p>全てのスコープが有効です</p>';
+        }
+    } catch (Exception $e) {
+        echo '<h3>エラー:</h3>';
+        echo '<p style="color: red;">' . htmlspecialchars($e->getMessage()) . '</p>';
+    }
+    
     exit;
 }
 
@@ -55,8 +88,10 @@ try {
     // デバッグ情報を追加
     $debug_info = [
         'received_return_url' => $return_url,
+        'auth_url_before_return_url' => $manager->getAuthUrl($needs_auth[0]),
         'auth_url_with_return_url' => $auth_url,
-        'get_params' => $_GET
+        'get_params' => $_GET,
+        'needs_auth_scopes' => $needs_auth
     ];
     
     echo json_encode([
