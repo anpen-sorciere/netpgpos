@@ -3,23 +3,29 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-echo "<h1>BASE API コールバック デバッグ</h1>";
+// デバッグ情報（開発時のみ表示）
+$debug_mode = isset($_GET['debug']) && $_GET['debug'] === '1';
 
-echo "<h2>1. 基本情報</h2>";
-echo "GET パラメーター: " . print_r($_GET, true) . "<br>";
-echo "POST パラメーター: " . print_r($_POST, true) . "<br>";
+if ($debug_mode) {
+    echo "<h1>BASE API コールバック デバッグ</h1>";
+    
+    echo "<h2>1. 基本情報</h2>";
+    echo "GET パラメーター: " . print_r($_GET, true) . "<br>";
+    echo "POST パラメーター: " . print_r($_POST, true) . "<br>";
+    
+    echo "<h2>2. ファイル存在確認</h2>";
+    echo "../common/config.php: " . (file_exists('../common/config.php') ? '存在' : '不存在') . "<br>";
+    echo "../../common/config.php: " . (file_exists('../../common/config.php') ? '存在' : '不存在') . "<br>";
+    echo "../common/dbconnect.php: " . (file_exists('../common/dbconnect.php') ? '存在' : '不存在') . "<br>";
+    echo "../../common/dbconnect.php: " . (file_exists('../../common/dbconnect.php') ? '存在' : '不存在') . "<br>";
+    
+    echo "<h2>3. ディレクトリ構造確認</h2>";
+    echo "現在のディレクトリ: " . getcwd() . "<br>";
+    echo "スクリプトのパス: " . __FILE__ . "<br>";
+    
+    echo "<h2>4. config.php読み込みテスト</h2>";
+}
 
-echo "<h2>2. ファイル存在確認</h2>";
-echo "../common/config.php: " . (file_exists('../common/config.php') ? '存在' : '不存在') . "<br>";
-echo "../../common/config.php: " . (file_exists('../../common/config.php') ? '存在' : '不存在') . "<br>";
-echo "../common/dbconnect.php: " . (file_exists('../common/dbconnect.php') ? '存在' : '不存在') . "<br>";
-echo "../../common/dbconnect.php: " . (file_exists('../../common/dbconnect.php') ? '存在' : '不存在') . "<br>";
-
-echo "<h2>3. ディレクトリ構造確認</h2>";
-echo "現在のディレクトリ: " . getcwd() . "<br>";
-echo "スクリプトのパス: " . __FILE__ . "<br>";
-
-echo "<h2>4. config.php読み込みテスト</h2>";
 try {
     // 複数のパスを試行
     $config_paths = [
@@ -32,7 +38,7 @@ try {
     $config_loaded = false;
     foreach ($config_paths as $path) {
         if (file_exists($path)) {
-            echo "config.php発見: " . $path . "<br>";
+            if ($debug_mode) echo "config.php発見: " . $path . "<br>";
             require_once $path;
             $config_loaded = true;
             break;
@@ -40,28 +46,35 @@ try {
     }
     
     if (!$config_loaded) {
-        echo "config.phpが見つかりません<br>";
+        if ($debug_mode) echo "config.phpが見つかりません<br>";
     } else {
-        echo "config.php読み込み: 成功<br>";
-        echo "base_client_id: " . (isset($base_client_id) ? $base_client_id : '未設定') . "<br>";
-        echo "base_client_secret: " . (isset($base_client_secret) ? substr($base_client_secret, 0, 10) . '...' : '未設定') . "<br>";
-        echo "base_redirect_uri: " . (isset($base_redirect_uri) ? $base_redirect_uri : '未設定') . "<br>";
+        if ($debug_mode) {
+            echo "config.php読み込み: 成功<br>";
+            echo "base_client_id: " . (isset($base_client_id) ? $base_client_id : '未設定') . "<br>";
+            echo "base_client_secret: " . (isset($base_client_secret) ? substr($base_client_secret, 0, 10) . '...' : '未設定') . "<br>";
+            echo "base_redirect_uri: " . (isset($base_redirect_uri) ? $base_redirect_uri : '未設定') . "<br>";
+        }
     }
 } catch (Exception $e) {
-    echo "config.php読み込みエラー: " . $e->getMessage() . "<br>";
+    if ($debug_mode) echo "config.php読み込みエラー: " . $e->getMessage() . "<br>";
 }
 
-echo "<h2>5. セッション開始テスト</h2>";
+if ($debug_mode) {
+    echo "<h2>5. セッション開始テスト</h2>";
+}
+
 try {
     session_start();
-    echo "セッション開始: 成功<br>";
+    if ($debug_mode) echo "セッション開始: 成功<br>";
 } catch (Exception $e) {
-    echo "セッション開始エラー: " . $e->getMessage() . "<br>";
+    if ($debug_mode) echo "セッション開始エラー: " . $e->getMessage() . "<br>";
 }
 
-echo "<h2>6. 認証コード処理</h2>";
-echo "GET パラメーター詳細: " . print_r($_GET, true) . "<br>";
-echo "state パラメーター: " . (isset($_GET['state']) ? htmlspecialchars($_GET['state']) : '未設定') . "<br>";
+if ($debug_mode) {
+    echo "<h2>6. 認証コード処理</h2>";
+    echo "GET パラメーター詳細: " . print_r($_GET, true) . "<br>";
+    echo "state パラメーター: " . (isset($_GET['state']) ? htmlspecialchars($_GET['state']) : '未設定') . "<br>";
+}
 
 if (isset($_GET['code'])) {
     $auth_code = $_GET['code'];
@@ -141,8 +154,26 @@ if (isset($_GET['code'])) {
                 echo "保存されたリフレッシュトークン: " . (isset($token_data['refresh_token']) ? 'あり' : 'なし') . "<br>";
                 echo "トークン有効期限: " . ($token_data['expires_in'] ?? '不明') . "秒<br>";
                 
-                echo "<h3>認証成功！</h3>";
-                echo '<a href="../base_data_sync_top.php?utype=1024">BASEデータ同期に戻る</a>';
+                // 動的な戻り先を設定
+                $return_url = '../base_data_sync_top.php?utype=1024'; // デフォルト
+                
+                // return_urlパラメータが指定されている場合はそれを使用
+                if (isset($_GET['return_url'])) {
+                    $return_url = urldecode($_GET['return_url']);
+                }
+                
+                if ($debug_mode) {
+                    echo "<h3>認証成功！</h3>";
+                    echo "戻り先URL: " . htmlspecialchars($return_url) . "<br>";
+                    echo '<a href="' . htmlspecialchars($return_url) . '">元のページに戻る</a><br>';
+                    echo '<a href="../base_data_sync_top.php?utype=1024">BASEデータ同期に戻る</a>';
+                } else {
+                    // 本番環境では自動リダイレクト
+                    echo "<h2>認証完了</h2>";
+                    echo "<p>認証が完了しました。元のページに戻ります...</p>";
+                    echo '<script>setTimeout(function() { window.location.href = "' . htmlspecialchars($return_url) . '"; }, 2000);</script>';
+                    echo '<p><a href="' . htmlspecialchars($return_url) . '">すぐに戻る</a></p>';
+                }
             } else {
                 echo "<h3>認証エラー</h3>";
                 echo "エラー: " . htmlspecialchars($response) . "<br>";

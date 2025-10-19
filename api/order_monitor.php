@@ -1086,7 +1086,8 @@ try {
             showAuthIndicator();
             
             // 必要なスコープを確認
-            fetch('auto_auth.php?scopes=read_orders,read_items')
+            const returnUrl = encodeURIComponent(window.location.href);
+            fetch('auto_auth.php?scopes=read_orders,read_items&return_url=' + returnUrl)
                 .then(response => response.json())
                 .then(data => {
                     hideAuthIndicator();

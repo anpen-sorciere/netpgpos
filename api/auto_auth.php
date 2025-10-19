@@ -33,6 +33,12 @@ try {
     // 認証URLを生成
     $auth_url = $manager->getAuthUrl($needs_auth[0]); // 最初のスコープで認証
     
+    // return_urlパラメータを追加
+    $return_url = $_GET['return_url'] ?? '';
+    if ($return_url) {
+        $auth_url .= (strpos($auth_url, '?') !== false ? '&' : '?') . 'return_url=' . urlencode($return_url);
+    }
+    
     echo json_encode([
         'success' => true,
         'needs_auth' => true,
