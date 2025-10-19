@@ -123,7 +123,23 @@ if (isset($_GET['code'])) {
                 echo "state パラメーター: " . (isset($_GET['state']) ? htmlspecialchars($_GET['state']) : '未設定') . "<br>";
                 
                 if (isset($_GET['state'])) {
-                    $scope_key = $_GET['state'];
+                    // stateパラメータをデコードしてスコープを取得
+                    try {
+                        $state_data = json_decode(base64_decode($_GET['state']), true);
+                        if (isset($state_data['scope'])) {
+                            $scope_key = $state_data['scope'];
+                            echo "デコードされたスコープ: " . htmlspecialchars($scope_key) . "<br>";
+                        } else {
+                            // 従来の形式（stateが直接スコープの場合）
+                            $scope_key = $_GET['state'];
+                            echo "従来形式のスコープ: " . htmlspecialchars($scope_key) . "<br>";
+                        }
+                    } catch (Exception $e) {
+                        // デコードに失敗した場合は従来の形式として扱う
+                        $scope_key = $_GET['state'];
+                        echo "デコード失敗、従来形式として処理: " . htmlspecialchars($scope_key) . "<br>";
+                    }
+                    
                     $_SESSION['base_current_scope'] = $scope_key;
                     echo "処理するスコープキー: " . htmlspecialchars($scope_key) . "<br>";
                     
