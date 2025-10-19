@@ -1722,7 +1722,7 @@ try {
         function showAuthError() {
             var errorDiv = document.createElement('div');
             errorDiv.className = 'error-message';
-            errorDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i><br>BASE API認証が必要です。<br><a href="test_practical_auto.php" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; margin-top: 10px; display: inline-block;">BASE API認証を実行</a>';
+            errorDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i><br>BASE API認証が必要です。<br><button onclick="autoAuth()" style="background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; margin-top: 10px; display: inline-block; cursor: pointer;">自動認証を実行</button><br><a href="test_practical_auto.php" style="color: #6c757d; font-size: 0.9em; margin-top: 5px; display: inline-block;">手動設定</a>';
             
             var container = document.getElementById('orders-container');
             if (container) {

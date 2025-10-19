@@ -23,14 +23,12 @@ try {
     echo '</div>';
     
     
-    // デバッグ情報を画面に表示
+    // 認証が必要な場合の表示
     if (!$orders_ok || !$items_ok) {
         echo '<div class="no-orders" style="text-align: center; padding: 20px; color: #dc3545;">';
-        echo '<h3>認証状況デバッグ情報</h3>';
-        echo '<p>read_orders: ' . (isset($auth_status['read_orders']['authenticated']) ? ($auth_status['read_orders']['authenticated'] ? '認証済み' : '未認証') : 'データなし') . '</p>';
-        echo '<p>read_items: ' . (isset($auth_status['read_items']['authenticated']) ? ($auth_status['read_items']['authenticated'] ? '認証済み' : '未認証') : 'データなし') . '</p>';
-        echo '<p>認証データ: ' . htmlspecialchars(json_encode($auth_status, JSON_UNESCAPED_UNICODE)) . '</p>';
-        echo '<br><a href="test_practical_auto.php" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">BASE API認証を実行</a>';
+        echo '<h3>BASE API認証が必要です</h3>';
+        echo '<p>注文データを取得するには認証が必要です。</p>';
+        echo '<p>ページを再読み込みして自動認証を実行してください。</p>';
         echo '</div>';
         exit;
     }
