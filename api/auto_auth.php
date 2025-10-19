@@ -3,6 +3,19 @@ session_start();
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/base_practical_auto_manager.php';
 
+// HTMLデバッグモード
+if (isset($_GET['debug']) && $_GET['debug'] === 'html') {
+    header('Content-Type: text/html; charset=UTF-8');
+    echo '<h2>auto_auth.php デバッグ</h2>';
+    echo '<h3>受信パラメータ:</h3>';
+    echo '<pre>' . htmlspecialchars(print_r($_GET, true)) . '</pre>';
+    echo '<h3>return_url パラメータ:</h3>';
+    echo '<p>' . htmlspecialchars($_GET['return_url'] ?? '未設定') . '</p>';
+    echo '<h3>scopes パラメータ:</h3>';
+    echo '<p>' . htmlspecialchars($_GET['scopes'] ?? '未設定') . '</p>';
+    exit;
+}
+
 header('Content-Type: application/json');
 
 try {
