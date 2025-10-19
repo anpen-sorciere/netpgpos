@@ -2,9 +2,18 @@
 // BASE API OAuth認証コールバック処理
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
+ini_set('log_errors', 1);
+
+// エラーログを確認
+echo "<!-- PHP Error Log: " . ini_get('error_log') . " -->\n";
 
 // デバッグ情報（開発時のみ表示）
 $debug_mode = isset($_GET['debug']) && $_GET['debug'] === '1';
+
+// 一時的にデバッグモードを有効化（エラー調査用）
+if (isset($_GET['force_debug']) && $_GET['force_debug'] === '1') {
+    $debug_mode = true;
+}
 
 // HTMLヘッダーとスタイル
 ?>
@@ -153,6 +162,11 @@ $debug_mode = isset($_GET['debug']) && $_GET['debug'] === '1';
         <?php endif; ?>
 
 try {
+    // エラーハンドリングを強化
+    set_error_handler(function($severity, $message, $file, $line) {
+        throw new ErrorException($message, 0, $severity, $file, $line);
+    });
+    
     // 複数のパスを試行
     $config_paths = [
         '../config.php',
@@ -318,6 +332,12 @@ if (isset($_GET['code'])) {
         if (isset($_GET['return_url'])) {
             $return_url = urldecode($_GET['return_url']);
         }
+        
+        // return_urlの検証と修正
+        if (empty($return_url) || !filter_var($return_url, FILTER_VALIDATE_URL)) {
+            // 無効なURLの場合はデフォルトに戻す
+            $return_url = '../api/order_monitor.php';
+        }
                 
                 
                 if ($debug_mode) {
@@ -325,6 +345,7 @@ if (isset($_GET['code'])) {
                     echo '<div class="debug-title"><i class="fas fa-check-circle"></i> 認証成功</div>';
                     echo '<div class="debug-content">';
                     echo '<strong>戻り先URL:</strong> ' . htmlspecialchars($return_url) . '<br>';
+                    echo '<strong>URL検証:</strong> ' . (filter_var($return_url, FILTER_VALIDATE_URL) ? '有効' : '無効') . '<br>';
                     echo '<strong>スコープ:</strong> ' . htmlspecialchars($scope_key) . '<br>';
                     echo '<strong>アクセストークン:</strong> ' . htmlspecialchars(substr($token_data['access_token'], 0, 20)) . '...<br>';
                     echo '</div>';
@@ -345,7 +366,7 @@ if (isset($_GET['code'])) {
                     echo '<div class="title">認証完了</div>';
                     echo '<div class="message">認証が完了しました。<br>元のページに戻ります...</div>';
                     echo '<div class="loading"></div><span>リダイレクト中...</span>';
-                    echo '<script>setTimeout(function() { window.location.href = "' . htmlspecialchars($return_url) . '"; }, 2000);</script>';
+                    echo '<script>setTimeout(function() { window.location.href = "' . addslashes($return_url) . '"; }, 2000);</script>';
                     echo '<div style="margin-top: 20px;">';
                     echo '<a href="' . htmlspecialchars($return_url) . '" class="btn btn-primary">';
                     echo '<i class="fas fa-arrow-left"></i> すぐに戻る';
@@ -418,3 +439,26 @@ if (isset($_GET['code'])) {
     </div>
 </body>
 </html>
+<?php
+} catch (Throwable $e) {
+    // 全体のエラーハンドリング
+    echo '<div class="success-icon" style="color: #dc3545;">';
+    echo '<i class="fas fa-exclamation-triangle"></i>';
+    echo '</div>';
+    echo '<div class="title" style="color: #dc3545;">システムエラー</div>';
+    echo '<div class="message">予期しないエラーが発生しました。</div>';
+    echo '<div class="debug-section">';
+    echo '<div class="debug-title"><i class="fas fa-bug"></i> エラー詳細</div>';
+    echo '<div class="debug-content">';
+    echo '<strong>エラー:</strong> ' . htmlspecialchars($e->getMessage()) . '<br>';
+    echo '<strong>ファイル:</strong> ' . htmlspecialchars($e->getFile()) . '<br>';
+    echo '<strong>行:</strong> ' . $e->getLine() . '<br>';
+    echo '<strong>スタックトレース:</strong><br>';
+    echo '<pre>' . htmlspecialchars($e->getTraceAsString()) . '</pre>';
+    echo '</div>';
+    echo '</div>';
+    echo '<a href="../api/order_monitor.php" class="btn btn-primary">';
+    echo '<i class="fas fa-home"></i> 注文監視に戻る';
+    echo '</a>';
+}
+?>
