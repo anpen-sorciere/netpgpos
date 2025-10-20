@@ -89,7 +89,7 @@ if (!$show_form) {
         $stmh_cast_ids = $pdo->prepare("
             SELECT cast_id FROM timecard_tbl WHERE shop_id = ? AND eigyo_ymd = ?
             UNION
-            SELECT cast_id FROM receipt_detail_tbl WHERE shop_mst = ? AND receipt_day = ? AND cast_id > 0
+            SELECT cast_id FROM receipt_detail_tbl WHERE shop_id = ? AND receipt_day = ? AND cast_id > 0
         ");
         $stmh_cast_ids->execute(array($shop_id, $c_day_format, $shop_id, $c_day_format));
         $relevant_cast_ids = $stmh_cast_ids->fetchAll(PDO::FETCH_COLUMN, 0);
@@ -111,7 +111,7 @@ if (!$show_form) {
                 'hourly_wage_note' => null
             ];
 
-            $stmh_timecard = $pdo->prepare("SELECT * FROM timecard_tbl WHERE cast_id = ? AND shop_mst = ? AND eigyo_ymd = ?");
+            $stmh_timecard = $pdo->prepare("SELECT * FROM timecard_tbl WHERE cast_id = ? AND shop_id = ? AND eigyo_ymd = ?");
             $stmh_timecard->execute(array($current_cast_id, $shop_id, $c_day_format));
             $timecard_data = $stmh_timecard->fetch(PDO::FETCH_ASSOC);
 
@@ -142,7 +142,7 @@ if (!$show_form) {
                 SELECT SUM(im.back_price * rd.quantity) AS total_back_wage
                 FROM receipt_detail_tbl AS rd
                 JOIN item_mst AS im ON rd.item_id = im.item_id
-                WHERE rd.shop_mst = ? AND rd.cast_id = ? AND rd.receipt_day = ? AND im.back_price > 0
+                WHERE rd.shop_id = ? AND rd.cast_id = ? AND rd.receipt_day = ? AND im.back_price > 0
             ");
             $stmh_receipt->execute(array($shop_id, $current_cast_id, $c_day_format));
             $back_data = $stmh_receipt->fetch(PDO::FETCH_ASSOC);
