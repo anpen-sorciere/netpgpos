@@ -87,7 +87,7 @@ if (!$show_form) {
 
     if ($cast_id == '0') {
         $stmh_cast_ids = $pdo->prepare("
-            SELECT cast_id FROM timecard_tbl WHERE shop_mst = ? AND eigyo_ymd = ?
+            SELECT cast_id FROM timecard_tbl WHERE shop_id = ? AND eigyo_ymd = ?
             UNION
             SELECT cast_id FROM receipt_detail_tbl WHERE shop_mst = ? AND receipt_day = ? AND cast_id > 0
         ");
@@ -155,7 +155,8 @@ if (!$show_form) {
         }
     } else {
         // 個別キャストの場合
-        $stmh_timecard = $pdo->prepare("SELECT * FROM timecard_tbl WHERE cast_id = ? AND shop_mst = ? AND eigyo_ymd = ?");
+        // timecard_tbl は shop_id カラムを使用
+        $stmh_timecard = $pdo->prepare("SELECT * FROM timecard_tbl WHERE cast_id = ? AND shop_id = ? AND eigyo_ymd = ?");
         $stmh_timecard->execute(array($cast_id, $shop_mst, $c_day_format));
         $timecard_data = $stmh_timecard->fetch(PDO::FETCH_ASSOC);
 
