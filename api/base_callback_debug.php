@@ -4,8 +4,25 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 ini_set('log_errors', 1);
 
-// エラーログを確認
+// エラーログを確認 + アプリ内ログ初期化
+// アプリ内ログ出力先を ../logs 配下に設定
+$__logDir = __DIR__ . '/../logs';
+if (!is_dir($__logDir)) { @mkdir($__logDir, 0775, true); }
+ini_set('error_log', $__logDir . '/php_errors.log');
 echo "<!-- PHP Error Log: " . ini_get('error_log') . " -->\n";
+
+// 簡易ロガー
+$__callbackLog = $__logDir . '/callback.log';
+function cb_log(string $message, array $context = []): void {
+    global $__callbackLog;
+    $line = '[' . date('Y-m-d H:i:s') . '] ' . $message;
+    if (!empty($context)) {
+        $encoded = json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        $line .= ' | ' . $encoded;
+    }
+    $line .= PHP_EOL;
+    @file_put_contents($__callbackLog, $line, FILE_APPEND);
+}
 
 // デバッグ情報（開発時のみ表示）
 $debug_mode = isset($_GET['debug']) && $_GET['debug'] === '1';
@@ -20,6 +37,13 @@ if (isset($_GET['error_debug']) && $_GET['error_debug'] === '1') {
     $debug_mode = true;
     echo "<!-- 強制デバッグモード有効 -->\n";
 }
+
+// コールバック開始ログ
+cb_log('CALLBACK_START', [
+    'GET' => $_GET,
+    'REMOTE_ADDR' => $_SERVER['REMOTE_ADDR'] ?? null,
+    'UA' => $_SERVER['HTTP_USER_AGENT'] ?? null
+]);
 
 // HTMLヘッダーとスタイル
 ?>
@@ -195,6 +219,7 @@ try {
     
     if (!$config_loaded) {
         if ($debug_mode) echo "config.phpが見つかりません<br>";
+        cb_log('CONFIG_NOT_FOUND', ['paths_tried' => $config_paths]);
     } else {
         if ($debug_mode) {
             echo "config.php読み込み: 成功<br>";
@@ -202,9 +227,11 @@ try {
             echo "base_client_secret: " . (isset($base_client_secret) ? substr($base_client_secret, 0, 10) . '...' : '未設定') . "<br>";
             echo "base_redirect_uri: " . (isset($base_redirect_uri) ? $base_redirect_uri : '未設定') . "<br>";
         }
+        cb_log('CONFIG_LOADED', ['redirect_uri' => $base_redirect_uri ?? null]);
     }
 } catch (Exception $e) {
     if ($debug_mode) echo "config.php読み込みエラー: " . $e->getMessage() . "<br>";
+    cb_log('CONFIG_ERROR', ['error' => $e->getMessage()]);
 }
 
 if ($debug_mode) {
@@ -214,8 +241,10 @@ if ($debug_mode) {
 try {
     session_start();
     if ($debug_mode) echo "セッション開始: 成功<br>";
+    cb_log('SESSION_STARTED');
 } catch (Exception $e) {
     if ($debug_mode) echo "セッション開始エラー: " . $e->getMessage() . "<br>";
+    cb_log('SESSION_ERROR', ['error' => $e->getMessage()]);
 }
 
 if ($debug_mode) {
@@ -227,6 +256,7 @@ if ($debug_mode) {
 if (isset($_GET['code'])) {
     $auth_code = $_GET['code'];
     echo "認証コード: " . htmlspecialchars($auth_code) . "<br>";
+    cb_log('CODE_RECEIVED', ['code_len' => strlen($auth_code)]);
     
     if (isset($base_client_id) && isset($base_client_secret) && isset($base_redirect_uri)) {
         echo "<h3>アクセストークン取得テスト</h3>";
@@ -250,12 +280,14 @@ if (isset($_GET['code'])) {
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
             
+            cb_log('TOKEN_REQUEST_START', ['token_url' => $url]);
             $response = curl_exec($ch);
             $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
             
             echo "HTTP コード: " . $http_code . "<br>";
             echo "レスポンス: " . htmlspecialchars($response) . "<br>";
+            cb_log('TOKEN_RESPONSE', ['http_code' => $http_code, 'response_snippet' => substr((string)$response, 0, 200)]);
             
             if ($http_code === 200) {
                 $token_data = json_decode($response, true);
@@ -265,6 +297,7 @@ if (isset($_GET['code'])) {
                 $_SESSION['base_access_token'] = $token_data['access_token'];
                 $_SESSION['base_refresh_token'] = $token_data['refresh_token'] ?? '';
                 $_SESSION['base_token_expires'] = time() + ($token_data['expires_in'] ?? 3600);
+                cb_log('TOKEN_SESSION_SAVED', ['expires_in' => $token_data['expires_in'] ?? null]);
                 
                 // スコープ情報を保存（stateパラメータから）
                 echo "<h4>スコープ情報処理:</h4>";
@@ -277,15 +310,18 @@ if (isset($_GET['code'])) {
                         if (isset($state_data['scope'])) {
                             $scope_key = $state_data['scope'];
                             echo "デコードされたスコープ: " . htmlspecialchars($scope_key) . "<br>";
+                            cb_log('STATE_SCOPE_DECODED', ['scope' => $scope_key]);
                         } else {
                             // 従来の形式（stateが直接スコープの場合）
                             $scope_key = $_GET['state'];
                             echo "従来形式のスコープ: " . htmlspecialchars($scope_key) . "<br>";
+                            cb_log('STATE_SCOPE_LEGACY', ['scope' => $scope_key]);
                         }
                     } catch (Exception $e) {
                         // デコードに失敗した場合は従来の形式として扱う
                         $scope_key = $_GET['state'];
                         echo "デコード失敗、従来形式として処理: " . htmlspecialchars($scope_key) . "<br>";
+                        cb_log('STATE_DECODE_ERROR', ['error' => $e->getMessage()]);
                     }
                     
                     $_SESSION['base_current_scope'] = $scope_key;
@@ -310,8 +346,10 @@ if (isset($_GET['code'])) {
                     );
                     
                     echo "✅ データベースに保存成功: " . $scope_key . "<br>";
+                    cb_log('DB_SAVE_OK', ['scope' => $scope_key]);
                 } catch (Exception $e) {
                     echo "❌ データベース保存エラー: " . $e->getMessage() . "<br>";
+                    cb_log('DB_SAVE_ERROR', ['error' => $e->getMessage()]);
                 }
                 }
                 
@@ -333,6 +371,7 @@ if (isset($_GET['code'])) {
                 if ($debug_mode) {
                     echo "state復元エラー: " . $e->getMessage() . "<br>";
                 }
+                cb_log('STATE_RETURN_URL_DECODE_ERROR', ['error' => $e->getMessage()]);
             }
         }
         
@@ -346,6 +385,7 @@ if (isset($_GET['code'])) {
             // 無効なURLの場合はデフォルトに戻す
             $return_url = '../api/order_monitor.php';
         }
+        cb_log('RETURN_URL_RESOLVED', ['return_url' => $return_url]);
                 
                 
                 if ($debug_mode) {
