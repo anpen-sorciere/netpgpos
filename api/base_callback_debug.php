@@ -167,6 +167,8 @@ if (isset($_GET['error_debug']) && $_GET['error_debug'] === '1') {
             </div>
         <?php endif; ?>
 
+<?php
+// PHP処理開始
 try {
     // エラーハンドリングを強化
     set_error_handler(function($severity, $message, $file, $line) {
