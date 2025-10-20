@@ -221,10 +221,10 @@ if (!$show_form) {
     <link href="https://unpkg.com/sanitize.css" rel="stylesheet"/>
     <link rel="stylesheet" href="css/style.css">
     <style>
-    /* 印刷時に日当合計の数字を強調 */
+    /* 印刷時に日当合計の数字を強調（既存の約4倍） */
     @media print {
         .grand-total {
-            font-size: 28pt !important;
+            font-size: 4em !important;
             font-weight: 800 !important;
         }
     }
