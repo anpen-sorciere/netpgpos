@@ -223,9 +223,10 @@ if (!$show_form) {
     <style>
     /* 印刷時に日当合計の数字を強調（既存の約3倍） */
     @media print {
-        .grand-total {
-            font-size: 24pt !important;
-            font-weight: 800 !important;
+        .summary-table tfoot .grand-total {
+            font-size: 18pt !important;
+            font-weight: bold !important;
+            color: #d32f2f !important;
         }
     }
     </style>
