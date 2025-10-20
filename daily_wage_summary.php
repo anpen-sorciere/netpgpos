@@ -69,7 +69,7 @@ if (!$show_form) {
     $ymd = explode('-', $_SESSION['join']['c_day']);
     $c_day_format = $ymd[0] . $ymd[1] . $ymd[2];
     $shop_info = get_shop_info($utype);
-    $shop_mst = $shop_info['id'];
+    $shop_id = $shop_info['id'];
     $shop_name = $shop_info['name'];
     $cast_id = $_SESSION['join']['cast_id'];
 
@@ -91,7 +91,7 @@ if (!$show_form) {
             UNION
             SELECT cast_id FROM receipt_detail_tbl WHERE shop_mst = ? AND receipt_day = ? AND cast_id > 0
         ");
-        $stmh_cast_ids->execute(array($shop_mst, $c_day_format, $shop_mst, $c_day_format));
+        $stmh_cast_ids->execute(array($shop_id, $c_day_format, $shop_id, $c_day_format));
         $relevant_cast_ids = $stmh_cast_ids->fetchAll(PDO::FETCH_COLUMN, 0);
         $relevant_cast_ids = array_unique($relevant_cast_ids);
 
@@ -112,7 +112,7 @@ if (!$show_form) {
             ];
 
             $stmh_timecard = $pdo->prepare("SELECT * FROM timecard_tbl WHERE cast_id = ? AND shop_mst = ? AND eigyo_ymd = ?");
-            $stmh_timecard->execute(array($current_cast_id, $shop_mst, $c_day_format));
+            $stmh_timecard->execute(array($current_cast_id, $shop_id, $c_day_format));
             $timecard_data = $stmh_timecard->fetch(PDO::FETCH_ASSOC);
 
             $jikyu_kingaku = 0;
@@ -144,7 +144,7 @@ if (!$show_form) {
                 JOIN item_mst AS im ON rd.item_id = im.item_id
                 WHERE rd.shop_mst = ? AND rd.cast_id = ? AND rd.receipt_day = ? AND im.back_price > 0
             ");
-            $stmh_receipt->execute(array($shop_mst, $current_cast_id, $c_day_format));
+            $stmh_receipt->execute(array($shop_id, $current_cast_id, $c_day_format));
             $back_data = $stmh_receipt->fetch(PDO::FETCH_ASSOC);
 
             $cast_summary['back_wage_total'] = intval($back_data['total_back_wage']);
@@ -157,7 +157,7 @@ if (!$show_form) {
         // 個別キャストの場合
         // timecard_tbl は shop_id カラムを使用
         $stmh_timecard = $pdo->prepare("SELECT * FROM timecard_tbl WHERE cast_id = ? AND shop_id = ? AND eigyo_ymd = ?");
-        $stmh_timecard->execute(array($cast_id, $shop_mst, $c_day_format));
+        $stmh_timecard->execute(array($cast_id, $shop_id, $c_day_format));
         $timecard_data = $stmh_timecard->fetch(PDO::FETCH_ASSOC);
 
         $work_minutes = 0;
@@ -192,13 +192,13 @@ if (!$show_form) {
             JOIN
                 item_mst AS im ON rd.item_id = im.item_id
             WHERE
-                rd.shop_mst = ? AND rd.cast_id = ? AND rd.receipt_day = ? AND im.back_price > 0
+                rd.shop_id = ? AND rd.cast_id = ? AND rd.receipt_day = ? AND im.back_price > 0
             GROUP BY
                 rd.item_id
             ORDER BY
                 rd.item_id
         ");
-        $stmh_receipt->execute(array($shop_mst, $cast_id, $c_day_format));
+        $stmh_receipt->execute(array($shop_id, $cast_id, $c_day_format));
         $summary_data_view = $stmh_receipt->fetchAll(PDO::FETCH_ASSOC);
 
         $total_back_wage = 0;
