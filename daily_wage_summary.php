@@ -411,7 +411,7 @@ if (!$show_form) {
                             </tr>
                             <tr class="total-row">
                                 <td colspan="3" class="right-align">日当合計</td>
-                                <td class="right-align highlight grand-total"><?php echo number_format($total_all_casts_wages); ?>円</td>
+                                <td class="right-align highlight grand-total" style="font-size: 20pt !important; font-weight: bold !important; color: #d32f2f !important;"><?php echo number_format($total_all_casts_wages); ?>円</td>
                             </tr>
                         </tfoot>
                     </table>
