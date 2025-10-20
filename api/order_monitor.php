@@ -1770,7 +1770,8 @@ try {
                                     '<div class="item-title">商品名</div>' +
                                     '<div class="item-quantity">数量</div>' +
                                     '<div class="item-nickname">お客様名</div>' +
-                                    '<div class="item-cast">キャスト名</div>';
+                                    '<div class="item-cast">キャスト名</div>' +
+                                    '<div class="item-status">ステータス</div>';
                                 container.appendChild(headerDiv);
                                 
                                 // 商品ごとの情報を表示
@@ -1781,6 +1782,23 @@ try {
                                     // ニックネームとキャスト名を抽出
                                     var nickname = '';
                                     var castName = '';
+                                    
+                                    // ステータス日本語化
+                                    function mapItemStatus(status) {
+                                        switch (status) {
+                                            case 'ordered':
+                                                return '未対応';
+                                            case 'paid':
+                                                return '入金済';
+                                            case 'cancelled':
+                                                return 'キャンセル';
+                                            case 'dispatched':
+                                                return '発送済';
+                                            default:
+                                                return status || '不明';
+                                        }
+                                    }
+                                    var statusLabel = mapItemStatus(item.status);
                                     
                                     if (item.options && item.options.length > 0) {
                                         item.options.forEach(function(option) {
@@ -1796,7 +1814,8 @@ try {
                                         '<div class="item-title">' + item.title + '</div>' +
                                         '<div class="item-quantity">' + item.amount + '</div>' +
                                         '<div class="item-nickname">' + (nickname || 'なし') + '</div>' +
-                                        '<div class="item-cast">' + (castName || 'なし') + '</div>';
+                                        '<div class="item-cast">' + (castName || 'なし') + '</div>' +
+                                        '<div class="item-status">' + statusLabel + '</div>';
                                     
                                     container.appendChild(itemDiv);
                                 });
@@ -1804,7 +1823,7 @@ try {
                                 // エラー時はエラーメッセージを表示
                                 var placeholder = container.querySelector('.item-details-placeholder');
                                 if (placeholder) {
-                                    placeholder.textContent = 'エラー: ' + (data.error || '不明なエラー');
+                                    placeholder.textContent = 'エラー: 商品情報の取得に失敗しました（' + (data.error || '不明なエラー') + '）';
                                     placeholder.style.color = '#dc3545';
                                 }
                             }
@@ -1813,7 +1832,7 @@ try {
                             console.error('商品情報取得エラー:', error);
                             var placeholder = container.querySelector('.item-details-placeholder');
                             if (placeholder) {
-                                placeholder.textContent = 'エラー: ' + error.message;
+                                placeholder.textContent = 'エラー: 商品情報の取得に失敗しました（' + error.message + '）';
                                 placeholder.style.color = '#dc3545';
                             }
                         });
