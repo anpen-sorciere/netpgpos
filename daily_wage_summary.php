@@ -219,6 +219,15 @@ if (!$show_form) {
     <link href="https://use.fontawesome.com/releases/v5.6.1/css/all.css" rel="stylesheet">
     <link href="https://unpkg.com/sanitize.css" rel="stylesheet"/>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+    /* 印刷時に日当合計の数字を強調 */
+    @media print {
+        .grand-total {
+            font-size: 28pt !important;
+            font-weight: 800 !important;
+        }
+    }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -400,7 +409,7 @@ if (!$show_form) {
                             </tr>
                             <tr class="total-row">
                                 <td colspan="3" class="right-align">日当合計</td>
-                                <td class="right-align highlight"><?php echo number_format($total_all_casts_wages); ?>円</td>
+                                <td class="right-align highlight grand-total"><?php echo number_format($total_all_casts_wages); ?>円</td>
                             </tr>
                         </tfoot>
                     </table>
