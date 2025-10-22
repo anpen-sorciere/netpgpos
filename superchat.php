@@ -53,41 +53,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         switch ($_POST['action']) {
             case 'add':
                 // スーパーチャット追加
-                $cast_id = $_POST['cast_id'] ?? '';
+                $cast_ids = $_POST['cast_ids'] ?? [];
                 $donor_name = trim($_POST['donor_name'] ?? '');
                 $amount = $_POST['amount'] ?? '';
                 $currency = $_POST['currency'] ?? 'JPY';
                 $received_date = $_POST['received_date'] ?? '';
                 
-                if ($cast_id && $amount && $received_date) {
+                if (!empty($cast_ids) && $amount && $received_date) {
                     try {
-                        // 為替レート取得と日本円換算
-                        $conversion = $exchange_service->convertToJPY($amount, $currency, $received_date);
-                        $jpy_amount = $conversion['jpy_amount'];
-                        $exchange_rate = $conversion['rate'];
+                        // キャスト数に応じて金額を分割
+                        $cast_count = count($cast_ids);
+                        $split_amount = floor($amount * 100 / $cast_count) / 100; // 小数点以下2桁で切り捨て
                         
-                        $stmt = $pdo->prepare("INSERT INTO superchat_tbl (cast_id, donor_name, amount, currency, received_date, jpy_amount, exchange_rate) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                        $stmt->execute([$cast_id, $donor_name, $amount, $currency, $received_date, $jpy_amount, $exchange_rate]);
-                        $message = "スーパーチャットを登録しました。（日本円換算: " . number_format($jpy_amount) . "円）";
+                        $registered_count = 0;
+                        $total_jpy_amount = 0;
+                        
+                        foreach ($cast_ids as $cast_id) {
+                            // 為替レート取得と日本円換算
+                            $conversion = $exchange_service->convertToJPY($split_amount, $currency, $received_date);
+                            $jpy_amount = $conversion['jpy_amount'];
+                            $exchange_rate = $conversion['rate'];
+                            
+                            $stmt = $pdo->prepare("INSERT INTO superchat_tbl (cast_id, donor_name, amount, currency, received_date, jpy_amount, exchange_rate) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                            $stmt->execute([$cast_id, $donor_name, $split_amount, $currency, $received_date, $jpy_amount, $exchange_rate]);
+                            
+                            $registered_count++;
+                            $total_jpy_amount += $jpy_amount;
+                        }
+                        
+                        $message = "スーパーチャットを{$registered_count}人に分割して登録しました。（日本円換算合計: " . number_format($total_jpy_amount) . "円）";
                     } catch (PDOException $e) {
                         $error = "登録に失敗しました: " . $e->getMessage();
                     }
                 } else {
-                    $error = "すべての項目を入力してください。";
+                    $error = "キャスト、金額、受領日を入力してください。";
                 }
                 break;
                 
             case 'update':
-                // スーパーチャット更新
+                // スーパーチャット更新（編集時は単一キャストのみ）
                 $id = $_POST['id'] ?? '';
-                $cast_id = $_POST['cast_id'] ?? '';
+                $cast_ids = $_POST['cast_ids'] ?? [];
                 $donor_name = trim($_POST['donor_name'] ?? '');
                 $amount = $_POST['amount'] ?? '';
                 $currency = $_POST['currency'] ?? 'JPY';
                 $received_date = $_POST['received_date'] ?? '';
                 
-                if ($id && $cast_id && $amount && $received_date) {
+                if ($id && !empty($cast_ids) && $amount && $received_date) {
                     try {
+                        // 編集時は最初のキャストのみ使用（単一レコードの更新）
+                        $cast_id = $cast_ids[0];
+                        
                         // 為替レート取得と日本円換算
                         $conversion = $exchange_service->convertToJPY($amount, $currency, $received_date);
                         $jpy_amount = $conversion['jpy_amount'];
@@ -100,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $error = "更新に失敗しました: " . $e->getMessage();
                     }
                 } else {
-                    $error = "すべての項目を入力してください。";
+                    $error = "キャスト、金額、受領日を入力してください。";
                 }
                 break;
                 
@@ -376,9 +392,8 @@ if (isset($_POST['received_date'])) {
                 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="cast_id">キャスト</label>
-                        <select name="cast_id" id="cast_id" required>
-                            <option value="">選択してください</option>
+                        <label for="cast_ids">キャスト（最大3人まで選択可能）</label>
+                        <select name="cast_ids[]" id="cast_ids" multiple size="5" required style="width: 100%;">
                             <?php foreach ($casts as $cast): ?>
                                 <option value="<?= htmlspecialchars($cast['cast_id']) ?>" 
                                     <?= ($edit_data && $edit_data['cast_id'] == $cast['cast_id']) ? 'selected' : '' ?>>
@@ -386,6 +401,7 @@ if (isset($_POST['received_date'])) {
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                        <small style="color: #666;">Ctrlキー（Mac: Cmdキー）を押しながら複数選択</small>
                     </div>
                     
                     <div class="form-group">
@@ -549,6 +565,15 @@ if (isset($_POST['received_date'])) {
             const todayString = year + '-' + month + '-' + day;
             document.getElementById('received_date').value = todayString;
         }
+        
+        // キャスト選択の制限（最大3人まで）
+        document.getElementById('cast_ids').addEventListener('change', function() {
+            if (this.selectedOptions.length > 3) {
+                alert('最大3人まで選択できます。');
+                // 最後に選択したものを解除
+                this.selectedOptions[this.selectedOptions.length - 1].selected = false;
+            }
+        });
     </script>
 </body>
 </html>
