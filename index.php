@@ -68,8 +68,9 @@ if(isset($_GET['utype'])) {
             <li class="menu-item"><a href="base_data_sync_top.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">BASEデータ同期</a></li>
             <li class="menu-item"><a href="order_system/order_terminal.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">店内オーダー（テスト）</a></li>
             <li class="menu-item"><a href="order_system/kitchen_terminal.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">キッチン受注（テスト）</a></li>
+            <li class="menu-item"><a href="superchat.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">スパチャ</a></li>
+            <li class="menu-item"><a href="staff_timecard/staff_timecard.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">スタッフタイムカード入力</a></li>
         </ul>
     </div>
-                <li class="menu-item"><a href="staff_timecard/staff_timecard.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">スタッフタイムカード入力</a></li>
 </body>
 </html>
