@@ -27,8 +27,8 @@ $exchange_service = new ExchangeRateService();
 $shop_info = get_shop_info($utype);
 $shop_name = $shop_info['name'];
 
-// キャスト一覧取得
-$casts = cast_get_all($pdo);
+// キャスト一覧取得（退職者も含む）
+$casts = cast_get_all($pdo, true);
 
 // 通貨リスト
 $currencies = [
