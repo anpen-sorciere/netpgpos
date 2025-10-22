@@ -7,6 +7,9 @@ error_reporting(E_ALL);
 require_once 'dbconnect.php';
 
 try {
+    // データベース接続
+    $pdo = connect();
+    
     // スーパーチャットテーブル作成SQLを読み込み
     $sql = file_get_contents('sql/superchat_table.sql');
     

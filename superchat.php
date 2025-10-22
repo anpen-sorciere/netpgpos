@@ -16,6 +16,9 @@ if (!$utype) {
     exit();
 }
 
+// データベース接続
+$pdo = connect();
+
 // 店舗名取得
 $shop_info = get_shop_info($utype);
 $shop_name = $shop_info['name'];
