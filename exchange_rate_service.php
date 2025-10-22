@@ -70,7 +70,10 @@ class ExchangeRateService {
             'CHF' => 170.0,
             'CNY' => 20.0,
             'KRW' => 0.11,
-            'THB' => 4.2
+            'THB' => 4.2,
+            'TRY' => 4.5,
+            'MIR' => 1.0,
+            'PHP' => 2.7
         ];
         
         return $fallback_rates[$from_currency] ?? 1.0;
