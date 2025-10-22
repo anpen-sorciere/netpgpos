@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $currency = $_POST['currency'] ?? 'JPY';
                 $received_date = $_POST['received_date'] ?? '';
                 
-                if ($cast_id && $donor_name && $amount && $received_date) {
+                if ($cast_id && $amount && $received_date) {
                     try {
                         // 為替レート取得と日本円換算
                         $conversion = $exchange_service->convertToJPY($amount, $currency, $received_date);
@@ -86,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $currency = $_POST['currency'] ?? 'JPY';
                 $received_date = $_POST['received_date'] ?? '';
                 
-                if ($id && $cast_id && $donor_name && $amount && $received_date) {
+                if ($id && $cast_id && $amount && $received_date) {
                     try {
                         // 為替レート取得と日本円換算
                         $conversion = $exchange_service->convertToJPY($amount, $currency, $received_date);
@@ -391,7 +391,8 @@ if (isset($_POST['received_date'])) {
                     <div class="form-group">
                         <label for="donor_name">寄付者名</label>
                         <input type="text" name="donor_name" id="donor_name" 
-                               value="<?= htmlspecialchars($edit_data['donor_name'] ?? '') ?>" required>
+                               value="<?= htmlspecialchars($edit_data['donor_name'] ?? '') ?>" 
+                               placeholder="匿名の場合は空欄でOK">
                     </div>
                     
                     <div class="form-group">
@@ -499,7 +500,7 @@ if (isset($_POST['received_date'])) {
                             <tr>
                                 <td><?= htmlspecialchars($sc['received_date']) ?></td>
                                 <td><?= htmlspecialchars($sc['cast_name'] ?? '不明') ?></td>
-                                <td><?= htmlspecialchars($sc['donor_name']) ?></td>
+                                <td><?= htmlspecialchars($sc['donor_name'] ?: '匿名') ?></td>
                                 <td class="amount-cell"><?= number_format($sc['amount'], 2) ?></td>
                                 <td><?= htmlspecialchars($sc['currency']) ?></td>
                                 <td class="amount-cell">
