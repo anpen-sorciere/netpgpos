@@ -7,6 +7,7 @@ error_reporting(E_ALL);
 session_start();
 require_once 'dbconnect.php';
 require_once 'functions.php';
+require_once 'exchange_rate_service.php';
 
 $uid = $_SESSION['user_id'] ?? null;
 $utype = $_SESSION['utype'] ?? null;
@@ -18,6 +19,9 @@ if (!$utype) {
 
 // データベース接続
 $pdo = connect();
+
+// 為替レートサービス初期化
+$exchange_service = new ExchangeRateService();
 
 // 店舗名取得
 $shop_info = get_shop_info($utype);
@@ -57,9 +61,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 if ($cast_id && $donor_name && $amount && $received_date) {
                     try {
-                        $stmt = $pdo->prepare("INSERT INTO superchat_tbl (cast_id, donor_name, amount, currency, received_date) VALUES (?, ?, ?, ?, ?)");
-                        $stmt->execute([$cast_id, $donor_name, $amount, $currency, $received_date]);
-                        $message = "スーパーチャットを登録しました。";
+                        // 為替レート取得と日本円換算
+                        $conversion = $exchange_service->convertToJPY($amount, $currency, $received_date);
+                        $jpy_amount = $conversion['jpy_amount'];
+                        $exchange_rate = $conversion['rate'];
+                        
+                        $stmt = $pdo->prepare("INSERT INTO superchat_tbl (cast_id, donor_name, amount, currency, received_date, jpy_amount, exchange_rate) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                        $stmt->execute([$cast_id, $donor_name, $amount, $currency, $received_date, $jpy_amount, $exchange_rate]);
+                        $message = "スーパーチャットを登録しました。（日本円換算: " . number_format($jpy_amount) . "円）";
                     } catch (PDOException $e) {
                         $error = "登録に失敗しました: " . $e->getMessage();
                     }
@@ -79,9 +88,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 if ($id && $cast_id && $donor_name && $amount && $received_date) {
                     try {
-                        $stmt = $pdo->prepare("UPDATE superchat_tbl SET cast_id = ?, donor_name = ?, amount = ?, currency = ?, received_date = ? WHERE id = ?");
-                        $stmt->execute([$cast_id, $donor_name, $amount, $currency, $received_date, $id]);
-                        $message = "スーパーチャットを更新しました。";
+                        // 為替レート取得と日本円換算
+                        $conversion = $exchange_service->convertToJPY($amount, $currency, $received_date);
+                        $jpy_amount = $conversion['jpy_amount'];
+                        $exchange_rate = $conversion['rate'];
+                        
+                        $stmt = $pdo->prepare("UPDATE superchat_tbl SET cast_id = ?, donor_name = ?, amount = ?, currency = ?, received_date = ?, jpy_amount = ?, exchange_rate = ? WHERE id = ?");
+                        $stmt->execute([$cast_id, $donor_name, $amount, $currency, $received_date, $jpy_amount, $exchange_rate, $id]);
+                        $message = "スーパーチャットを更新しました。（日本円換算: " . number_format($jpy_amount) . "円）";
                     } catch (PDOException $e) {
                         $error = "更新に失敗しました: " . $e->getMessage();
                     }
@@ -101,6 +115,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     } catch (PDOException $e) {
                         $error = "削除に失敗しました: " . $e->getMessage();
                     }
+                }
+                break;
+                
+            case 'update_rates':
+                // 既存データの為替レート更新
+                try {
+                    $stmt = $pdo->prepare("SELECT id, amount, currency, received_date FROM superchat_tbl WHERE currency != 'JPY' AND (jpy_amount IS NULL OR exchange_rate IS NULL)");
+                    $stmt->execute();
+                    $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    
+                    $updated_count = 0;
+                    foreach ($records as $record) {
+                        $conversion = $exchange_service->convertToJPY($record['amount'], $record['currency'], $record['received_date']);
+                        $jpy_amount = $conversion['jpy_amount'];
+                        $exchange_rate = $conversion['rate'];
+                        
+                        $update_stmt = $pdo->prepare("UPDATE superchat_tbl SET jpy_amount = ?, exchange_rate = ? WHERE id = ?");
+                        $update_stmt->execute([$jpy_amount, $exchange_rate, $record['id']]);
+                        $updated_count++;
+                    }
+                    
+                    $message = "為替レートを更新しました。（{$updated_count}件）";
+                } catch (PDOException $e) {
+                    $error = "為替レート更新に失敗しました: " . $e->getMessage();
                 }
                 break;
         }
@@ -416,6 +454,15 @@ if (isset($_GET['edit'])) {
                 </form>
             </div>
             
+            <div style="margin-bottom: 20px;">
+                <form method="POST" style="display: inline;">
+                    <input type="hidden" name="action" value="update_rates">
+                    <button type="submit" class="btn btn-primary" onclick="return confirm('既存データの為替レートを更新しますか？')">
+                        <i class="fas fa-sync"></i> 為替レート更新
+                    </button>
+                </form>
+            </div>
+            
             <?php if (empty($superchats)): ?>
                 <p>該当月のスーパーチャットはありません。</p>
             <?php else: ?>
@@ -427,6 +474,8 @@ if (isset($_GET['edit'])) {
                             <th>寄付者名</th>
                             <th>金額</th>
                             <th>通貨</th>
+                            <th>日本円換算</th>
+                            <th>為替レート</th>
                             <th>登録日時</th>
                             <th>操作</th>
                         </tr>
@@ -439,6 +488,22 @@ if (isset($_GET['edit'])) {
                                 <td><?= htmlspecialchars($sc['donor_name']) ?></td>
                                 <td class="amount-cell"><?= number_format($sc['amount'], 2) ?></td>
                                 <td><?= htmlspecialchars($sc['currency']) ?></td>
+                                <td class="amount-cell">
+                                    <?php if ($sc['jpy_amount'] !== null): ?>
+                                        <?= number_format($sc['jpy_amount'], 0) ?>円
+                                    <?php else: ?>
+                                        <span style="color: #999;">未換算</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if ($sc['exchange_rate'] !== null && $sc['currency'] !== 'JPY'): ?>
+                                        <?= number_format($sc['exchange_rate'], 4) ?>
+                                    <?php elseif ($sc['currency'] === 'JPY'): ?>
+                                        -
+                                    <?php else: ?>
+                                        <span style="color: #999;">-</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td><?= htmlspecialchars($sc['created_at']) ?></td>
                                 <td class="actions">
                                     <a href="superchat.php?utype=<?= htmlspecialchars($utype) ?>&year=<?= htmlspecialchars($display_year) ?>&month=<?= htmlspecialchars($display_month) ?>&edit=<?= htmlspecialchars($sc['id']) ?>" 
