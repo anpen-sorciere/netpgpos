@@ -476,7 +476,6 @@ if (isset($_GET['edit'])) {
                             <th>通貨</th>
                             <th>日本円換算</th>
                             <th>為替レート</th>
-                            <th>登録日時</th>
                             <th>操作</th>
                         </tr>
                     </thead>
@@ -504,7 +503,6 @@ if (isset($_GET['edit'])) {
                                         <span style="color: #999;">-</span>
                                     <?php endif; ?>
                                 </td>
-                                <td><?= htmlspecialchars($sc['created_at']) ?></td>
                                 <td class="actions">
                                     <a href="superchat.php?utype=<?= htmlspecialchars($utype) ?>&year=<?= htmlspecialchars($display_year) ?>&month=<?= htmlspecialchars($display_month) ?>&edit=<?= htmlspecialchars($sc['id']) ?>" 
                                        class="btn btn-warning">
