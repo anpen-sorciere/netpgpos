@@ -180,6 +180,16 @@ if (isset($_GET['edit'])) {
         $error = "編集データの取得に失敗しました: " . $e->getMessage();
     }
 }
+
+// 受領日のデフォルト値を設定
+$default_date = date('Y-m-d'); // 本日
+if (isset($_POST['received_date'])) {
+    // フォーム送信後は同じ日付を引き継ぐ
+    $default_date = $_POST['received_date'];
+} elseif ($edit_data) {
+    // 編集時は編集データの日付を使用
+    $default_date = $edit_data['received_date'];
+}
 ?>
 
 <!DOCTYPE html>
@@ -386,8 +396,13 @@ if (isset($_GET['edit'])) {
                     
                     <div class="form-group">
                         <label for="received_date">受領日</label>
-                        <input type="date" name="received_date" id="received_date" 
-                               value="<?= htmlspecialchars($edit_data['received_date'] ?? date('Y-m-d')) ?>" required>
+                        <div style="display: flex; gap: 5px;">
+                            <input type="date" name="received_date" id="received_date" 
+                                   value="<?= htmlspecialchars($default_date) ?>" required style="flex: 1;">
+                            <button type="button" onclick="setToday()" class="btn btn-primary" style="padding: 8px 12px;">
+                                <i class="fas fa-calendar-day"></i> 本日
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
@@ -524,5 +539,15 @@ if (isset($_GET['edit'])) {
             <?php endif; ?>
         </div>
     </div>
+    <script>
+        function setToday() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const todayString = year + '-' + month + '-' + day;
+            document.getElementById('received_date').value = todayString;
+        }
+    </script>
 </body>
 </html>
