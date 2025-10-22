@@ -57,6 +57,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             case 'add':
                 // スーパーチャット追加
                 $cast_ids = $_POST['cast_ids'] ?? [];
+                // 空値を除外し、最大3人に制限
+                $cast_ids = array_values(array_filter($cast_ids, function($v){ return $v !== '' && $v !== null; }));
+                if (count($cast_ids) > 3) {
+                    $cast_ids = array_slice($cast_ids, 0, 3);
+                }
                 $donor_name = trim($_POST['donor_name'] ?? '');
                 $amount = $_POST['amount'] ?? '';
                 $currency = $_POST['currency'] ?? 'JPY';
@@ -97,6 +102,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // スーパーチャット更新（編集時は単一キャストのみ）
                 $id = $_POST['id'] ?? '';
                 $cast_ids = $_POST['cast_ids'] ?? [];
+                // 空値を除外し、1人目のみ採用
+                $cast_ids = array_values(array_filter($cast_ids, function($v){ return $v !== '' && $v !== null; }));
                 $donor_name = trim($_POST['donor_name'] ?? '');
                 $amount = $_POST['amount'] ?? '';
                 $currency = $_POST['currency'] ?? 'JPY';
@@ -395,16 +402,35 @@ if (isset($_POST['received_date'])) {
                 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="cast_ids">キャスト（最大3人まで選択可能）</label>
-                        <select name="cast_ids[]" id="cast_ids" multiple size="5" required style="width: 100%;">
-                            <?php foreach ($casts as $cast): ?>
-                                <option value="<?= htmlspecialchars($cast['cast_id']) ?>" 
-                                    <?= ($edit_data && $edit_data['cast_id'] == $cast['cast_id']) ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($cast['cast_name']) ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                        <small style="color: #666;">Ctrlキー（Mac: Cmdキー）を押しながら複数選択</small>
+                        <label>キャスト（最大3人まで選択可能）</label>
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 6px;">
+                            <select name="cast_ids[]" id="cast_id_1" style="width: 100%;">
+                                <option value="">未選択</option>
+                                <?php foreach ($casts as $cast): ?>
+                                    <option value="<?= htmlspecialchars($cast['cast_id']) ?>" 
+                                        <?= ($edit_data && $edit_data['cast_id'] == $cast['cast_id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($cast['cast_name']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <select name="cast_ids[]" id="cast_id_2" style="width: 100%;">
+                                <option value="">未選択</option>
+                                <?php foreach ($casts as $cast): ?>
+                                    <option value="<?= htmlspecialchars($cast['cast_id']) ?>">
+                                        <?= htmlspecialchars($cast['cast_name']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <select name="cast_ids[]" id="cast_id_3" style="width: 100%;">
+                                <option value="">未選択</option>
+                                <?php foreach ($casts as $cast): ?>
+                                    <option value="<?= htmlspecialchars($cast['cast_id']) ?>">
+                                        <?= htmlspecialchars($cast['cast_name']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <small style="color: #666;">未選択の欄は空のままで大丈夫です</small>
                     </div>
                     
                     <div class="form-group">
