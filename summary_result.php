@@ -57,7 +57,7 @@ try {
     // 伝票の基本情報を取得するSQLクエリ
     // $shop_mstがnullでないことを確認してからクエリを実行
     if ($shop_mst !== null) {
-        $sql_receipts = "SELECT * FROM receipt_tbl WHERE shop_mst = ? AND receipt_day BETWEEN ? AND ? ";
+        $sql_receipts = "SELECT * FROM receipt_tbl WHERE shop_id = ? AND receipt_day BETWEEN ? AND ? ";
         $params_receipts = [intval($shop_mst), $start_ymd, $end_ymd];
     
         if ($payment_type != '0') {
@@ -71,6 +71,10 @@ try {
         }
     
         $sql_receipts .= " ORDER BY receipt_day DESC, receipt_id DESC";
+    
+        // デバッグ用: SQLクエリとパラメータをログに記録
+        error_log("SQL Query: " . $sql_receipts);
+        error_log("Parameters: " . print_r($params_receipts, true));
     
         $statement_receipts = $pdo->prepare($sql_receipts);
         $statement_receipts->execute($params_receipts);
@@ -117,7 +121,7 @@ try {
     }
 
 } catch (PDOException $e) {
-    $error['db'] = "データベースエラーが発生しました。時間をおいて再度お試しいただくか、管理者にご連絡ください。";
+    $error['db'] = "データベースエラーが発生しました: " . $e->getMessage();
     error_log("Database Error: " . $e->getMessage());
 } catch (Exception $e) {
     $error['general'] = "エラーが発生しました: " . $e->getMessage();
