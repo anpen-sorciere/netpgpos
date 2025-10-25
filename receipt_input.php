@@ -343,6 +343,7 @@ try {
                             <button type="button" class="kampai-btn" data-row="<?= $i ?>" data-item-id="2">乾杯</button>
                             <?php if ($i > 1): ?>
                                 <button type="button" class="copy-item-btn" data-row="<?= $i ?>">↑</button>
+                                <button type="button" class="copy-cast-btn" data-row="<?= $i ?>">C</button>
                             <?php endif; ?>
                         </div>
                         <input type="hidden" name="price<?= $i ?>" id="price<?= $i ?>" value="<?= htmlspecialchars($_SESSION['join']["price$i"] ?? '', ENT_QUOTES) ?>">
@@ -475,6 +476,18 @@ try {
                     
                     document.getElementById('item_name' + currentRow).value = prevItem;
                     document.getElementById('price' + currentRow).value = prevPrice;
+                });
+            });
+
+            document.querySelectorAll('.copy-cast-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const currentRow = parseInt(this.getAttribute('data-row'));
+                    const prevRow = currentRow - 1;
+                    const prevCast = document.getElementById('cast_name' + prevRow).value;
+                    
+                    if (prevCast) {
+                        document.getElementById('cast_name' + currentRow).value = prevCast;
+                    }
                 });
             });
 
