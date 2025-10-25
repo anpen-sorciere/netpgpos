@@ -58,8 +58,13 @@ try {
         $params_receipts = [intval($shop_mst), $start_ymd, $end_ymd];
     
         if ($payment_type != '0') {
-            $sql_receipts .= "AND payment_type = ? ";
-            $params_receipts[] = intval($payment_type);
+            if ($payment_type == '-1') {
+                // 現金以外（payment_typeが1以外）
+                $sql_receipts .= "AND payment_type != 1 ";
+            } else {
+                $sql_receipts .= "AND payment_type = ? ";
+                $params_receipts[] = intval($payment_type);
+            }
         }
     
         $sql_receipts .= " ORDER BY receipt_day DESC, receipt_id DESC";
@@ -276,6 +281,7 @@ function format_price($price) {
                 <label for="p_type">支払い方法</label>
                 <select name="p_type" id="p_type">
                     <option value="0" <?= ($payment_type == '0') ? 'selected' : ''; ?>>全部</option>
+                    <option value="-1" <?= ($payment_type == '-1') ? 'selected' : ''; ?>>現金以外</option>
                     <?php foreach($payment_mst_data as $row): ?>
                         <option value="<?= htmlspecialchars($row["payment_type"]) ?>" <?= ($row["payment_type"] == $payment_type) ? 'selected' : ''; ?>>
                             <?= htmlspecialchars($row["payment_name"], ENT_QUOTES); ?>

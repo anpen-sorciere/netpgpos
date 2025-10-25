@@ -54,6 +54,7 @@ try {
                 <label for="p_type">支払い方法</label>
                 <select name="p_type" id="p_type">
                     <option value="0">全部</option>
+                    <option value="-1">現金以外</option>
                     <?php foreach ($payment_list as $row): ?>
                         <option value="<?= h($row["payment_type"]) ?>">
                             <?= h($row["payment_name"]) ?>
