@@ -201,31 +201,31 @@ $final_total = $total_with_tax + $adjust_price;
             <tbody>
                 <tr>
                     <th>店舗コード</th>
-                    <td><span class="check-info"><?= ($utype == 3) ? 'コレクト' : htmlspecialchars($shop_mst, ENT_QUOTES); ?></span></td>
+                    <td><span class="check-info"><?= ($utype == 3) ? 'コレクト' : htmlspecialchars($shop_mst ?? '', ENT_QUOTES); ?></span></td>
                     <th>座席番号</th>
-                    <td><span class="check-info"><?= htmlspecialchars($sheet_no, ENT_QUOTES); ?></span></td>
+                    <td><span class="check-info"><?= htmlspecialchars($sheet_no ?? '', ENT_QUOTES); ?></span></td>
                 </tr>
                 <tr>
                     <th>伝票集計日付</th>
-                    <td><span class="check-info"><?= htmlspecialchars($receipt_day, ENT_QUOTES); ?></span></td>
+                    <td><span class="check-info"><?= htmlspecialchars($receipt_day ?? '', ENT_QUOTES); ?></span></td>
                     <td></td>
                     <td></td>
                 </tr>
                 <tr>
                     <th>入店日付</th>
-                    <td><span class="check-info"><?= htmlspecialchars($in_date, ENT_QUOTES); ?></span></td>
+                    <td><span class="check-info"><?= htmlspecialchars($in_date ?? '', ENT_QUOTES); ?></span></td>
                     <th>入店時間</th>
-                    <td><span class="check-info"><?= htmlspecialchars($in_time, ENT_QUOTES); ?></span></td>
+                    <td><span class="check-info"><?= htmlspecialchars($in_time ?? '', ENT_QUOTES); ?></span></td>
                 </tr>
                 <tr>
                     <th>顧客名</th>
-                    <td><span class="check-info"><?= htmlspecialchars($customer_name, ENT_QUOTES); ?></span></td>
+                    <td><span class="check-info"><?= htmlspecialchars($customer_name ?? '', ENT_QUOTES); ?></span></td>
                     <th>伝票起票者</th>
-                    <td><span class="check-info"><?= htmlspecialchars($issuer_name, ENT_QUOTES); ?></span></td>
+                    <td><span class="check-info"><?= htmlspecialchars($issuer_name ?? '', ENT_QUOTES); ?></span></td>
                 </tr>
                 <tr>
                     <th>支払い方法</th>
-                    <td><span class="check-info"><?= htmlspecialchars($payment_name, ENT_QUOTES); ?></span></td>
+                    <td><span class="check-info"><?= htmlspecialchars($payment_name ?? '', ENT_QUOTES); ?></span></td>
                     <th>調整額</th>
                     <td><span class="check-info"><?= number_format($adjust_price); ?></span></td>
                 </tr>
@@ -286,7 +286,7 @@ $final_total = $total_with_tax + $adjust_price;
         
         <br>
         <div class="btn-container">
-            <a href="receipt_input.php?utype=<?= htmlspecialchars($utype, ENT_QUOTES); ?>&is_back=1" class="btn back-btn">変更する</a>
+            <a href="receipt_input.php?utype=<?= htmlspecialchars($utype ?? '', ENT_QUOTES); ?>&is_back=1" class="btn back-btn">変更する</a>
             <form action="" method="POST">
                 <input type="hidden" name="check" value="checked">
                 <button type="submit" class="btn next-btn">登録する</button>
