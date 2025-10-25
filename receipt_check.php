@@ -39,7 +39,7 @@ if (!empty($_POST['check'])) {
     $out_date = '';
     $out_time = '';
 
-    $stmt_base = $pdo->prepare("INSERT INTO receipt_tbl (receipt_id, shop_mst, sheet_no, receipt_day, in_date, in_time, out_date, out_time, customer_name, issuer_id, rep_id, payment_type, adjust_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt_base = $pdo->prepare("INSERT INTO receipt_tbl (receipt_id, shop_id, sheet_no, receipt_day, in_date, in_time, out_date, out_time, customer_name, issuer_id, rep_id, payment_type, adjust_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     $stmt_base->execute([
         $receipt_id,
         $shop_mst,
@@ -57,7 +57,7 @@ if (!empty($_POST['check'])) {
     ]);
 
     // 伝票明細登録 (11行登録)
-    $stmt_detail = $pdo->prepare("INSERT INTO receipt_detail_tbl (shop_mst, receipt_id, receipt_day, item_id, quantity, price, cast_id, cast_back_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt_detail = $pdo->prepare("INSERT INTO receipt_detail_tbl (shop_id, receipt_id, receipt_day, item_id, quantity, price, cast_id, cast_back_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
     for ($i = 1; $i <= 11; $i++) {
         // 全ての行に対して処理を実行
         $item_id = intval($_SESSION['join']["item_name$i"] ?? 0);
