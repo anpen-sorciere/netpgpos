@@ -35,7 +35,7 @@ try {
     $pdo->beginTransaction();
 
     // 伝票データの取得
-    $stmt = $pdo->prepare("SELECT * FROM receipt_tbl WHERE receipt_id = ? AND shop_mst = ?");
+    $stmt = $pdo->prepare("SELECT * FROM receipt_tbl WHERE receipt_id = ? AND shop_id = ?");
     $stmt->execute([$receipt_id, $shop_mst]);
     $receipt = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -83,6 +83,7 @@ try {
             $new_issuer_id = $_POST['issuer_id'];
             $new_payment_type = $_POST['payment_type'];
             $new_adjust_price = $_POST['adjust_price'];
+            $new_customer_name = $_POST['customer_name'];
             
             // YYYY-MM-DD形式からYYYYMMDD形式に変換
             $new_in_date = str_replace('-', '', $new_in_date_raw);
@@ -91,8 +92,8 @@ try {
             $new_out_time = str_replace(':', '', $new_out_time_raw);
             $new_receipt_day = str_replace('-', '', $new_receipt_day_raw);
 
-            $stmt = $pdo->prepare("UPDATE receipt_tbl SET in_date = ?, in_time = ?, out_date = ?, out_time = ?, receipt_day = ?, issuer_id = ?, payment_type = ?, adjust_price = ? WHERE receipt_id = ?");
-            $stmt->execute([$new_in_date, $new_in_time, $new_out_date, $new_out_time, $new_receipt_day, $new_issuer_id, $new_payment_type, $new_adjust_price, $receipt_id]);
+            $stmt = $pdo->prepare("UPDATE receipt_tbl SET customer_name = ?, in_date = ?, in_time = ?, out_date = ?, out_time = ?, receipt_day = ?, issuer_id = ?, payment_type = ?, adjust_price = ? WHERE receipt_id = ?");
+            $stmt->execute([$new_customer_name, $new_in_date, $new_in_time, $new_out_date, $new_out_time, $new_receipt_day, $new_issuer_id, $new_payment_type, $new_adjust_price, $receipt_id]);
 
             // 既存明細の更新または新規明細の追加
             $submitted_details = $_POST['details'];
@@ -282,7 +283,7 @@ $out_time_formatted = $receipt['out_time'] ? date('H:i', strtotime($receipt['out
                     <h2>基本情報</h2>
                     <div class="form-group">
                         <label for="customer_name">顧客名</label>
-                        <input type="text" id="customer_name" value="<?= htmlspecialchars($receipt['customer_name'] ?? '未設定') ?>" readonly>
+                        <input type="text" name="customer_name" id="customer_name" value="<?= htmlspecialchars($receipt['customer_name'] ?? '') ?>">
                     </div>
 
                     <div class="form-group">
