@@ -33,6 +33,17 @@ try {
     <title>売上集計データ</title>
     <link href="https://unpkg.com/sanitize.css" rel="stylesheet"/>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -62,6 +73,14 @@ try {
                     <?php endforeach; ?>
                 </select>
             </div>
+            
+            <?php if (!empty($error)): ?>
+                <div class="error-message">
+                    <?php foreach ($error as $key => $msg): ?>
+                        <p><strong><?= h($key) ?>:</strong> <?= h($msg) ?></p>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
             
             <br>
 

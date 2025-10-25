@@ -27,6 +27,9 @@ $total_adjusted_amount = 0; // 合計金額の合計を格納する変数
 
 try {
     $pdo = connect();
+    if (!$pdo) {
+        throw new Exception("データベース接続に失敗しました");
+    }
     $casts = cast_get_all($pdo);
 
     // cast_idをキーとした連想配列を作成
@@ -116,6 +119,9 @@ try {
 } catch (PDOException $e) {
     $error['db'] = "データベースエラーが発生しました。時間をおいて再度お試しいただくか、管理者にご連絡ください。";
     error_log("Database Error: " . $e->getMessage());
+} catch (Exception $e) {
+    $error['general'] = "エラーが発生しました: " . $e->getMessage();
+    error_log("General Error: " . $e->getMessage());
 } finally {
     disconnect($pdo);
 }
@@ -266,8 +272,8 @@ function format_price($price) {
         <h1>伝票一覧 (<?= htmlspecialchars($shop_name) ?>)</h1>
         <?php if (!empty($error)): ?>
             <div class="error-message">
-                <?php foreach ($error as $msg): ?>
-                    <p><?= htmlspecialchars($msg, ENT_QUOTES) ?></p>
+                <?php foreach ($error as $key => $msg): ?>
+                    <p><strong><?= htmlspecialchars($key, ENT_QUOTES) ?>:</strong> <?= htmlspecialchars($msg, ENT_QUOTES) ?></p>
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
