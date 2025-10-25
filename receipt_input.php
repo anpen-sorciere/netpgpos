@@ -229,8 +229,20 @@ try {
         }
         .submit-btn .next-btn {
             width: 80%;
-            font-size: 1.2em;
-            padding: 15px 0;
+            font-size: 1.3em;
+            padding: 18px 0;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+            transition: all 0.3s ease;
+        }
+        .submit-btn .next-btn:hover {
+            background-color: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(40, 167, 69, 0.4);
         }
     </style>
 </head>
@@ -356,8 +368,8 @@ try {
                 <button type="submit" id="next_btn" class="btn next-btn">次へ</button>
             </div>
             
-            <div class="back-btn" style="text-align: center; margin-top: 20px;">
-                <a href="index.php?utype=<?= htmlspecialchars($utype) ?>" class="btn back-btn-link" style="display: inline-block; padding: 10px 20px; background-color: #6c757d; color: white; text-decoration: none; border-radius: 5px; font-size: 1em;">メニューに戻る</a>
+            <div class="back-btn" style="text-align: center; margin-top: 30px;">
+                <a href="index.php?utype=<?= htmlspecialchars($utype) ?>" class="btn back-btn-link" style="display: inline-block; padding: 8px 16px; background-color: #6c757d; color: white; text-decoration: none; border-radius: 5px; font-size: 0.9em; opacity: 0.8;">メニューに戻る</a>
             </div>
         </form>
     </div>
