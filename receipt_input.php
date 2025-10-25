@@ -354,6 +354,10 @@ try {
             <div class="submit-btn">
                 <button type="submit" id="next_btn" class="btn next-btn">次へ</button>
             </div>
+            
+            <div class="back-btn" style="text-align: center; margin-top: 20px;">
+                <a href="index.php?utype=<?= htmlspecialchars($utype) ?>" class="btn back-btn-link" style="display: inline-block; padding: 10px 20px; background-color: #6c757d; color: white; text-decoration: none; border-radius: 5px; font-size: 1em;">メニューに戻る</a>
+            </div>
         </form>
     </div>
 
