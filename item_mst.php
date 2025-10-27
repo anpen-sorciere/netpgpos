@@ -46,28 +46,50 @@ function get_items($pdo) {
 if (!empty($_POST)) {
     if (isset($_POST['insert'])) {
         // 新規登録
+        // 空文字列を0に変換（MySQL 8系の厳格モード対応）
+        $price = $_POST['price'] ?? 0;
+        $back_price = $_POST['back_price'] ?? 0;
+        $cost = $_POST['cost'] ?? 0;
+        if ($price === '' || $price === null) $price = 0;
+        if ($back_price === '' || $back_price === null) $back_price = 0;
+        if ($cost === '' || $cost === null) $cost = 0;
+        $price = intval($price);
+        $back_price = intval($back_price);
+        $cost = intval($cost);
+        
         $stmt = $pdo->prepare("INSERT INTO item_mst (item_name, item_yomi, category, price, back_price, cost, tax_type_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
         $stmt->execute([
             $_POST['item_name'], 
             $_POST['item_yomi'],
             $_POST['category'], 
-            $_POST['price'], 
-            $_POST['back_price'],
-            $_POST['cost'],
+            $price, 
+            $back_price,
+            $cost,
             $_POST['tax_type_id']
         ]);
         header('Location: item_mst.php');
         exit();
     } elseif (isset($_POST['update'])) {
         // 修正
+        // 空文字列を0に変換（MySQL 8系の厳格モード対応）
+        $price = $_POST['price'] ?? 0;
+        $back_price = $_POST['back_price'] ?? 0;
+        $cost = $_POST['cost'] ?? 0;
+        if ($price === '' || $price === null) $price = 0;
+        if ($back_price === '' || $back_price === null) $back_price = 0;
+        if ($cost === '' || $cost === null) $cost = 0;
+        $price = intval($price);
+        $back_price = intval($back_price);
+        $cost = intval($cost);
+        
         $stmt = $pdo->prepare("UPDATE item_mst SET item_name=?, item_yomi=?, category=?, price=?, back_price=?, cost=?, tax_type_id=? WHERE item_id=?");
         $stmt->execute([
             $_POST['item_name'], 
             $_POST['item_yomi'],
             $_POST['category'], 
-            $_POST['price'], 
-            $_POST['back_price'],
-            $_POST['cost'],
+            $price, 
+            $back_price,
+            $cost,
             $_POST['tax_type_id'],
             $_POST['item_id']
         ]);
