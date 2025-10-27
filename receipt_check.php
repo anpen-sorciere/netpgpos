@@ -42,6 +42,13 @@ if (!empty($_POST['check'])) {
     }
     $sheet_no = intval($sheet_no);
     
+    // issuer_idを整数型に変換（空文字列やnullの場合は0）
+    $issuer_id = $_SESSION['join']['issuer_id'] ?? null;
+    if ($issuer_id === '' || $issuer_id === null) {
+        $issuer_id = 0;
+    }
+    $issuer_id = intval($issuer_id);
+    
     // out_dateとout_timeには空文字列を挿入
     $out_date = '';
     $out_time = '';
