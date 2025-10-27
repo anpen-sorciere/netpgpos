@@ -35,6 +35,13 @@ if (!empty($_POST['check'])) {
     $p_type = $_SESSION['join']['p_type'] ?? null;
     $adjust_price = $_SESSION['join']['adjust_price'] ?? 0;
     
+    // sheet_noを整数型に変換（空文字列やnullの場合は0）
+    $sheet_no = $_SESSION['join']['sheet_no'] ?? 0;
+    if ($sheet_no === '' || $sheet_no === null) {
+        $sheet_no = 0;
+    }
+    $sheet_no = intval($sheet_no);
+    
     // out_dateとout_timeには空文字列を挿入
     $out_date = '';
     $out_time = '';
@@ -43,7 +50,7 @@ if (!empty($_POST['check'])) {
     $stmt_base->execute([
         $receipt_id,
         $shop_mst,
-        $_SESSION['join']['sheet_no'] ?? null,
+        $sheet_no,
         $receipt_day,
         $in_date,
         $in_time,
