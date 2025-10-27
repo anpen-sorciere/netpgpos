@@ -79,6 +79,12 @@ if (!empty($_POST['check'])) {
         $price = intval($_SESSION['join']["price$i"] ?? 0);
         $cast_id = $_SESSION['join']["cast_name$i"] ?? null;
         
+        // cast_idを整数型に変換（空文字列やnullの場合は0）
+        if ($cast_id === '' || $cast_id === null) {
+            $cast_id = 0;
+        }
+        $cast_id = intval($cast_id);
+        
         $cast_back_price = 0;
         if ($item_id > 0) {
             $item_data = item_get($pdo, $item_id);
