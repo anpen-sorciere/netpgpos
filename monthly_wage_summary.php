@@ -1,8 +1,8 @@
 ﻿<?php
 // monthly_wage_summary.php
 
-require_once(__DIR__ . '/dbconnect.php');
-require_once(__DIR__ . '/functions.php');
+require_once(__DIR__ . '/../common/dbconnect.php');
+require_once(__DIR__ . '/../common/functions.php');
 
 // セッション開始
 session_start();
