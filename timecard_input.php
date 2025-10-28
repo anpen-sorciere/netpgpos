@@ -146,7 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['timecard']['cast_name'] = $cast_name;
 
             // データの存在チェック
-            $statement = $pdo->prepare("SELECT count(*) as cnt FROM timecard_tbl WHERE cast_id = ? AND shop_mst = ? AND eigyo_ymd = ?");
+            $statement = $pdo->prepare("SELECT count(*) as cnt FROM timecard_tbl WHERE cast_id = ? AND shop_id = ? AND eigyo_ymd = ?");
             $statement->execute(array(
                 intval($cast_id),
                 intval($shop_mst),
@@ -167,7 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($count == 0) {
                 // 新規挿入
-                $statement = $pdo->prepare("INSERT INTO timecard_tbl (cast_id, shop_mst, eigyo_ymd, in_ymd, in_time, out_ymd, out_time, break_start_ymd, break_start_time, break_end_ymd, break_end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $statement = $pdo->prepare("INSERT INTO timecard_tbl (cast_id, shop_id, eigyo_ymd, in_ymd, in_time, out_ymd, out_time, break_start_ymd, break_start_time, break_end_ymd, break_end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $statement->execute(array(
                     intval($cast_id),
                     intval($shop_mst),
@@ -183,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ));
             } else {
                 // 更新
-                $statement = $pdo->prepare("UPDATE timecard_tbl SET in_ymd=?, in_time=?, out_ymd=?, out_time=?, break_start_ymd=?, break_start_time=?, break_end_ymd=?, break_end_time=? WHERE cast_id=? AND shop_mst=? AND eigyo_ymd=?");
+                $statement = $pdo->prepare("UPDATE timecard_tbl SET in_ymd=?, in_time=?, out_ymd=?, out_time=?, break_start_ymd=?, break_start_time=?, break_end_ymd=?, break_end_time=? WHERE cast_id=? AND shop_id=? AND eigyo_ymd=?");
                 $statement->execute(array(
                     $in_ymd_formatted,
                     $in_time_formatted,
@@ -440,7 +440,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (castId && eigyoYmd) {
-                const url = `timecard_get.php?cast_id=${castId}&eigyo_ymd=${eigyoYmd}&shop_mst=${shopId}`;
+                const url = `timecard_get.php?cast_id=${castId}&eigyo_ymd=${eigyoYmd}&shop_id=${shopId}`;
                 try {
                     const response = await fetch(url);
                     const data = await response.json();

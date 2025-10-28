@@ -292,14 +292,12 @@ $category_names = [
         }
         
         .summary {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
             background: white;
             padding: 15px;
             box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
             border-radius: 15px 15px 0 0;
+            margin-top: 20px;
+            margin-bottom: 80px; /* 下部メニューの高さ分の余白を確保 */
         }
         
         .summary-row {
