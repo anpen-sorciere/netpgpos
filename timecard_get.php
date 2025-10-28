@@ -9,7 +9,7 @@ header('Content-Type: application/json; charset=UTF-8');
 
 $cast_id = $_GET['cast_id'] ?? null;
 $eigyo_ymd = $_GET['eigyo_ymd'] ?? null;
-$shop_mst = $_GET['shop_mst'] ?? null;
+$shop_mst = $_GET['shop_id'] ?? null;
 
 $response = [
     'exists' => false,
@@ -30,7 +30,7 @@ if (empty($cast_id) || empty($eigyo_ymd) || empty($shop_mst)) {
 
 try {
     $pdo = connect();
-    $statement = $pdo->prepare("SELECT * FROM timecard_tbl WHERE cast_id = ? AND shop_mst = ? AND eigyo_ymd = ?");
+    $statement = $pdo->prepare("SELECT * FROM timecard_tbl WHERE cast_id = ? AND shop_id = ? AND eigyo_ymd = ?");
     $statement->execute([$cast_id, $shop_mst, str_replace('-', '', $eigyo_ymd)]);
     $timecard_data = $statement->fetch(PDO::FETCH_ASSOC);
 

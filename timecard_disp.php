@@ -42,15 +42,15 @@ session_start();
 		    $utype = $_SESSION['utype'];
 		    switch ($utype){
 				case 1024:
-					$shop_mst = 1;
+                    $shop_mst = 1;
 					$shop_name = "ソルシエール";
 					break;
 				case 3:
-					$shop_mst = $utype;
+                    $shop_mst = $utype;
 					$shop_name = "コレクト";
 					break;
 				default:
-					$shop_mst = $utype;
+                    $shop_mst = $utype;
 					$shop_name = "レーヴェス";
 			}
 		?>
@@ -83,7 +83,7 @@ session_start();
 				$timediff25 = convertTimeFormat($timediff);
 				$timesoudiff25 = $timesoudiff25 + $timediff25;
 				//個別
-			    $stmh2 = $db->prepare("SELECT receipt_day,cast_id,quantity,item_id,SUM(quantity) as suu FROM receipt_detail_tbl where shop_mst = ? AND cast_id = ? AND receipt_day = ? GROUP BY item_id ORDER BY item_id,cast_id");
+                $stmh2 = $db->prepare("SELECT receipt_day,cast_id,quantity,item_id,SUM(quantity) as suu FROM receipt_detail_tbl where shop_id = ? AND cast_id = ? AND receipt_day = ? GROUP BY item_id ORDER BY item_id,cast_id");
 			    $stmh2->execute(array($shop_mst,$cast_id,$row['eigyo_ymd']));
 				$backgoukei = 0;	//バック合計金額
 			    $backmoney = 0;

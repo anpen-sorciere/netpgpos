@@ -158,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 初回アクセス時
     try {
         // 伝票マスターデータ取得
-        $stmh_receipt = $pdo->prepare("SELECT * FROM receipt_tbl WHERE receipt_id = ? AND shop_mst = ?");
+        $stmh_receipt = $pdo->prepare("SELECT * FROM receipt_tbl WHERE receipt_id = ? AND shop_id = ?");
         $stmh_receipt->execute([$receipt_id, $shop_mst]);
         $receipt_data = $stmh_receipt->fetch(PDO::FETCH_ASSOC);
 

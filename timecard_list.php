@@ -22,7 +22,7 @@ $cast_timecard_data = [];
 $year = $_GET['year'] ?? date('Y');
 $month = $_GET['month'] ?? date('m');
 $selected_cast_id = $_GET['cast_id'] ?? 'all'; // デフォルトは「全員」
-$selected_shop_mst = $_GET['shop_mst'] ?? 'all'; // デフォルトは「全店」
+$selected_shop_mst = $_GET['shop_id'] ?? 'all'; // デフォルトは「全店」
 
 // SQLクエリの準備
 $sql = "SELECT * FROM timecard_tbl WHERE eigyo_ymd LIKE ? ";
@@ -30,7 +30,7 @@ $params = [$year . $month . '%'];
 
 // 店舗が選択されている場合は絞り込む
 if ($selected_shop_mst !== 'all') {
-    $sql .= "AND shop_mst = ? ";
+    $sql .= "AND shop_id = ? ";
     $params[] = intval($selected_shop_mst);
 }
 
@@ -158,8 +158,8 @@ try {
             <input type="hidden" name="utype" value="<?= htmlspecialchars($utype_all) ?>">
             
             <div class="control-group">
-                <label for="shop_mst">店舗:</label>
-                <select name="shop_mst" id="shop_mst">
+                <label for="shop_id">店舗:</label>
+                <select name="shop_id" id="shop_id">
                     <?php foreach ($shops as $shop): ?>
                         <option value="<?= htmlspecialchars($shop['id']) ?>" <?= ($shop['id'] == $selected_shop_mst) ? 'selected' : ''; ?>>
                             <?= htmlspecialchars($shop['name'], ENT_QUOTES); ?>

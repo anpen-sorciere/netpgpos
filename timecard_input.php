@@ -33,9 +33,9 @@ $shop_mst = $shop_info['id'];
 // POSTデータがあればPOSTを優先
 $cast_id_selected = $_POST['cast_id'] ?? ($_SESSION['timecard']['cast_id'] ?? ($_SESSION['join']['cast_id'] ?? null));
 $eigyo_ymd_default = $_POST['eigyo_ymd'] ?? ($_SESSION['timecard']['eigyo_ymd'] ?? ($_SESSION['join']['eigyo_ymd'] ?? date('Y-m-d')));
-$in_ymd_value = $_POST['in_ymd'] ?? ($_SESSION['timecard']['in_ymd'] ?? '');
+$in_ymd_value = $_POST['in_ymd'] ?? ($_SESSION['timecard']['in_ymd'] ?? $eigyo_ymd_default);
 $in_time_value = $_POST['in_time'] ?? ($_SESSION['timecard']['in_time'] ?? '');
-$out_ymd_value = $_POST['out_ymd'] ?? ($_SESSION['timecard']['out_ymd'] ?? '');
+$out_ymd_value = $_POST['out_ymd'] ?? ($_SESSION['timecard']['out_ymd'] ?? $eigyo_ymd_default);
 $out_time_value = $_POST['out_time'] ?? ($_SESSION['timecard']['out_time'] ?? '');
 $break_start_ymd_value = $_POST['break_start_ymd'] ?? ($_SESSION['timecard']['break_start_ymd'] ?? '');
 $break_start_time_value = $_POST['break_start_time'] ?? ($_SESSION['timecard']['break_start_time'] ?? '');
