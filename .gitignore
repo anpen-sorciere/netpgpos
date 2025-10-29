@@ -1,0 +1,37 @@
+# バックアップディレクトリ
+backups/
+
+# バックアップファイル
+*.bak
+*.bak2
+*.bakup
+*.saisin
+*.ajax.bak
+
+# ログファイル
+*.log
+debug.log
+
+# デバッグファイル
+debug_*.php
+fix_*.php
+test_*.php
+*_debug.php
+
+# 一時ファイル
+*.tmp
+*.temp
+
+# OS関連
+.DS_Store
+Thumbs.db
+
+# IDE関連（.vscodeは除外しない場合もあるため、必要に応じて）
+# .vscode/
+.vscode/settings.json
+
+# その他の一時ファイル
+*.php~
+*.swp
+*.swo
+
