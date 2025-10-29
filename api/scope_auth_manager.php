@@ -1,5 +1,7 @@
 <?php
-require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../common/config.php';
+require_once __DIR__ . '/../common/dbconnect.php';
+require_once __DIR__ . '/../common/functions.php';
 require_once __DIR__ . '/base_api_client.php';
 
 // セッション開始

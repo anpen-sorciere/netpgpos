@@ -3,8 +3,9 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../functions.php';
+require_once __DIR__ . '/../common/config.php';
+require_once __DIR__ . '/../common/dbconnect.php';
+require_once __DIR__ . '/../common/functions.php';
 require_once __DIR__ . '/base_practical_auto_manager.php';
 
 session_start();
