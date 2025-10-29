@@ -4,8 +4,9 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-require("../common/dbconnect.php");
-require("../common/functions.php");
+require_once(__DIR__ . '/../common/config.php');
+require_once(__DIR__ . '/../common/dbconnect.php');
+require_once(__DIR__ . '/../common/functions.php');
 session_start();
 
 // セッションから必要な情報を取得

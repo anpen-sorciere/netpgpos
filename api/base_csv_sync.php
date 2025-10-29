@@ -9,8 +9,9 @@ ini_set('post_max_size', '50M');
 ini_set('max_execution_time', 300); // 5分
 ini_set('memory_limit', '256M');
 
-require_once '../../common/dbconnect.php';
-require_once '../../common/functions.php';
+require_once __DIR__ . '/../../common/config.php';
+require_once __DIR__ . '/../../common/dbconnect.php';
+require_once __DIR__ . '/../../common/functions.php';
 
 session_start();
 

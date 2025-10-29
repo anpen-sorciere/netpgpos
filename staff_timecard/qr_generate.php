@@ -1,7 +1,8 @@
 ﻿<?php
 // QR打刻API（出勤/退勤登録）
-require_once('../../common/dbconnect.php');
-require_once('../../common/functions.php');
+require_once(__DIR__ . '/../../common/config.php');
+require_once(__DIR__ . '/../../common/dbconnect.php');
+require_once(__DIR__ . '/../../common/functions.php');
 header('Content-Type: application/json; charset=UTF-8');
 
 $input = json_decode(file_get_contents('php://input'), true);

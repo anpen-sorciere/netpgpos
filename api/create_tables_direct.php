@@ -4,7 +4,9 @@
  * SQLファイルの分割処理を避けて、個別にCREATE文を実行
  */
 session_start();
-require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../../common/config.php';
+require_once __DIR__ . '/../../common/dbconnect.php';
+require_once __DIR__ . '/../../common/functions.php';
 
 echo "<h1>データベーステーブル個別作成</h1>";
 

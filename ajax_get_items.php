@@ -1,5 +1,7 @@
 ﻿<?php
-require_once('../common/dbconnect.php');
+require_once(__DIR__ . '/../common/config.php');
+require_once(__DIR__ . '/../common/dbconnect.php');
+require_once(__DIR__ . '/../common/functions.php');
 header('Content-Type: application/json; charset=UTF-8');
 
 // connect()関数はdbconnect.phpで定義されていると仮定

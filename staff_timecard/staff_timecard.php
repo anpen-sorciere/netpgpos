@@ -4,7 +4,9 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 // スタッフ用タイムカード画面（QR読み取り・出退勤登録）
+require_once(__DIR__ . '/../../common/config.php');
 require_once(__DIR__ . '/../../common/dbconnect.php');
+require_once(__DIR__ . '/../../common/functions.php');
 session_start();
 // 今後はIDはcast_idとして扱う
 $cast_id = $_SESSION['cast_id'] ?? ($_GET['cast_id'] ?? null);

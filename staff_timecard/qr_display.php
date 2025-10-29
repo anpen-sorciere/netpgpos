@@ -1,6 +1,8 @@
 ﻿<?php
 // 店内タブレット用：1秒ごとに更新されるQRコード表示画面
+require_once(__DIR__ . '/../../common/config.php');
 require_once(__DIR__ . '/../../common/dbconnect.php');
+require_once(__DIR__ . '/../../common/functions.php');
 // 店舗ID（utype）をURLパラメータから取得
 $utype = $_GET['utype'] ?? '';
 // actionは出勤/退勤どちらか（例：in/out）

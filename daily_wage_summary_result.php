@@ -1,6 +1,7 @@
 ﻿<?php
-require("../common/dbconnect.php");
-require("../common/functions.php");
+require_once(__DIR__ . '/../common/config.php');
+require_once(__DIR__ . '/../common/dbconnect.php');
+require_once(__DIR__ . '/../common/functions.php');
 
 session_start();
 $uid = $_SESSION['user_id'];

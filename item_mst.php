@@ -1,5 +1,7 @@
 ﻿<?php
-require_once('../common/dbconnect.php');
+require_once(__DIR__ . '/../common/config.php');
+require_once(__DIR__ . '/../common/dbconnect.php');
+require_once(__DIR__ . '/../common/functions.php');
 session_start();
 
 $pdo = connect();

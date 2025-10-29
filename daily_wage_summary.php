@@ -8,8 +8,9 @@ error_reporting(E_ALL);
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/log/error.log');
 
-require("../common/dbconnect.php");
-require("../common/functions.php");
+require_once(__DIR__ . '/../common/config.php');
+require_once(__DIR__ . '/../common/dbconnect.php');
+require_once(__DIR__ . '/../common/functions.php');
 
 session_start();
 
