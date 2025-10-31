@@ -422,6 +422,42 @@ function buildPageUrl($page_num) {
             width: 160px;
         }
         
+        /* 詳細フィルター */
+        .detail-filters {
+            margin: 10px 0;
+            padding: 15px;
+            background: #e8f4fd;
+            border-radius: 6px;
+            border: 1px solid #b3d9ff;
+        }
+        
+        .detail-filters-content {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .detail-filter-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .detail-filter-item label {
+            font-weight: 600;
+            color: #495057;
+            min-width: 80px;
+        }
+        
+        .text-input {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 0.95em;
+            width: 200px;
+        }
+        
         .controls {
             padding: 20px;
             background: #f8f9fa;
@@ -1007,6 +1043,28 @@ function buildPageUrl($page_num) {
                             <div class="search-item-inline">
                                 <label><i class="fas fa-calendar-check"></i> 終了日:</label>
                                 <input type="date" id="end-date" class="date-input" max="">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 詳細フィルター（検索モード時のみ表示） -->
+                    <div id="detail-filters" class="detail-filters" style="display: none;">
+                        <div class="detail-filters-content">
+                            <div class="detail-filter-item">
+                                <label><i class="fas fa-user-tie"></i> キャスト名:</label>
+                                <input type="text" id="filter-cast-name" class="text-input" placeholder="部分一致で検索">
+                            </div>
+                            <div class="detail-filter-item">
+                                <label><i class="fas fa-user"></i> お客様名:</label>
+                                <input type="text" id="filter-customer-name" class="text-input" placeholder="部分一致で検索">
+                            </div>
+                            <div class="detail-filter-item">
+                                <button class="btn btn-sm btn-success" onclick="applyDetailFilters()">
+                                    <i class="fas fa-search"></i> 詳細フィルター適用
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="clearDetailFilters()">
+                                    <i class="fas fa-times"></i> クリア
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1992,95 +2050,117 @@ function buildPageUrl($page_num) {
         
         // 商品ごとの情報を表示する関数
         function loadItemDetails() {
-            var itemDetailContainers = document.querySelectorAll('.item-details');
-            
-            itemDetailContainers.forEach(function(container) {
-                var orderId = container.getAttribute('data-order-id');
-                if (orderId) {
-                    fetch('get_order_items.php?order_id=' + encodeURIComponent(orderId))
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success && data.items) {
-                                // プレースホルダーを削除
-                                var placeholder = container.querySelector('.item-details-placeholder');
-                                if (placeholder) {
-                                    placeholder.remove();
-                                }
-                                
-                                // テーブルヘッダーを追加
-                                var headerDiv = document.createElement('div');
-                                headerDiv.className = 'item-detail-header';
-                                headerDiv.innerHTML = 
-                                    '<div class="item-title">商品名</div>' +
-                                    '<div class="item-quantity">数量</div>' +
-                                    '<div class="item-nickname">お客様名</div>' +
-                                    '<div class="item-cast">キャスト名</div>' +
-                                    '<div class="item-status">ステータス</div>';
-                                container.appendChild(headerDiv);
-                                
-                                // 商品ごとの情報を表示
-                                data.items.forEach(function(item) {
-                                    var itemDiv = document.createElement('div');
-                                    itemDiv.className = 'item-detail-row';
-                                    
-                                    // ニックネームとキャスト名を抽出
-                                    var nickname = '';
-                                    var castName = '';
-                                    
-                                    // ステータス日本語化
-                                    function mapItemStatus(status) {
-                                        switch (status) {
-                                            case 'ordered':
-                                                return '未対応';
-                                            case 'paid':
-                                                return '入金済';
-                                            case 'cancelled':
-                                                return 'キャンセル';
-                                            case 'dispatched':
-                                                return '発送済';
-                                            default:
-                                                return status || '不明';
-                                        }
+            return new Promise(function(resolve, reject) {
+                var itemDetailContainers = document.querySelectorAll('.item-details');
+                var totalRequests = itemDetailContainers.length;
+                var completedRequests = 0;
+                
+                if (totalRequests === 0) {
+                    resolve();
+                    return;
+                }
+                
+                itemDetailContainers.forEach(function(container) {
+                    var orderId = container.getAttribute('data-order-id');
+                    if (orderId) {
+                        fetch('get_order_items.php?order_id=' + encodeURIComponent(orderId))
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success && data.items) {
+                                    // プレースホルダーを削除
+                                    var placeholder = container.querySelector('.item-details-placeholder');
+                                    if (placeholder) {
+                                        placeholder.remove();
                                     }
-                                    var statusLabel = mapItemStatus(item.status);
                                     
-                                    if (item.options && item.options.length > 0) {
-                                        item.options.forEach(function(option) {
-                                            if (option.name === 'お客様名') {
-                                                nickname = option.value;
-                                            } else if (option.name === 'キャスト名') {
-                                                castName = option.value;
+                                    // テーブルヘッダーを追加
+                                    var headerDiv = document.createElement('div');
+                                    headerDiv.className = 'item-detail-header';
+                                    headerDiv.innerHTML = 
+                                        '<div class="item-title">商品名</div>' +
+                                        '<div class="item-quantity">数量</div>' +
+                                        '<div class="item-nickname">お客様名</div>' +
+                                        '<div class="item-cast">キャスト名</div>' +
+                                        '<div class="item-status">ステータス</div>';
+                                    container.appendChild(headerDiv);
+                                    
+                                    // 商品ごとの情報を表示
+                                    data.items.forEach(function(item) {
+                                        var itemDiv = document.createElement('div');
+                                        itemDiv.className = 'item-detail-row';
+                                        
+                                        // ニックネームとキャスト名を抽出
+                                        var nickname = '';
+                                        var castName = '';
+                                        
+                                        // ステータス日本語化
+                                        function mapItemStatus(status) {
+                                            switch (status) {
+                                                case 'ordered':
+                                                    return '未対応';
+                                                case 'paid':
+                                                    return '入金済';
+                                                case 'cancelled':
+                                                    return 'キャンセル';
+                                                case 'dispatched':
+                                                    return '発送済';
+                                                default:
+                                                    return status || '不明';
                                             }
-                                        });
+                                        }
+                                        var statusLabel = mapItemStatus(item.status);
+                                        
+                                        if (item.options && item.options.length > 0) {
+                                            item.options.forEach(function(option) {
+                                                if (option.name === 'お客様名') {
+                                                    nickname = option.value;
+                                                } else if (option.name === 'キャスト名') {
+                                                    castName = option.value;
+                                                }
+                                            });
+                                        }
+                                        
+                                        itemDiv.innerHTML = 
+                                            '<div class="item-title">' + item.title + '</div>' +
+                                            '<div class="item-quantity">' + item.amount + '</div>' +
+                                            '<div class="item-nickname">' + (nickname || 'なし') + '</div>' +
+                                            '<div class="item-cast">' + (castName || 'なし') + '</div>' +
+                                            '<div class="item-status">' + statusLabel + '</div>';
+                                        
+                                        container.appendChild(itemDiv);
+                                    });
+                                } else {
+                                    // エラー時はエラーメッセージを表示
+                                    var placeholder = container.querySelector('.item-details-placeholder');
+                                    if (placeholder) {
+                                        placeholder.textContent = 'エラー: 商品情報の取得に失敗しました（' + (data.error || '不明なエラー') + '）';
+                                        placeholder.style.color = '#dc3545';
                                     }
-                                    
-                                    itemDiv.innerHTML = 
-                                        '<div class="item-title">' + item.title + '</div>' +
-                                        '<div class="item-quantity">' + item.amount + '</div>' +
-                                        '<div class="item-nickname">' + (nickname || 'なし') + '</div>' +
-                                        '<div class="item-cast">' + (castName || 'なし') + '</div>' +
-                                        '<div class="item-status">' + statusLabel + '</div>';
-                                    
-                                    container.appendChild(itemDiv);
-                                });
-                            } else {
-                                // エラー時はエラーメッセージを表示
+                                }
+                                completedRequests++;
+                                if (completedRequests === totalRequests) {
+                                    resolve();
+                                }
+                            })
+                            .catch(error => {
+                                console.error('商品情報取得エラー:', error);
                                 var placeholder = container.querySelector('.item-details-placeholder');
                                 if (placeholder) {
-                                    placeholder.textContent = 'エラー: 商品情報の取得に失敗しました（' + (data.error || '不明なエラー') + '）';
+                                    placeholder.textContent = 'エラー: 商品情報の取得に失敗しました（' + error.message + '）';
                                     placeholder.style.color = '#dc3545';
                                 }
-                            }
-                        })
-                        .catch(error => {
-                            console.error('商品情報取得エラー:', error);
-                            var placeholder = container.querySelector('.item-details-placeholder');
-                            if (placeholder) {
-                                placeholder.textContent = 'エラー: 商品情報の取得に失敗しました（' + error.message + '）';
-                                placeholder.style.color = '#dc3545';
-                            }
-                        });
-                }
+                                completedRequests++;
+                                if (completedRequests === totalRequests) {
+                                    resolve();
+                                }
+                            });
+                    } else {
+                        completedRequests++;
+                        if (completedRequests === totalRequests) {
+                            resolve();
+                        }
+                    }
+                });
             });
         }
         
@@ -2109,8 +2189,11 @@ function buildPageUrl($page_num) {
             var realtimeButtons = document.getElementById('realtime-filter-buttons');
             var searchButtons = document.getElementById('search-filter-buttons');
             
+            var detailFilters = document.getElementById('detail-filters');
+            
             if (mode === 'search') {
                 if (searchForm) searchForm.style.display = 'block';
+                if (detailFilters) detailFilters.style.display = 'block';
                 if (realtimeButtons) realtimeButtons.style.display = 'none';
                 if (searchButtons) searchButtons.style.display = 'block';
                 
@@ -2137,6 +2220,7 @@ function buildPageUrl($page_num) {
                 
             } else {
                 if (searchForm) searchForm.style.display = 'none';
+                if (detailFilters) detailFilters.style.display = 'none';
                 if (realtimeButtons) realtimeButtons.style.display = 'block';
                 if (searchButtons) searchButtons.style.display = 'none';
                 
@@ -2186,6 +2270,108 @@ function buildPageUrl($page_num) {
             window.location.href = url.toString();
         }
         
+        // 詳細フィルター適用関数
+        function applyDetailFilters() {
+            var castName = document.getElementById('filter-cast-name').value.trim();
+            var customerName = document.getElementById('filter-customer-name').value.trim();
+            
+            if (!castName && !customerName) {
+                alert('キャスト名またはお客様名を入力してください。');
+                return;
+            }
+            
+            // 注文行のみを対象にする
+            var rows = document.querySelectorAll('.order-table tbody tr:not([id^="detail-"])');
+            var visibleCount = 0;
+            
+            rows.forEach(function(row) {
+                var shouldShow = true;
+                
+                // キャスト名フィルター
+                if (castName) {
+                    var castCells = row.querySelectorAll('.item-cast');
+                    var foundCast = false;
+                    castCells.forEach(function(cell) {
+                        if (cell.textContent.includes(castName)) {
+                            foundCast = true;
+                        }
+                    });
+                    if (!foundCast) {
+                        shouldShow = false;
+                    }
+                }
+                
+                // お客様名フィルター
+                if (customerName) {
+                    var customerCells = row.querySelectorAll('.item-nickname');
+                    var foundCustomer = false;
+                    customerCells.forEach(function(cell) {
+                        if (cell.textContent.includes(customerName)) {
+                            foundCustomer = true;
+                        }
+                    });
+                    // お客様名が見つからない場合は注文者名で検索
+                    if (!foundCustomer) {
+                        var orderCustomerName = row.querySelector('.customer-name');
+                        if (orderCustomerName && orderCustomerName.textContent.includes(customerName)) {
+                            foundCustomer = true;
+                        }
+                    }
+                    if (!foundCustomer) {
+                        shouldShow = false;
+                    }
+                }
+                
+                if (shouldShow) {
+                    row.style.display = '';
+                    visibleCount++;
+                    
+                    // 対応する詳細行も表示
+                    var detailRow = document.getElementById('detail-' + row.id);
+                    if (detailRow) {
+                        detailRow.style.display = '';
+                    }
+                } else {
+                    row.style.display = 'none';
+                    
+                    // 対応する詳細行も非表示
+                    var detailRow = document.getElementById('detail-' + row.id);
+                    if (detailRow) {
+                        detailRow.style.display = 'none';
+                    }
+                }
+            });
+            
+            // フィルター結果を表示
+            var filterStatus = document.getElementById('filter-status');
+            if (filterStatus) {
+                var filterText = 'フィルター適用中: ';
+                var filters = [];
+                if (castName) filters.push('キャスト名「' + castName + '」');
+                if (customerName) filters.push('お客様名「' + customerName + '」');
+                filterStatus.textContent = filterText + filters.join(' + ') + ' (' + visibleCount + '件)';
+            }
+        }
+        
+        // 詳細フィルタークリア関数
+        function clearDetailFilters() {
+            document.getElementById('filter-cast-name').value = '';
+            document.getElementById('filter-customer-name').value = '';
+            
+            // 全ての行を表示
+            var rows = document.querySelectorAll('.order-table tbody tr:not([id^="detail-"])');
+            rows.forEach(function(row) {
+                row.style.display = '';
+                var detailRow = document.getElementById('detail-' + row.id);
+                if (detailRow) {
+                    detailRow.style.display = '';
+                }
+            });
+            
+            // フィルター状態をリセット
+            updateFilterStatus();
+        }
+        
         // ページ読み込み時の初期化
         window.onload = function() {
             // 初期データを保存
@@ -2199,42 +2385,42 @@ function buildPageUrl($page_num) {
             updateOrderCount();
             
             // 商品ごとの情報を読み込み
-            loadItemDetails();
-            
-            // フィルター状態の表示を初期化（適用はしない）
-            updateFilterStatus();
-            
-            // フィルターボタンのイベントリスナーを設定
-            document.querySelectorAll('.filter-btn[data-status]').forEach(function(button) {
-                button.addEventListener('click', function() {
-                    var status = this.getAttribute('data-status');
-                    toggleFilter(status);
-                });
-            });
-            
-            // URLパラメータでモードを判定
-            var urlParams = new URLSearchParams(window.location.search);
-            var mode = urlParams.get('mode');
-            
-            if (mode === 'search') {
-                // 検索モードの場合
-                var startDate = urlParams.get('start_date');
-                var endDate = urlParams.get('end_date');
+            loadItemDetails().then(function() {
+                // フィルター状態の表示を初期化（適用はしない）
+                updateFilterStatus();
                 
-                if (startDate && endDate) {
-                    document.getElementById('start-date').value = startDate;
-                    document.getElementById('end-date').value = endDate;
-                    switchMode('search');
+                // フィルターボタンのイベントリスナーを設定
+                document.querySelectorAll('.filter-btn[data-status]').forEach(function(button) {
+                    button.addEventListener('click', function() {
+                        var status = this.getAttribute('data-status');
+                        toggleFilter(status);
+                    });
+                });
+                
+                // URLパラメータでモードを判定
+                var urlParams = new URLSearchParams(window.location.search);
+                var mode = urlParams.get('mode');
+                
+                if (mode === 'search') {
+                    // 検索モードの場合
+                    var startDate = urlParams.get('start_date');
+                    var endDate = urlParams.get('end_date');
+                    
+                    if (startDate && endDate) {
+                        document.getElementById('start-date').value = startDate;
+                        document.getElementById('end-date').value = endDate;
+                        switchMode('search');
+                    } else {
+                        // パラメータがない場合はリアルタイムモードに戻す
+                        document.querySelector('.mode-tab[onclick*="realtime"]').click();
+                    }
                 } else {
-                    // パラメータがない場合はリアルタイムモードに戻す
-                    document.querySelector('.mode-tab[onclick*="realtime"]').click();
+                    // リアルタイムモード
+                    currentMode = 'realtime';
+                    // 30秒間隔で自動更新
+                    autoRefreshInterval = setInterval(refreshOrderData, 30000);
                 }
-            } else {
-                // リアルタイムモード
-                currentMode = 'realtime';
-                // 30秒間隔で自動更新
-                autoRefreshInterval = setInterval(refreshOrderData, 30000);
-            }
+            });
         };
     </script>
 </body>
