@@ -2303,11 +2303,15 @@ function buildPageUrl($page_num) {
                     autoUpdateSpan.innerHTML = '<i class="fas fa-sync-alt"></i> 自動更新: 無効（検索モード）';
                 }
                 
-                // 日付の最大値を設定（今日）
+                // 日付の最大値を設定（今日 - 日本時間で正確に取得）
                 var startDateInput = document.getElementById('start-date');
                 var endDateInput = document.getElementById('end-date');
                 if (startDateInput && endDateInput) {
-                    var today = new Date().toISOString().split('T')[0];
+                    var now = new Date();
+                    var year = now.getFullYear();
+                    var month = String(now.getMonth() + 1).padStart(2, '0');
+                    var day = String(now.getDate()).padStart(2, '0');
+                    var today = year + '-' + month + '-' + day;
                     startDateInput.max = today;
                     endDateInput.max = today;
                 }
