@@ -65,6 +65,51 @@ try {
             $all_orders = array_values($all_orders);
         }
         
+        // ステータスフィルター（URLパラメータの場合）
+        $status_filter = isset($_GET['status']) ? explode(',', $_GET['status']) : [];
+        if (!empty($status_filter) && !in_array('all', $status_filter)) {
+            $all_orders = array_filter($all_orders, function($order) use ($status_filter) {
+                $dispatch_status = $order['dispatch_status'] ?? '';
+                
+                // dispatch_statusでフィルタリング
+                if (in_array($dispatch_status, $status_filter)) {
+                    return true;
+                }
+                
+                // dispatch_statusがない場合のフォールバック処理
+                // cancelled、dispatched、paymentなどのフィールドで判定
+                foreach ($status_filter as $status) {
+                    switch ($status) {
+                        case 'cancelled':
+                            if (isset($order['cancelled']) && $order['cancelled'] !== null) {
+                                return true;
+                            }
+                            break;
+                        case 'dispatched':
+                            if (isset($order['dispatched']) && $order['dispatched'] !== null) {
+                                return true;
+                            }
+                            break;
+                        case 'unpaid':
+                            if (isset($order['payment']) && ($order['payment'] === false || $order['payment'] === 'unpaid')) {
+                                return true;
+                            }
+                            break;
+                        case 'unshippable':
+                            if (isset($order['payment']) && ($order['payment'] === true || $order['payment'] === 'paid')) {
+                                return true;
+                            }
+                            break;
+                    }
+                }
+                
+                return false;
+            });
+            
+            // インデックスを再設定
+            $all_orders = array_values($all_orders);
+        }
+        
         // 注文日時で並び替え（新しいものが先頭）
         usort($all_orders, function($a, $b) {
             $date_a = $a['ordered'] ?? 0;
@@ -204,6 +249,27 @@ try {
 } catch (Exception $e) {
     $error_message = 'BASE API接続エラー: ' . $e->getMessage();
     $orders = [];
+}
+
+// ページネーション用URL生成関数
+function buildPageUrl($page_num) {
+    global $search_mode, $start_date, $end_date;
+    $params = [];
+    
+    if ($search_mode && $start_date && $end_date) {
+        $params[] = 'mode=search';
+        $params[] = 'start_date=' . urlencode($start_date);
+        $params[] = 'end_date=' . urlencode($end_date);
+    }
+    
+    // ステータスフィルター
+    if (isset($_GET['status']) && $_GET['status'] !== '') {
+        $params[] = 'status=' . urlencode($_GET['status']);
+    }
+    
+    $params[] = 'page=' . $page_num;
+    
+    return '?' . implode('&', $params);
 }
 ?>
 
@@ -946,8 +1012,8 @@ try {
             </div>
             <div class="pagination-nav">
                 <?php if ($page > 1): ?>
-                    <a href="?page=1" class="btn btn-sm btn-outline-primary">最初</a>
-                    <a href="?page=<?= $page - 1 ?>" class="btn btn-sm btn-outline-primary">前へ</a>
+                    <a href="<?= buildPageUrl(1) ?>" class="btn btn-sm btn-outline-primary">最初</a>
+                    <a href="<?= buildPageUrl($page - 1) ?>" class="btn btn-sm btn-outline-primary">前へ</a>
                 <?php endif; ?>
                 
                 <?php
@@ -960,13 +1026,13 @@ try {
                     <?php if ($i == $page): ?>
                         <span class="btn btn-sm btn-primary"><?= $i ?></span>
                     <?php else: ?>
-                        <a href="?page=<?= $i ?>" class="btn btn-sm btn-outline-primary"><?= $i ?></a>
+                        <a href="<?= buildPageUrl($i) ?>" class="btn btn-sm btn-outline-primary"><?= $i ?></a>
                     <?php endif; ?>
                 <?php endfor; ?>
                 
                 <?php if ($page < $total_pages): ?>
-                    <a href="?page=<?= $page + 1 ?>" class="btn btn-sm btn-outline-primary">次へ</a>
-                    <a href="?page=<?= $total_pages ?>" class="btn btn-sm btn-outline-primary">最後</a>
+                    <a href="<?= buildPageUrl($page + 1) ?>" class="btn btn-sm btn-outline-primary">次へ</a>
+                    <a href="<?= buildPageUrl($total_pages) ?>" class="btn btn-sm btn-outline-primary">最後</a>
                 <?php endif; ?>
             </div>
         </div>
@@ -1169,8 +1235,8 @@ try {
                     </div>
                     <div class="pagination-nav">
                         <?php if ($page > 1): ?>
-                            <a href="?page=1" class="btn btn-sm btn-outline-primary">最初</a>
-                            <a href="?page=<?= $page - 1 ?>" class="btn btn-sm btn-outline-primary">前へ</a>
+                            <a href="<?= buildPageUrl(1) ?>" class="btn btn-sm btn-outline-primary">最初</a>
+                            <a href="<?= buildPageUrl($page - 1) ?>" class="btn btn-sm btn-outline-primary">前へ</a>
                         <?php endif; ?>
                         
                         <?php
@@ -1183,13 +1249,13 @@ try {
                             <?php if ($i == $page): ?>
                                 <span class="btn btn-sm btn-primary"><?= $i ?></span>
                             <?php else: ?>
-                                <a href="?page=<?= $i ?>" class="btn btn-sm btn-outline-primary"><?= $i ?></a>
+                                <a href="<?= buildPageUrl($i) ?>" class="btn btn-sm btn-outline-primary"><?= $i ?></a>
                             <?php endif; ?>
                         <?php endfor; ?>
                         
                         <?php if ($page < $total_pages): ?>
-                            <a href="?page=<?= $page + 1 ?>" class="btn btn-sm btn-outline-primary">次へ</a>
-                            <a href="?page=<?= $total_pages ?>" class="btn btn-sm btn-outline-primary">最後</a>
+                            <a href="<?= buildPageUrl($page + 1) ?>" class="btn btn-sm btn-outline-primary">次へ</a>
+                            <a href="<?= buildPageUrl($total_pages) ?>" class="btn btn-sm btn-outline-primary">最後</a>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -2049,6 +2115,13 @@ try {
             url.searchParams.set('start_date', startDate);
             url.searchParams.set('end_date', endDate);
             url.searchParams.delete('page'); // ページをリセット
+            
+            // ステータスフィルターが設定されている場合は追加
+            if (!activeFilters.status.includes('all') && activeFilters.status.length > 0) {
+                url.searchParams.set('status', activeFilters.status.join(','));
+            } else {
+                url.searchParams.delete('status');
+            }
             
             window.location.href = url.toString();
         }
