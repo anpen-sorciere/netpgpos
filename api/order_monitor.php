@@ -40,12 +40,21 @@ try {
     $limit = 50;
     $offset = ($page - 1) * $limit;
     
+    // ステータスフィルター（通常検索モードでサーバー側適用を試行）
+    $status_filter = isset($_GET['status']) ? explode(',', $_GET['status']) : [];
+    $status_param = null;
+    
+    // 通常検索モードで1つのステータスが選択されている場合、APIに渡す
+    if ($search_mode && !empty($status_filter) && !in_array('all', $status_filter) && count($status_filter) === 1) {
+        $status_param = $status_filter[0];
+    }
+    
     // 自動でデータを取得・合成
     try {
         // リアルタイムモード: 当日+前日のため多めに取得
         // 通常検索モード: 最大1年間=約10,000件を想定（実績: 月間最大844件）
         $fetch_limit = 15000; // API制限を考慮した上限（1年分+余裕）
-        $combined_data = $practical_manager->getCombinedOrderData($fetch_limit);
+        $combined_data = $practical_manager->getCombinedOrderData($fetch_limit, 0, $status_param);
         $orders_data = $combined_data['merged_orders'];
         
         // データ構造を確認して適切に注文データを取得
@@ -95,9 +104,8 @@ try {
             $all_orders = array_values($all_orders);
         }
         
-        // ステータスフィルター（URLパラメータの場合）
-        $status_filter = isset($_GET['status']) ? explode(',', $_GET['status']) : [];
-        if (!empty($status_filter) && !in_array('all', $status_filter)) {
+        // 複数のステータスが選択された場合はクライアント側フィルタリングを適用
+        if ($search_mode && !empty($status_filter) && !in_array('all', $status_filter) && count($status_filter) > 1) {
             $all_orders = array_filter($all_orders, function($order) use ($status_filter) {
                 $dispatch_status = $order['dispatch_status'] ?? '';
                 
@@ -108,6 +116,49 @@ try {
                 
                 // dispatch_statusがない場合のフォールバック処理
                 // cancelled、dispatched、paymentなどのフィールドで判定
+                foreach ($status_filter as $status) {
+                    switch ($status) {
+                        case 'cancelled':
+                            if (isset($order['cancelled']) && $order['cancelled'] !== null) {
+                                return true;
+                            }
+                            break;
+                        case 'dispatched':
+                            if (isset($order['dispatched']) && $order['dispatched'] !== null) {
+                                return true;
+                            }
+                            break;
+                        case 'unpaid':
+                            if (isset($order['payment']) && ($order['payment'] === false || $order['payment'] === 'unpaid')) {
+                                return true;
+                            }
+                            break;
+                        case 'unshippable':
+                            if (isset($order['payment']) && ($order['payment'] === true || $order['payment'] === 'paid')) {
+                                return true;
+                            }
+                            break;
+                    }
+                }
+                
+                return false;
+            });
+            
+            // インデックスを再設定
+            $all_orders = array_values($all_orders);
+        }
+        
+        // リアルタイムモードのステータスフィルター（常にクライアント側）
+        if (!$search_mode && !empty($status_filter) && !in_array('all', $status_filter)) {
+            $all_orders = array_filter($all_orders, function($order) use ($status_filter) {
+                $dispatch_status = $order['dispatch_status'] ?? '';
+                
+                // dispatch_statusでフィルタリング
+                if (in_array($dispatch_status, $status_filter)) {
+                    return true;
+                }
+                
+                // dispatch_statusがない場合のフォールバック処理
                 foreach ($status_filter as $status) {
                     switch ($status) {
                         case 'cancelled':
