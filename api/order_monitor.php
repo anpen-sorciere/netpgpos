@@ -349,7 +349,7 @@ function buildPageUrl($page_num) {
             font-weight: 600;
         }
         
-        /* 検索フォーム */
+        /* 検索フォーム（旧スタイル - 削除予定） */
         .search-form {
             padding: 20px;
             background: white;
@@ -384,6 +384,42 @@ function buildPageUrl($page_num) {
         .btn-lg {
             padding: 10px 20px;
             font-size: 1em;
+        }
+        
+        /* インライン検索フォーム */
+        .search-form-inline {
+            margin: 10px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .search-controls-inline {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .search-item-inline {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .search-item-inline label {
+            font-weight: 600;
+            color: #495057;
+            min-width: 80px;
+        }
+        
+        .search-item-inline input[type="date"] {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 0.95em;
+            width: 160px;
         }
         
         .controls {
@@ -907,25 +943,6 @@ function buildPageUrl($page_num) {
             </button>
         </div>
         
-        <!-- 通常検索フォーム -->
-        <div id="search-form" class="search-form" style="display: none;">
-            <div class="search-controls">
-                <div class="search-item">
-                    <label><i class="fas fa-calendar-alt"></i> 開始日:</label>
-                    <input type="date" id="start-date" class="date-input" max="">
-                </div>
-                <div class="search-item">
-                    <label><i class="fas fa-calendar-check"></i> 終了日:</label>
-                    <input type="date" id="end-date" class="date-input" max="">
-                </div>
-                <div class="search-item">
-                    <button class="btn btn-primary btn-lg" onclick="performSearch()">
-                        <i class="fas fa-search"></i> 検索
-                    </button>
-                </div>
-            </div>
-        </div>
-        
         <div class="controls">
             <div class="refresh-info">
                 <span><i class="fas fa-sync-alt"></i> 自動更新: 30秒間隔</span>
@@ -977,8 +994,24 @@ function buildPageUrl($page_num) {
             <?php else: ?>
                 <div class="filter-section">
                     <div class="filter-title">
-                        <i class="fas fa-filter"></i> 表示フィルター
+                        <i class="fas fa-filter"></i> 検索条件
                     </div>
+                    
+                    <!-- 通常検索フォーム（検索モード時のみ表示） -->
+                    <div id="search-form" class="search-form-inline" style="display: none;">
+                        <div class="search-controls-inline">
+                            <div class="search-item-inline">
+                                <label><i class="fas fa-calendar-alt"></i> 開始日:</label>
+                                <input type="date" id="start-date" class="date-input" max="">
+                            </div>
+                            <div class="search-item-inline">
+                                <label><i class="fas fa-calendar-check"></i> 終了日:</label>
+                                <input type="date" id="end-date" class="date-input" max="">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- ステータスフィルター -->
                     <div class="filter-buttons">
                         <div class="filter-group">
                             <span class="filter-label">ステータス:</span>
@@ -990,18 +1023,25 @@ function buildPageUrl($page_num) {
                             <button class="filter-btn" data-status="dispatched">対応済</button>
                             <button class="filter-btn" data-status="cancelled">キャンセル</button>
                         </div>
-                        <div class="filter-group">
-                            <span class="filter-label">顧客情報:</span>
-                            <button class="filter-btn" data-filter="customer" onclick="toggleCustomerFilter()">購入者名、電話番号など</button>
-                        </div>
                     </div>
+                    
                     <div class="filter-info">
                         <span id="filter-status">全ての注文を表示中</span>
                         <div class="filter-actions">
-                            <button class="btn btn-sm btn-primary" onclick="applyFilters()">
-                                <i class="fas fa-search"></i> 検索
-                            </button>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="clearAllFilters()">フィルタークリア</button>
+                            <!-- リアルタイムモード用のボタン -->
+                            <div id="realtime-filter-buttons">
+                                <button class="btn btn-sm btn-primary" onclick="applyFilters()">
+                                    <i class="fas fa-filter"></i> フィルター適用
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="clearAllFilters()">フィルタークリア</button>
+                            </div>
+                            <!-- 通常検索モード用のボタン -->
+                            <div id="search-filter-buttons" style="display: none;">
+                                <button class="btn btn-sm btn-primary" onclick="performSearch()">
+                                    <i class="fas fa-search"></i> 検索実行
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="clearAllFilters()">リセット</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1392,16 +1432,26 @@ function buildPageUrl($page_num) {
         
         // 全てのフィルターをクリア
         function clearAllFilters() {
+            // 現在のモードに応じて処理を分岐
+            if (currentMode === 'search') {
+                // 検索モードの場合：URLパラメータをクリアしてリロード
+                var url = new URL(window.location.href);
+                url.searchParams.delete('mode');
+                url.searchParams.delete('start_date');
+                url.searchParams.delete('end_date');
+                url.searchParams.delete('status');
+                url.searchParams.delete('page');
+                window.location.href = url.toString();
+                return;
+            }
+            
+            // リアルタイムモードの場合：フィルターのみリセット
             // ステータスフィルターをリセット
             document.querySelectorAll('.filter-btn[data-status]').forEach(function(btn) {
                 btn.classList.remove('active');
             });
             document.querySelector('[data-status="all"]').classList.add('active');
             activeFilters.status = ['all'];
-            
-            // 顧客情報フィルターをリセット
-            document.querySelector('[data-filter="customer"]').classList.remove('active');
-            activeFilters.customer = false;
             
             updateFilterStatus();
         }
@@ -2056,9 +2106,13 @@ function buildPageUrl($page_num) {
             // 検索フォームの表示/非表示
             var searchForm = document.getElementById('search-form');
             var controls = document.querySelector('.controls');
+            var realtimeButtons = document.getElementById('realtime-filter-buttons');
+            var searchButtons = document.getElementById('search-filter-buttons');
             
             if (mode === 'search') {
-                searchForm.style.display = 'block';
+                if (searchForm) searchForm.style.display = 'block';
+                if (realtimeButtons) realtimeButtons.style.display = 'none';
+                if (searchButtons) searchButtons.style.display = 'block';
                 
                 // 自動更新を停止
                 if (autoRefreshInterval) {
@@ -2073,12 +2127,18 @@ function buildPageUrl($page_num) {
                 }
                 
                 // 日付の最大値を設定（今日）
-                var today = new Date().toISOString().split('T')[0];
-                document.getElementById('start-date').max = today;
-                document.getElementById('end-date').max = today;
+                var startDateInput = document.getElementById('start-date');
+                var endDateInput = document.getElementById('end-date');
+                if (startDateInput && endDateInput) {
+                    var today = new Date().toISOString().split('T')[0];
+                    startDateInput.max = today;
+                    endDateInput.max = today;
+                }
                 
             } else {
-                searchForm.style.display = 'none';
+                if (searchForm) searchForm.style.display = 'none';
+                if (realtimeButtons) realtimeButtons.style.display = 'block';
+                if (searchButtons) searchButtons.style.display = 'none';
                 
                 // 自動更新の表示を戻す
                 var autoUpdateSpan = controls.querySelector('.refresh-info span:first-child');
