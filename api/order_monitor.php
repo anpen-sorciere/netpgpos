@@ -23,6 +23,11 @@ if ($utype == 1024) {
 // デバッグモードチェック
 $debug_mode = isset($_GET['debug']) && $_GET['debug'] === '1';
 
+// 検索モード判定
+$search_mode = isset($_GET['mode']) && $_GET['mode'] === 'search';
+$start_date = isset($_GET['start_date']) ? $_GET['start_date'] : null;
+$end_date = isset($_GET['end_date']) ? $_GET['end_date'] : null;
+
 // BASE API認証チェック
 try {
     $practical_manager = new BasePracticalAutoManager();
@@ -44,6 +49,20 @@ try {
         } else {
             // 新しい構造: merged_orders自体が注文配列
             $all_orders = $orders_data;
+        }
+        
+        // 検索モードの場合、日付でフィルタリング
+        if ($search_mode && $start_date && $end_date) {
+            $start_timestamp = strtotime($start_date . ' 00:00:00');
+            $end_timestamp = strtotime($end_date . ' 23:59:59');
+            
+            $all_orders = array_filter($all_orders, function($order) use ($start_timestamp, $end_timestamp) {
+                $order_timestamp = $order['ordered'] ?? 0;
+                return $order_timestamp >= $start_timestamp && $order_timestamp <= $end_timestamp;
+            });
+            
+            // インデックスを再設定
+            $all_orders = array_values($all_orders);
         }
         
         // 注文日時で並び替え（新しいものが先頭）
@@ -231,6 +250,74 @@ try {
             font-size: 1.2em;
             opacity: 0.9;
             margin-top: 5px;
+        }
+        
+        /* モード選択タブ */
+        .mode-tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .mode-tab {
+            flex: 1;
+            padding: 15px 20px;
+            border: none;
+            background: transparent;
+            color: #6c757d;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .mode-tab:hover {
+            background: #e9ecef;
+            color: #495057;
+        }
+        
+        .mode-tab.active {
+            background: white;
+            color: #007bff;
+            border-bottom-color: #007bff;
+            font-weight: 600;
+        }
+        
+        /* 検索フォーム */
+        .search-form {
+            padding: 20px;
+            background: white;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .search-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .search-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .search-item label {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .date-input {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        
+        .btn-lg {
+            padding: 10px 20px;
+            font-size: 1em;
         }
         
         .controls {
@@ -742,6 +829,35 @@ try {
         <div class="header">
             <h1><i class="fas fa-chart-line"></i> リアルタイム注文監視システム</h1>
             <div class="shop-name"><?= htmlspecialchars($shop_name) ?></div>
+        </div>
+        
+        <!-- モード選択タブ -->
+        <div class="mode-tabs">
+            <button class="mode-tab active" onclick="switchMode('realtime')">
+                <i class="fas fa-bolt"></i> リアルタイム
+            </button>
+            <button class="mode-tab" onclick="switchMode('search')">
+                <i class="fas fa-search"></i> 通常検索
+            </button>
+        </div>
+        
+        <!-- 通常検索フォーム -->
+        <div id="search-form" class="search-form" style="display: none;">
+            <div class="search-controls">
+                <div class="search-item">
+                    <label><i class="fas fa-calendar-alt"></i> 開始日:</label>
+                    <input type="date" id="start-date" class="date-input" max="">
+                </div>
+                <div class="search-item">
+                    <label><i class="fas fa-calendar-check"></i> 終了日:</label>
+                    <input type="date" id="end-date" class="date-input" max="">
+                </div>
+                <div class="search-item">
+                    <button class="btn btn-primary btn-lg" onclick="performSearch()">
+                        <i class="fas fa-search"></i> 検索
+                    </button>
+                </div>
+            </div>
         </div>
         
         <div class="controls">
@@ -1852,6 +1968,91 @@ try {
             });
         }
         
+        // モード切り替え変数
+        var currentMode = 'realtime';
+        var autoRefreshInterval = null;
+        
+        // モード切り替え関数
+        function switchMode(mode) {
+            currentMode = mode;
+            
+            // タブの状態を更新
+            document.querySelectorAll('.mode-tab').forEach(function(tab) {
+                tab.classList.remove('active');
+            });
+            // 該当するタブをアクティブに
+            document.querySelectorAll('.mode-tab').forEach(function(tab) {
+                if (tab.getAttribute('onclick').includes(mode)) {
+                    tab.classList.add('active');
+                }
+            });
+            
+            // 検索フォームの表示/非表示
+            var searchForm = document.getElementById('search-form');
+            var controls = document.querySelector('.controls');
+            
+            if (mode === 'search') {
+                searchForm.style.display = 'block';
+                
+                // 自動更新を停止
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+                
+                // 自動更新の表示を変更
+                var autoUpdateSpan = controls.querySelector('.refresh-info span:first-child');
+                if (autoUpdateSpan) {
+                    autoUpdateSpan.innerHTML = '<i class="fas fa-sync-alt"></i> 自動更新: 無効（検索モード）';
+                }
+                
+                // 日付の最大値を設定（今日）
+                var today = new Date().toISOString().split('T')[0];
+                document.getElementById('start-date').max = today;
+                document.getElementById('end-date').max = today;
+                
+            } else {
+                searchForm.style.display = 'none';
+                
+                // 自動更新の表示を戻す
+                var autoUpdateSpan = controls.querySelector('.refresh-info span:first-child');
+                if (autoUpdateSpan) {
+                    autoUpdateSpan.innerHTML = '<i class="fas fa-sync-alt"></i> 自動更新: 30秒間隔';
+                }
+                
+                // 30秒間隔で自動更新を開始
+                if (!autoRefreshInterval) {
+                    autoRefreshInterval = setInterval(refreshOrderData, 30000);
+                }
+            }
+        }
+        
+        // 検索実行関数
+        function performSearch() {
+            var startDate = document.getElementById('start-date').value;
+            var endDate = document.getElementById('end-date').value;
+            
+            if (!startDate || !endDate) {
+                alert('開始日と終了日を両方選択してください。');
+                return;
+            }
+            
+            // 日付の妥当性チェック
+            if (startDate > endDate) {
+                alert('開始日は終了日より前の日付を選択してください。');
+                return;
+            }
+            
+            // 検索実行（URLパラメータを追加してリロード）
+            var url = new URL(window.location.href);
+            url.searchParams.set('mode', 'search');
+            url.searchParams.set('start_date', startDate);
+            url.searchParams.set('end_date', endDate);
+            url.searchParams.delete('page'); // ページをリセット
+            
+            window.location.href = url.toString();
+        }
+        
         // ページ読み込み時の初期化
         window.onload = function() {
             // 初期データを保存
@@ -1878,8 +2079,29 @@ try {
                 });
             });
             
-            // 30秒間隔で自動更新
-            setInterval(refreshOrderData, 30000);
+            // URLパラメータでモードを判定
+            var urlParams = new URLSearchParams(window.location.search);
+            var mode = urlParams.get('mode');
+            
+            if (mode === 'search') {
+                // 検索モードの場合
+                var startDate = urlParams.get('start_date');
+                var endDate = urlParams.get('end_date');
+                
+                if (startDate && endDate) {
+                    document.getElementById('start-date').value = startDate;
+                    document.getElementById('end-date').value = endDate;
+                    switchMode('search');
+                } else {
+                    // パラメータがない場合はリアルタイムモードに戻す
+                    document.querySelector('.mode-tab[onclick*="realtime"]').click();
+                }
+            } else {
+                // リアルタイムモード
+                currentMode = 'realtime';
+                // 30秒間隔で自動更新
+                autoRefreshInterval = setInterval(refreshOrderData, 30000);
+            }
         };
     </script>
 </body>
