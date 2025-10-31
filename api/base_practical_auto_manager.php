@@ -114,14 +114,13 @@ class BasePracticalAutoManager {
             $encrypted_refresh = $this->encrypt($refresh_token);
             
             $sql = "INSERT INTO base_api_tokens 
-                    (scope_key, access_token, refresh_token, access_expires, refresh_expires, created_at, updated_at) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    (scope_key, access_token, refresh_token, access_expires, refresh_expires) 
+                    VALUES (?, ?, ?, ?, ?)
                     ON DUPLICATE KEY UPDATE 
                     access_token = VALUES(access_token),
                     refresh_token = VALUES(refresh_token),
                     access_expires = VALUES(access_expires),
-                    refresh_expires = VALUES(refresh_expires),
-                    updated_at = VALUES(updated_at)";
+                    refresh_expires = VALUES(refresh_expires)";
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
@@ -129,9 +128,7 @@ class BasePracticalAutoManager {
                 $encrypted_access,
                 $encrypted_refresh,
                 $access_expires,
-                $refresh_expires,
-                $current_time,
-                $current_time
+                $refresh_expires
             ]);
             
             $this->logSystemEvent("TOKEN_SAVED", "スコープ {$scope_key} のトークンを保存しました");
