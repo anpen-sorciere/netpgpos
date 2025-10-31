@@ -210,7 +210,9 @@ try {
             // デバッグ: データ構造を確認
             echo '<div style="background-color: #fff3cd; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
             echo '<strong>DEBUG order_monitor.php:</strong> ';
-            echo '全注文数: ' . $total_orders . ' | ';
+            echo 'API取得上限: ' . $fetch_limit . ' | ';
+            echo 'API実取得件数: ' . $fetched_count . ' | ';
+            echo '日付フィルタ後の全注文数: ' . $total_orders . ' | ';
             echo '現在ページ: ' . $page . '/' . $total_pages . ' | ';
             echo '表示件数: ' . count($orders) . ' | ';
             echo 'オフセット: ' . $offset;
