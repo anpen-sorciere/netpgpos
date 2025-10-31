@@ -54,70 +54,26 @@ try {
     
     // 自動でデータを取得・合成
     try {
-        $all_orders = [];
-        $fetched_count = 0;
-        $limit_warning_message = null;
+        // リアルタイムモード: 当日+前日のため多めに取得
+        // 通常検索モード: 最大1年間=約10,000件を想定（実績: 月間最大844件）
+        $fetch_limit = 15000; // API制限を考慮した上限（1年分+余裕）
+        $combined_data = $practical_manager->getCombinedOrderData($fetch_limit, 0, $status_param);
+        $orders_data = $combined_data['merged_orders'];
         
-        if ($search_mode) {
-            // 通常検索モード: BASE APIの制限(100件)を考慮して複数回取得
-            $fetch_limit = 15000; // API制限を考慮した上限（1年分+余裕）
-            $api_limit = 100; // BASE APIの1回あたりの上限
-            $fetch_offset = 0;
-            $max_iterations = ceil($fetch_limit / $api_limit); // 最大150回
-            $iteration_count = 0;
-            
-            while ($fetch_offset < $fetch_limit && $iteration_count < $max_iterations) {
-                $combined_data = $practical_manager->getCombinedOrderData($api_limit, $fetch_offset, $status_param);
-                $orders_data = $combined_data['merged_orders'];
-                
-                // データ構造を確認して適切に注文データを取得
-                if (isset($orders_data['orders'])) {
-                    // 従来の構造: merged_orders.orders
-                    $batch_orders = $orders_data['orders'];
-                } else {
-                    // 新しい構造: merged_orders自体が注文配列
-                    $batch_orders = $orders_data;
-                }
-                
-                // 取得件数が0件なら終了
-                if (count($batch_orders) === 0) {
-                    break;
-                }
-                
-                // 全注文配列に追加
-                $all_orders = array_merge($all_orders, $batch_orders);
-                
-                // 取得件数がAPI制限より少なければ全て取得済み
-                if (count($batch_orders) < $api_limit) {
-                    break;
-                }
-                
-                $fetch_offset += $api_limit;
-                $iteration_count++;
-            }
-            
-            // 取得件数が上限に達した場合のチェック
-            $actual_fetched_count = count($all_orders);
-            if ($actual_fetched_count >= $fetch_limit) {
-                $limit_warning_message = "⚠️ 警告: 取得データが上限（{$fetch_limit}件）に達しています。一部のデータが表示されない可能性があります。期間を短くして再検索してください。";
-            }
-            $fetched_count = $actual_fetched_count;
+        // データ構造を確認して適切に注文データを取得
+        if (isset($orders_data['orders'])) {
+            // 従来の構造: merged_orders.orders
+            $all_orders = $orders_data['orders'];
         } else {
-            // リアルタイムモード: 当日+前日のため多めに取得
-            $fetch_limit = 200; // リアルタイム用の上限
-            $combined_data = $practical_manager->getCombinedOrderData($fetch_limit, 0, $status_param);
-            $orders_data = $combined_data['merged_orders'];
-            
-            // データ構造を確認して適切に注文データを取得
-            if (isset($orders_data['orders'])) {
-                // 従来の構造: merged_orders.orders
-                $all_orders = $orders_data['orders'];
-            } else {
-                // 新しい構造: merged_orders自体が注文配列
-                $all_orders = $orders_data;
-            }
-            
-            $fetched_count = count($all_orders);
+            // 新しい構造: merged_orders自体が注文配列
+            $all_orders = $orders_data;
+        }
+        
+        // 取得件数が上限に達した場合のチェック（実際の取得件数が指定した上限と等しい場合）
+        $fetched_count = count($all_orders);
+        $limit_warning_message = null;
+        if ($fetched_count >= $fetch_limit) {
+            $limit_warning_message = "⚠️ 警告: 取得データが上限（{$fetch_limit}件）に達しています。一部のデータが表示されない可能性があります。期間を短くして再検索してください。";
         }
         
         // 日付フィルタリング
