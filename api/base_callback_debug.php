@@ -126,8 +126,11 @@ try {
     // Persist by scope
     try {
         require_once __DIR__ . '/base_practical_auto_manager.php';
+        cb_log('MANAGER_LOADED');
         $mgr = new BasePracticalAutoManager();
+        cb_log('MANAGER_INSTANTIATED');
         if ($scopeKey) {
+            cb_log('SAVE_ATTEMPT', ['scope' => $scopeKey, 'has_refresh' => !empty($token['refresh_token']), 'expires_in' => $token['expires_in']]);
             $save_result = $mgr->saveScopeToken(
                 $scopeKey,
                 $token['access_token'],

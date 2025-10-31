@@ -138,7 +138,7 @@ class BasePracticalAutoManager {
             return true;
             
         } catch (PDOException $e) {
-            $this->logSystemEvent("TOKEN_SAVE_ERROR", "トークン保存エラー: " . $e->getMessage());
+            $this->logSystemEvent("TOKEN_SAVE_ERROR", "トークン保存エラー: " . $e->getMessage() . " | File: " . $e->getFile() . " | Line: " . $e->getLine());
             return false;
         }
     }
