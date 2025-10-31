@@ -127,6 +127,20 @@ try {
     try {
         require_once __DIR__ . '/base_practical_auto_manager.php';
         cb_log('MANAGER_LOADED');
+        
+        // DB接続テスト
+        try {
+            $test_pdo = new PDO(
+                "mysql:host={$host};dbname={$dbname};charset=utf8mb4",
+                $user,
+                $password,
+                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+            );
+            cb_log('DB_CONNECT_OK');
+        } catch (PDOException $e) {
+            cb_log('DB_CONNECT_FAIL', ['error' => $e->getMessage()]);
+        }
+        
         $mgr = new BasePracticalAutoManager();
         cb_log('MANAGER_INSTANTIATED');
         if ($scopeKey) {
