@@ -56,6 +56,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $in_time = !empty($_POST['in_time']) ? str_replace(':', '', $_POST['in_time']) : null;
             $out_time = !empty($_POST['out_time']) ? str_replace(':', '', $_POST['out_time']) : null;
 
+            // 数値の正規化（空文字は0へ）
+            $sheet_no = isset($_POST['sheet_no']) && $_POST['sheet_no'] !== '' ? (int)$_POST['sheet_no'] : 0;
+            $issuer_id = isset($_POST['issuer_id']) && $_POST['issuer_id'] !== '' ? (int)$_POST['issuer_id'] : 0;
+            $p_type = isset($_POST['p_type']) && $_POST['p_type'] !== '' ? (int)$_POST['p_type'] : 0;
+            $adjust_price = isset($_POST['adjust_price']) && $_POST['adjust_price'] !== '' ? (int)$_POST['adjust_price'] : 0;
+
             $sql_receipt = "UPDATE receipt_tbl SET
                 sheet_no = ?,
                 receipt_day = ?,
@@ -71,16 +77,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $stmh_update_receipt = $pdo->prepare($sql_receipt);
             $stmh_update_receipt->execute([
-                $_POST['sheet_no'] ?? null,
+                $sheet_no,
                 $receipt_day,
                 $in_date,
                 $in_time,
                 $out_date,
                 $out_time,
                 $_POST['customer_name'] ?? null,
-                $_POST['issuer_id'] ?? null,
-                $_POST['p_type'],
-                $_POST['adjust_price'] ?? 0,
+                $issuer_id,
+                $p_type,
+                $adjust_price,
                 $receipt_id
             ]);
 
@@ -103,34 +109,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // 11件の明細をループ処理
             for ($i = 1; $i <= 11; $i++) {
                 $receipt_detail_id = $_POST['receipt_detail_id' . $i] ?? null;
-                $item_id = $_POST['item_name' . $i] ?? null;
-                $quantity = $_POST['suu' . $i] ?? null;
-                $cast_id = $_POST['cast_name' . $i] ?? null;
+                $item_id = isset($_POST['item_name' . $i]) && $_POST['item_name' . $i] !== '' ? (int)$_POST['item_name' . $i] : 0;
+                $quantity = isset($_POST['suu' . $i]) && $_POST['suu' . $i] !== '' ? (int)$_POST['suu' . $i] : 0;
+                $cast_id = isset($_POST['cast_name' . $i]) && $_POST['cast_name' . $i] !== '' ? (int)$_POST['cast_name' . $i] : 0;
 
                 if (!empty($receipt_detail_id)) {
                     $item_data = $items_map[$item_id] ?? null;
 
                     // 商品が選択されているか確認
-                    if (!empty($item_id) && $item_data) {
+                    if ($item_id > 0 && $item_data) {
                         $price = $item_data['price'] ?? 0;
-                        $cast_back_price = $item_data['back_price'] ?? 0;
+                        $cast_back_price = ($item_data['back_price'] ?? 0) * $quantity;
                         
                         $stmh_update_detail->execute([
                             $item_id,
-                            $quantity ?? 0,
+                            $quantity,
                             $price,
                             $cast_id,
                             $cast_back_price,
                             $receipt_detail_id
                         ]);
                     } else {
-                        // フォームで空欄にされた場合、データベースの該当レコードを空にする
+                        // フォームで空欄にされた場合、0でクリア（NULLは厳格モードで失敗するため）
                         $stmh_update_detail->execute([
-                            null, // item_id
-                            null, // quantity
-                            null, // price
-                            null, // cast_id
-                            null, // cast_back_price
+                            0, // item_id
+                            0, // quantity
+                            0, // price
+                            0, // cast_id
+                            0, // cast_back_price
                             $receipt_detail_id
                         ]);
                     }

@@ -31,10 +31,10 @@ $current_pay = 0;
 if (!empty($_POST) && isset($_POST['submit_action']) && $_POST['submit_action'] === 'save_data') {
     // フォームの内容をセッションで保存
     $_SESSION['join'] = $_POST;
-    $cast_id = $_SESSION['join']['cast_id'];
+    $cast_id = isset($_SESSION['join']['cast_id']) && $_SESSION['join']['cast_id'] !== '' ? (int)$_SESSION['join']['cast_id'] : 0;
     $work_in_ymd = explode('-', $_SESSION['join']['in_ymd']);
     $chk_month = $work_in_ymd[0] . $work_in_ymd[1];
-    $pay = $_SESSION['join']['pay'];
+    $pay = isset($_SESSION['join']['pay']) && $_SESSION['join']['pay'] !== '' ? (int)str_replace(',', '', $_SESSION['join']['pay']) : 0;
 
     try {
         // 同じキャストIDと月が既に存在するか確認

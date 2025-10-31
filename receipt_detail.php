@@ -81,9 +81,10 @@ try {
             $new_out_date_raw = $_POST['out_date'];
             $new_out_time_raw = $_POST['out_time'];
             $new_receipt_day_raw = $_POST['receipt_day'];
-            $new_issuer_id = $_POST['issuer_id'];
-            $new_payment_type = $_POST['payment_type'];
-            $new_adjust_price = $_POST['adjust_price'];
+            // 数値系は空文字/NULLを0に正規化（MySQL8の厳格モード対策）
+            $new_issuer_id = isset($_POST['issuer_id']) && $_POST['issuer_id'] !== '' ? (int)$_POST['issuer_id'] : 0;
+            $new_payment_type = isset($_POST['payment_type']) && $_POST['payment_type'] !== '' ? (int)$_POST['payment_type'] : 0;
+            $new_adjust_price = isset($_POST['adjust_price']) && $_POST['adjust_price'] !== '' ? (int)$_POST['adjust_price'] : 0;
             $new_customer_name = $_POST['customer_name'];
             
             // YYYY-MM-DD形式からYYYYMMDD形式に変換
@@ -101,9 +102,9 @@ try {
             
             for ($i = 0; $i < 11; $i++) {
                 $detail = $submitted_details[$i];
-                $item_id = $detail['item_id'];
-                $quantity = $detail['quantity'];
-                $cast_id = $detail['cast_id'] ?? null;
+                $item_id = isset($detail['item_id']) && $detail['item_id'] !== '' ? (int)$detail['item_id'] : 0;
+                $quantity = isset($detail['quantity']) && $detail['quantity'] !== '' ? (int)$detail['quantity'] : 0;
+                $cast_id = isset($detail['cast_id']) && $detail['cast_id'] !== '' ? (int)$detail['cast_id'] : 0;
                 $receipt_detail_id = $detail['receipt_detail_id'] ?? null;
                 
                 // item_idが空の場合は、値をリセット
@@ -170,11 +171,12 @@ function format_price($price) {
 $fixed_details = array_pad($details, 11, null);
 
 // YYYYMMDD形式からYYYY-MM-DD形式に変換
-$receipt_day_formatted = $receipt['receipt_day'] ? date('Y-m-d', strtotime($receipt['receipt_day'])) : '';
-$in_date_formatted = $receipt['in_date'] ? date('Y-m-d', strtotime($receipt['in_date'])) : '';
-$in_time_formatted = $receipt['in_time'] ? date('H:i', strtotime($receipt['in_time'])) : '';
-$out_date_formatted = $receipt['out_date'] ? date('Y-m-d', strtotime($receipt['out_date'])) : '';
-$out_time_formatted = $receipt['out_time'] ? date('H:i', strtotime($receipt['out_time'])) : '';
+// $receipt が null の場合に配列アクセスで警告が出ないようにガード
+$receipt_day_formatted = (isset($receipt['receipt_day']) && $receipt['receipt_day']) ? date('Y-m-d', strtotime($receipt['receipt_day'])) : '';
+$in_date_formatted = (isset($receipt['in_date']) && $receipt['in_date']) ? date('Y-m-d', strtotime($receipt['in_date'])) : '';
+$in_time_formatted = (isset($receipt['in_time']) && $receipt['in_time']) ? date('H:i', strtotime($receipt['in_time'])) : '';
+$out_date_formatted = (isset($receipt['out_date']) && $receipt['out_date']) ? date('Y-m-d', strtotime($receipt['out_date'])) : '';
+$out_time_formatted = (isset($receipt['out_time']) && $receipt['out_time']) ? date('H:i', strtotime($receipt['out_time'])) : '';
 ?>
 
 <!DOCTYPE html>

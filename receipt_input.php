@@ -318,6 +318,7 @@ try {
                 <button type="button" class="category-filter-btn" data-category="1">通常</button>
                 <button type="button" class="category-filter-btn" data-category="2">シャンパン</button>
                 <button type="button" class="category-filter-btn" data-category="3">フード</button>
+                <button type="button" class="category-filter-btn" data-category="4">イベント</button>
                 <button type="button" class="category-filter-btn" data-category="7">遠隔</button>
                 <button type="button" id="quantity-1-btn" style="margin-left:5px;">数量1</button>
             </div>
