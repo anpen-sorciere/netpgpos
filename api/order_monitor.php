@@ -31,6 +31,9 @@ $search_mode = isset($_GET['mode']) && $_GET['mode'] === 'search';
 $start_date = isset($_GET['start_date']) ? $_GET['start_date'] : null;
 $end_date = isset($_GET['end_date']) ? $_GET['end_date'] : null;
 
+// 日付入力の最大値（今日）
+$max_date = date('Y-m-d');
+
 // BASE API認証チェック
 try {
     $practical_manager = new BasePracticalAutoManager();
@@ -1058,17 +1061,17 @@ function buildPageUrl($page_num) {
         
         <!-- モード選択タブ -->
         <div class="mode-tabs">
-            <button class="mode-tab active" onclick="switchMode('realtime')">
+            <button class="mode-tab <?= $search_mode ? '' : 'active' ?>" onclick="switchMode('realtime')">
                 <i class="fas fa-bolt"></i> リアルタイム
             </button>
-            <button class="mode-tab" onclick="switchMode('search')">
+            <button class="mode-tab <?= $search_mode ? 'active' : '' ?>" onclick="switchMode('search')">
                 <i class="fas fa-search"></i> 通常検索
             </button>
         </div>
         
         <div class="controls">
             <div class="refresh-info">
-                <span><i class="fas fa-sync-alt"></i> 自動更新: 30秒間隔</span>
+                <span><i class="fas fa-sync-alt"></i> 自動更新: <?= $search_mode ? '無効（検索モード）' : '30秒間隔' ?></span>
                 <span><i class="fas fa-clock"></i> 最終更新: <span id="last-update">-</span></span>
                 <span><i class="fas fa-list"></i> 表示件数: <span id="order-count">-</span>件</span>
             </div>
@@ -1126,21 +1129,21 @@ function buildPageUrl($page_num) {
                     </div>
                     
                     <!-- 通常検索フォーム（検索モード時のみ表示） -->
-                    <div id="search-form" class="search-form-inline" style="display: none;">
+                    <div id="search-form" class="search-form-inline" style="display: <?= $search_mode ? 'block' : 'none' ?>;">
                         <div class="search-controls-inline">
                             <div class="search-item-inline">
                                 <label><i class="fas fa-calendar-alt"></i> 開始日:</label>
-                                <input type="date" id="start-date" class="date-input" max="">
+                                <input type="date" id="start-date" class="date-input" max="<?= htmlspecialchars($max_date) ?>" value="<?= htmlspecialchars($start_date ?? '') ?>">
                             </div>
                             <div class="search-item-inline">
                                 <label><i class="fas fa-calendar-check"></i> 終了日:</label>
-                                <input type="date" id="end-date" class="date-input" max="">
+                                <input type="date" id="end-date" class="date-input" max="<?= htmlspecialchars($max_date) ?>" value="<?= htmlspecialchars($end_date ?? '') ?>">
                             </div>
                         </div>
                     </div>
                     
                     <!-- 詳細フィルター（検索モード時のみ表示） -->
-                    <div id="detail-filters" class="detail-filters" style="display: none;">
+                    <div id="detail-filters" class="detail-filters" style="display: <?= $search_mode ? 'block' : 'none' ?>;">
                         <div class="detail-filters-content">
                             <div class="detail-filter-item">
                                 <label><i class="fas fa-user-tie"></i> キャスト名:</label>
@@ -1179,14 +1182,14 @@ function buildPageUrl($page_num) {
                         <span id="filter-status">全ての注文を表示中</span>
                         <div class="filter-actions">
                             <!-- リアルタイムモード用のボタン -->
-                            <div id="realtime-filter-buttons">
+                            <div id="realtime-filter-buttons" style="display: <?= $search_mode ? 'none' : 'block' ?>;">
                                 <button class="btn btn-sm btn-primary" onclick="applyFilters()">
                                     <i class="fas fa-filter"></i> フィルター適用
                                 </button>
                                 <button class="btn btn-sm btn-outline-secondary" onclick="clearAllFilters()">フィルタークリア</button>
                             </div>
                             <!-- 通常検索モード用のボタン -->
-                            <div id="search-filter-buttons" style="display: none;">
+                            <div id="search-filter-buttons" style="display: <?= $search_mode ? 'block' : 'none' ?>;">
                                 <button class="btn btn-sm btn-primary" onclick="performSearch()">
                                     <i class="fas fa-search"></i> 検索実行
                                 </button>
@@ -2498,16 +2501,20 @@ function buildPageUrl($page_num) {
                     var endDate = urlParams.get('end_date');
                     
                     if (startDate && endDate) {
-                        document.getElementById('start-date').value = startDate;
-                        document.getElementById('end-date').value = endDate;
-                        switchMode('search');
+                        // PHPでHTMLが既に正しく初期化されているので、currentModeのみ設定
+                        currentMode = 'search';
                     } else {
                         // パラメータがない場合はリアルタイムモードに戻す
-                        switchMode('realtime');
+                        currentMode = 'realtime';
                     }
                 } else {
                     // リアルタイムモード
-                    switchMode('realtime');
+                    currentMode = 'realtime';
+                    
+                    // リアルタイムモードの場合のみ自動更新を開始（PHPでHTMLが正しく初期化されている）
+                    if (!autoRefreshInterval) {
+                        autoRefreshInterval = setInterval(refreshOrderData, 30000);
+                    }
                 }
             });
         };
