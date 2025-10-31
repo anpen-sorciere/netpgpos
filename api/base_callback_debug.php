@@ -128,16 +128,11 @@ try {
         require_once __DIR__ . '/base_practical_auto_manager.php';
         cb_log('MANAGER_LOADED');
         
-        // DB接続テスト
+        // DB接続テスト（共通のconnect関数を使用）
         try {
-            $test_pdo = new PDO(
-                "mysql:host={$host};dbname={$dbname};charset=utf8mb4",
-                $user,
-                $password,
-                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-            );
-            cb_log('DB_CONNECT_OK');
-        } catch (PDOException $e) {
+            $test_pdo = connect();
+            cb_log('DB_CONNECT_OK', ['pdo' => $test_pdo ? 'created' : 'null']);
+        } catch (Exception $e) {
             cb_log('DB_CONNECT_FAIL', ['error' => $e->getMessage()]);
         }
         
