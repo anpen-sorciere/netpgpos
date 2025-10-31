@@ -55,20 +55,25 @@ try {
     $scopeKey = null;
     $returnUrl = '../api/order_monitor.php';
     $rawState = $_GET['state'] ?? null;
+    cb_log('STATE_INPUT', ['raw' => $rawState, 'has_code' => isset($_GET['code'])]);
     if ($rawState) {
         try {
             $decoded = json_decode(base64_decode($rawState), true);
             if (is_array($decoded)) {
                 $scopeKey = $decoded['scope'] ?? null;
                 $returnUrl = $decoded['return_url'] ?? $returnUrl;
+                cb_log('STATE_DECODED', ['scope' => $scopeKey, 'return_url' => $returnUrl]);
             } else {
                 // legacy: state holds scope directly
                 $scopeKey = $rawState;
+                cb_log('STATE_LEGACY', ['scope' => $scopeKey]);
             }
         } catch (Throwable $e) {
             $scopeKey = $rawState; // fallback legacy
             cb_log('STATE_DECODE_FAIL', ['error' => $e->getMessage(), 'raw' => $rawState]);
         }
+    } else {
+        cb_log('STATE_MISSING');
     }
     if (!filter_var($returnUrl, FILTER_VALIDATE_URL)) {
         $returnUrl = 'https://purplelion51.sakura.ne.jp/netpgpos/api/order_monitor.php';
@@ -123,18 +128,22 @@ try {
         require_once __DIR__ . '/base_practical_auto_manager.php';
         $mgr = new BasePracticalAutoManager();
         if ($scopeKey) {
-            $mgr->saveScopeToken(
+            $save_result = $mgr->saveScopeToken(
                 $scopeKey,
                 $token['access_token'],
                 $token['refresh_token'] ?? '',
                 (int)($token['expires_in'] ?? 3600)
             );
-            cb_log('DB_SAVE_OK', ['scope' => $scopeKey]);
+            if ($save_result) {
+                cb_log('DB_SAVE_OK', ['scope' => $scopeKey]);
+            } else {
+                cb_log('DB_SAVE_FAILED', ['scope' => $scopeKey]);
+            }
         } else {
             cb_log('DB_SAVE_SKIPPED_NO_SCOPE');
         }
     } catch (Throwable $e) {
-        cb_log('DB_SAVE_ERROR', ['error' => $e->getMessage()]);
+        cb_log('DB_SAVE_ERROR', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
         // 続行（ユーザーは遷移できるようにする）
     }
 
