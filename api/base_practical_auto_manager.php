@@ -373,13 +373,13 @@ class BasePracticalAutoManager {
     /**
      * 注文データと商品データの組み合わせ取得
      */
-    public function getCombinedOrderData($limit = 50) {
+    public function getCombinedOrderData($limit = 50, $offset = 0) {
         $auth_log = [];
         
         try {
             // 注文データ取得
             $auth_log[] = "注文データ取得を開始...";
-            $orders_data = $this->getDataWithAutoAuth('read_orders', '/orders', ['limit' => $limit]);
+            $orders_data = $this->getDataWithAutoAuth('read_orders', '/orders', ['limit' => $limit, 'offset' => $offset]);
             $auth_log[] = "注文データ取得成功: " . count($orders_data['orders']) . "件";
             
             // 商品データ取得

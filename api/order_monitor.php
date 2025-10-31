@@ -3,6 +3,9 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+// タイムゾーンを日本時間に設定
+date_default_timezone_set('Asia/Tokyo');
+
 require_once __DIR__ . '/../../common/config.php';
 require_once __DIR__ . '/../../common/dbconnect.php';
 require_once __DIR__ . '/../../common/functions.php';
@@ -39,7 +42,10 @@ try {
     
     // 自動でデータを取得・合成
     try {
-        $combined_data = $practical_manager->getCombinedOrderData(1000); // 全件取得してページング処理
+        // リアルタイムモード: 当日+前日のため多めに取得
+        // 通常検索モード: 最大1年間=約10,000件を想定（実績: 月間最大844件）
+        $fetch_limit = 15000; // API制限を考慮した上限（1年分+余裕）
+        $combined_data = $practical_manager->getCombinedOrderData($fetch_limit);
         $orders_data = $combined_data['merged_orders'];
         
         // データ構造を確認して適切に注文データを取得
@@ -51,14 +57,38 @@ try {
             $all_orders = $orders_data;
         }
         
-        // 検索モードの場合、日付でフィルタリング
+        // 取得件数が上限に達した場合のチェック（実際の取得件数が指定した上限と等しい場合）
+        $fetched_count = count($all_orders);
+        $limit_warning_message = null;
+        if ($fetched_count >= $fetch_limit) {
+            $limit_warning_message = "⚠️ 警告: 取得データが上限（{$fetch_limit}件）に達しています。一部のデータが表示されない可能性があります。期間を短くして再検索してください。";
+        }
+        
+        // 日付フィルタリング
         if ($search_mode && $start_date && $end_date) {
+            // 通常検索モード：指定された日付範囲でフィルタリング
             $start_timestamp = strtotime($start_date . ' 00:00:00');
             $end_timestamp = strtotime($end_date . ' 23:59:59');
             
             $all_orders = array_filter($all_orders, function($order) use ($start_timestamp, $end_timestamp) {
                 $order_timestamp = $order['ordered'] ?? 0;
                 return $order_timestamp >= $start_timestamp && $order_timestamp <= $end_timestamp;
+            });
+            
+            // インデックスを再設定
+            $all_orders = array_values($all_orders);
+        } elseif (!$search_mode) {
+            // リアルタイムモード：当日と前日の0時〜23:59を表示
+            $today_start = strtotime('today 00:00:00');
+            $today_end = strtotime('today 23:59:59');
+            $yesterday_start = strtotime('yesterday 00:00:00');
+            $yesterday_end = strtotime('yesterday 23:59:59');
+            
+            $all_orders = array_filter($all_orders, function($order) use ($today_start, $today_end, $yesterday_start, $yesterday_end) {
+                $order_timestamp = $order['ordered'] ?? 0;
+                // 当日または前日の範囲内かチェック
+                return ($order_timestamp >= $today_start && $order_timestamp <= $today_end) ||
+                       ($order_timestamp >= $yesterday_start && $order_timestamp <= $yesterday_end);
             });
             
             // インデックスを再設定
@@ -253,13 +283,19 @@ try {
 
 // ページネーション用URL生成関数
 function buildPageUrl($page_num) {
-    global $search_mode, $start_date, $end_date;
     $params = [];
     
-    if ($search_mode && $start_date && $end_date) {
+    // 検索モードのパラメータ
+    if (isset($_GET['mode']) && $_GET['mode'] === 'search') {
         $params[] = 'mode=search';
-        $params[] = 'start_date=' . urlencode($start_date);
-        $params[] = 'end_date=' . urlencode($end_date);
+    }
+    
+    if (isset($_GET['start_date']) && $_GET['start_date'] !== '') {
+        $params[] = 'start_date=' . urlencode($_GET['start_date']);
+    }
+    
+    if (isset($_GET['end_date']) && $_GET['end_date'] !== '') {
+        $params[] = 'end_date=' . urlencode($_GET['end_date']);
     }
     
     // ステータスフィルター
@@ -1028,6 +1064,11 @@ function buildPageUrl($page_num) {
                     注文データがありません
                 </div>
             <?php else: ?>
+                <?php if (!empty($limit_warning_message)): ?>
+                    <div style="background-color: #fff3cd; border: 2px solid #ffc107; padding: 15px; margin: 15px; border-radius: 8px; font-size: 1em; color: #856404;">
+                        <i class="fas fa-exclamation-triangle"></i> <strong><?= htmlspecialchars($limit_warning_message) ?></strong>
+                    </div>
+                <?php endif; ?>
                 <div class="filter-section">
                     <div class="filter-title">
                         <i class="fas fa-filter"></i> 検索条件
