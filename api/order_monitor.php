@@ -20,6 +20,9 @@ if ($utype == 1024) {
     $shop_name = 'コレクト';
 }
 
+// デバッグモードチェック
+$debug_mode = isset($_GET['debug']) && $_GET['debug'] === '1';
+
 // BASE API認証チェック
 try {
     $practical_manager = new BasePracticalAutoManager();
@@ -55,74 +58,79 @@ try {
         $total_pages = ceil($total_orders / $limit);
         $orders = array_slice($all_orders, $offset, $limit);
         
-        // $error_message = ''; // 空文字列を設定しない
-        
-        // デバッグ: データ構造を確認
-        echo '<div style="background-color: #fff3cd; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
-        echo '<strong>DEBUG order_monitor.php:</strong> ';
-        echo '全注文数: ' . $total_orders . ' | ';
-        echo '現在ページ: ' . $page . '/' . $total_pages . ' | ';
-        echo '表示件数: ' . count($orders) . ' | ';
-        echo 'オフセット: ' . $offset;
-        echo '</div>';
-        
-        // デバッグ: 最初の3件の注文のdispatch_statusを確認
-        if (count($orders) > 0) {
+        if ($debug_mode) {
+            // デバッグ: データ構造を確認
+            echo '<div style="background-color: #fff3cd; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
+            echo '<strong>DEBUG order_monitor.php:</strong> ';
+            echo '全注文数: ' . $total_orders . ' | ';
+            echo '現在ページ: ' . $page . '/' . $total_pages . ' | ';
+            echo '表示件数: ' . count($orders) . ' | ';
+            echo 'オフセット: ' . $offset;
+            echo '</div>';
+            
+            // デバッグ: 最初の3件の注文のdispatch_statusを確認
+            if (count($orders) > 0) {
+                echo '<div style="background-color: #e8f4fd; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
+                echo '<strong>ステータスデバッグ（最初の3件）:</strong><br>';
+                for ($i = 0; $i < min(3, count($orders)); $i++) {
+                    $order = $orders[$i];
+                    $order_id = $order['unique_key'] ?? 'N/A';
+                    $dispatch_status = $order['dispatch_status'] ?? 'N/A';
+                    $ordered = $order['ordered'] ?? 'N/A';
+                    echo '注文' . ($i + 1) . ': ' . $order_id . ' | dispatch_status: ' . $dispatch_status . ' | ordered: ' . $ordered . '<br>';
+                }
+                echo '</div>';
+            }
+            
+            // デバッグ: 認証状況を確認
             echo '<div style="background-color: #e8f4fd; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
-            echo '<strong>ステータスデバッグ（最初の3件）:</strong><br>';
-            for ($i = 0; $i < min(3, count($orders)); $i++) {
-                $order = $orders[$i];
-                $order_id = $order['unique_key'] ?? 'N/A';
-                $dispatch_status = $order['dispatch_status'] ?? 'N/A';
-                $ordered = $order['ordered'] ?? 'N/A';
-                echo '注文' . ($i + 1) . ': ' . $order_id . ' | dispatch_status: ' . $dispatch_status . ' | ordered: ' . $ordered . '<br>';
+            echo '<strong>認証デバッグ情報:</strong><br>';
+            echo 'セッションアクセストークン存在: ' . (isset($_SESSION['base_access_token']) ? 'Yes' : 'No') . '<br>';
+            if (isset($_SESSION['base_access_token'])) {
+                echo 'トークン長: ' . strlen($_SESSION['base_access_token']) . '文字<br>';
+                echo 'トークン先頭: ' . substr($_SESSION['base_access_token'], 0, 20) . '...<br>';
+            }
+            
+            // BasePracticalAutoManagerの認証状況を確認
+            $scopes = ['read_orders', 'read_items', 'write_orders'];
+            foreach ($scopes as $scope) {
+                $is_valid = $practical_manager->isTokenValid($scope);
+                echo "スコープ {$scope}: " . ($is_valid ? '有効' : '無効') . '<br>';
             }
             echo '</div>';
         }
-        
-        // デバッグ: 認証状況を確認
-        echo '<div style="background-color: #e8f4fd; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
-        echo '<strong>認証デバッグ情報:</strong><br>';
-        echo 'セッションアクセストークン存在: ' . (isset($_SESSION['base_access_token']) ? 'Yes' : 'No') . '<br>';
-        if (isset($_SESSION['base_access_token'])) {
-            echo 'トークン長: ' . strlen($_SESSION['base_access_token']) . '文字<br>';
-            echo 'トークン先頭: ' . substr($_SESSION['base_access_token'], 0, 20) . '...<br>';
-        }
-        
-        // BasePracticalAutoManagerの認証状況を確認
-        $scopes = ['read_orders', 'read_items', 'write_orders'];
-        foreach ($scopes as $scope) {
-            $is_valid = $practical_manager->isTokenValid($scope);
-            echo "スコープ {$scope}: " . ($is_valid ? '有効' : '無効') . '<br>';
-        }
-        echo '</div>';
         
     } catch (Exception $e) {
         $error_message = $e->getMessage();
         $orders = [];
         
-        // デバッグ: エラー情報を表示
-        echo '<div style="background-color: #f8d7da; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
-        echo '<strong>ERROR:</strong> ' . htmlspecialchars($e->getMessage()) . ' | ';
-        echo 'ファイル: ' . htmlspecialchars($e->getFile()) . ' | ';
-        echo '行: ' . htmlspecialchars($e->getLine());
+        if ($debug_mode) {
+            // デバッグ: エラー情報を表示
+            echo '<div style="background-color: #f8d7da; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
+            echo '<strong>ERROR:</strong> ' . htmlspecialchars($e->getMessage()) . ' | ';
+            echo 'ファイル: ' . htmlspecialchars($e->getFile()) . ' | ';
+            echo '行: ' . htmlspecialchars($e->getLine());
+            echo '</div>';
+        }
+    }
+    
+    if ($debug_mode) {
+        // デバッグ: 処理継続確認
+        echo '<div style="background-color: #d1ecf1; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
+        echo '<strong>処理継続:</strong> データ取得完了 | ';
+        echo 'orders数: ' . count($orders) . ' | ';
+        echo 'error_message: ' . (isset($error_message) ? htmlspecialchars($error_message) : 'なし');
         echo '</div>';
     }
     
-    // デバッグ: 処理継続確認
-    echo '<div style="background-color: #d1ecf1; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
-    echo '<strong>処理継続:</strong> データ取得完了 | ';
-    echo 'orders数: ' . count($orders) . ' | ';
-    echo 'error_message: ' . (isset($error_message) ? htmlspecialchars($error_message) : 'なし');
-    echo '</div>';
-    
     // 最新の注文が上に来るようにソート（注文日時順）
     if (!empty($orders)) {
-        // デバッグ: ソート処理開始
-        echo '<div style="background-color: #d4edda; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
-        echo '<strong>ソート処理開始:</strong> orders数: ' . count($orders) . ' | ';
-        echo '最初の注文キー: ' . (isset($orders[0]) ? htmlspecialchars(json_encode(array_keys($orders[0]), JSON_UNESCAPED_UNICODE)) : 'なし');
-        echo '</div>';
+        if ($debug_mode) {
+            echo '<div style="background-color: #d4edda; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
+            echo '<strong>ソート処理開始:</strong> orders数: ' . count($orders) . ' | ';
+            echo '最初の注文キー: ' . (isset($orders[0]) ? htmlspecialchars(json_encode(array_keys($orders[0]), JSON_UNESCAPED_UNICODE)) : 'なし');
+            echo '</div>';
+        }
         
         $sort_key = 'ordered'; // 注文日時でソート
         if (!isset($orders[0]['ordered'])) {
@@ -166,12 +174,13 @@ try {
                 error_log('ソートエラー: ' . $e->getMessage());
             }
             
-            // デバッグ: ソート処理完了
-            echo '<div style="background-color: #d4edda; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
-            echo '<strong>ソート処理完了:</strong> orders数: ' . count($orders) . ' | ';
-            echo 'ソートキー: ' . $sort_key . ' | ';
-            echo '最初の注文日時: ' . (isset($orders[0][$sort_key]) ? $orders[0][$sort_key] : 'なし');
-            echo '</div>';
+            if ($debug_mode) {
+                echo '<div style="background-color: #d4edda; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
+                echo '<strong>ソート処理完了:</strong> orders数: ' . count($orders) . ' | ';
+                echo 'ソートキー: ' . $sort_key . ' | ';
+                echo '最初の注文日時: ' . (isset($orders[0][$sort_key]) ? $orders[0][$sort_key] : 'なし');
+                echo '</div>';
+            }
         }
 } catch (Exception $e) {
     $error_message = 'BASE API接続エラー: ' . $e->getMessage();
@@ -756,13 +765,15 @@ try {
         
         <div id="orders-container">
             <?php 
-            // デバッグ: 表示条件を確認
-            echo '<div style="background-color: #e7f3ff; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
-            echo '<strong>表示条件デバッグ:</strong> ';
-            echo 'error_message設定: ' . (isset($error_message) ? 'Yes (' . htmlspecialchars($error_message) . ')' : 'No') . ' | ';
-            echo 'orders空チェック: ' . (empty($orders) ? 'Yes (空)' : 'No (' . count($orders) . '件)') . ' | ';
-            echo '表示パターン: ' . (isset($error_message) ? 'エラー表示' : (empty($orders) ? 'データなし表示' : 'テーブル表示'));
-            echo '</div>';
+            if ($debug_mode) {
+                // デバッグ: 表示条件を確認
+                echo '<div style="background-color: #e7f3ff; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
+                echo '<strong>表示条件デバッグ:</strong> ';
+                echo 'error_message設定: ' . (isset($error_message) ? 'Yes (' . htmlspecialchars($error_message) . ')' : 'No') . ' | ';
+                echo 'orders空チェック: ' . (empty($orders) ? 'Yes (空)' : 'No (' . count($orders) . '件)') . ' | ';
+                echo '表示パターン: ' . (isset($error_message) ? 'エラー表示' : (empty($orders) ? 'データなし表示' : 'テーブル表示'));
+                echo '</div>';
+            }
             ?>
             
             <?php if (isset($error_message)): ?>
