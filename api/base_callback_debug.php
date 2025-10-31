@@ -36,12 +36,13 @@ function send_error_and_exit(string $title = '認証エラー', string $message 
 
 try {
     // Load config
-    $config = __DIR__ . '/../config.php';
+    $config = __DIR__ . '/../../common/config.php';
     if (!file_exists($config)) {
         cb_log('CONFIG_NOT_FOUND', ['path' => $config]);
         send_error_and_exit('設定エラー', '設定ファイルが見つかりません。');
     }
     require_once $config;
+    require_once __DIR__ . '/../../common/dbconnect.php';
 
     // Basic validation
     if (!isset($_GET['code'])) {
