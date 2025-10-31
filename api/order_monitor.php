@@ -1584,9 +1584,8 @@ function buildPageUrl($page_num) {
         function clearAllFilters() {
             // 現在のモードに応じて処理を分岐
             if (currentMode === 'search') {
-                // 検索モードの場合：URLパラメータをクリアしてリロード
+                // 検索モードの場合：日付とステータスをクリアしてリロード（モードは保持）
                 var url = new URL(window.location.href);
-                url.searchParams.delete('mode');
                 url.searchParams.delete('start_date');
                 url.searchParams.delete('end_date');
                 url.searchParams.delete('status');
@@ -2504,13 +2503,11 @@ function buildPageUrl($page_num) {
                         switchMode('search');
                     } else {
                         // パラメータがない場合はリアルタイムモードに戻す
-                        document.querySelector('.mode-tab[onclick*="realtime"]').click();
+                        switchMode('realtime');
                     }
                 } else {
                     // リアルタイムモード
-                    currentMode = 'realtime';
-                    // 30秒間隔で自動更新
-                    autoRefreshInterval = setInterval(refreshOrderData, 30000);
+                    switchMode('realtime');
                 }
             });
         };
