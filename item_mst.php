@@ -15,12 +15,6 @@ if (!$pdo) {
     die('データベース接続に失敗しました。MySQLが起動しているか確認してください。');
 }
 
-// HTMLエスケープ処理
-function h($str)
-{
-    return htmlspecialchars($str, ENT_QUOTES, 'UTF-8');
-}
-
 // カテゴリと税区分を取得
 function get_categories($pdo) {
     try {
