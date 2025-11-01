@@ -1,10 +1,16 @@
 ﻿<?php
-ini_set('display_errors', 1);
+// 出力バッファを開始してBOMや余分な出力を除去
+ob_start();
+
+ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
 require_once(__DIR__ . '/../common/config.php');
 require_once(__DIR__ . '/../common/dbconnect.php');
 require_once(__DIR__ . '/../common/functions.php');
+
+// 出力バッファをクリア（BOM文字やrequire_onceによる出力を除去）
+ob_clean();
 
 header('Content-Type: application/json; charset=UTF-8');
 
@@ -53,5 +59,7 @@ try {
     disconnect($pdo);
 }
 
-echo json_encode($response);
+// JSONを出力（出力バッファはob_clean()で既にクリア済み）
+echo json_encode($response, JSON_UNESCAPED_UNICODE);
+ob_end_flush();
 exit;
