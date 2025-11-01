@@ -482,6 +482,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else if (castSelect.value === '') {
                 // 初回アクセス時、キャスト選択にフォーカスを当てる
                 castSelect.focus();
+            } else {
+                // キャストと日付が既に設定されている場合はデータを取得
+                if (castSelect.value && eigyoDateInput.value) {
+                    fetchTimecardData();
+                }
             }
         });
     </script>
