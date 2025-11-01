@@ -1,4 +1,7 @@
 ﻿<?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 require_once(__DIR__ . '/../common/config.php');
 require_once(__DIR__ . '/../common/dbconnect.php');
 require_once(__DIR__ . '/../common/functions.php');
@@ -6,6 +9,11 @@ session_start();
 
 $pdo = connect();
 $error = [];
+
+// データベース接続チェック
+if (!$pdo) {
+    die('データベース接続に失敗しました。MySQLが起動しているか確認してください。');
+}
 
 // HTMLエスケープ処理
 function h($str)
@@ -15,103 +23,128 @@ function h($str)
 
 // カテゴリと税区分を取得
 function get_categories($pdo) {
-    $stmt = $pdo->query("SELECT category_id, category_name FROM category_mst ORDER BY category_id");
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        $stmt = $pdo->query("SELECT category_id, category_name FROM category_mst ORDER BY category_id");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Error fetching categories: " . $e->getMessage());
+        return [];
+    }
 }
 
 function get_tax_types($pdo) {
-    $stmt = $pdo->query("SELECT tax_type_id, tax_type_name FROM tax_mst ORDER BY tax_type_id");
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        $stmt = $pdo->query("SELECT tax_type_id, tax_type_name FROM tax_mst ORDER BY tax_type_id");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Error fetching tax types: " . $e->getMessage());
+        return [];
+    }
 }
 
 // 商品一覧を取得
 function get_items($pdo) {
-    $stmt = $pdo->query("
-        SELECT 
-            im.item_id, 
-            im.item_name,
-            im.item_yomi,
-            cm.category_name, 
-            im.price, 
-            im.back_price,
-            im.cost,
-            tm.tax_type_name
-        FROM item_mst AS im
-        LEFT JOIN category_mst AS cm ON im.category = cm.category_id
-        LEFT JOIN tax_mst AS tm ON im.tax_type_id = tm.tax_type_id
-        ORDER BY im.item_id DESC
-    ");
-    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        $stmt = $pdo->query("
+            SELECT 
+                im.item_id, 
+                im.item_name,
+                im.item_yomi,
+                cm.category_name, 
+                im.price, 
+                im.back_price,
+                im.cost,
+                tm.tax_type_name
+            FROM item_mst AS im
+            LEFT JOIN category_mst AS cm ON im.category = cm.category_id
+            LEFT JOIN tax_mst AS tm ON im.tax_type_id = tm.tax_type_id
+            ORDER BY im.item_id DESC
+        ");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Error fetching items: " . $e->getMessage());
+        return [];
+    }
 }
 
 // 商品の登録、修正、削除
 if (!empty($_POST)) {
-    if (isset($_POST['insert'])) {
-        // 新規登録
-        // 空文字列を0に変換（MySQL 8系の厳格モード対応）
-        $price = $_POST['price'] ?? 0;
-        $back_price = $_POST['back_price'] ?? 0;
-        $cost = $_POST['cost'] ?? 0;
-        if ($price === '' || $price === null) $price = 0;
-        if ($back_price === '' || $back_price === null) $back_price = 0;
-        if ($cost === '' || $cost === null) $cost = 0;
-        $price = intval($price);
-        $back_price = intval($back_price);
-        $cost = intval($cost);
-        
-        $stmt = $pdo->prepare("INSERT INTO item_mst (item_name, item_yomi, category, price, back_price, cost, tax_type_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->execute([
-            $_POST['item_name'], 
-            $_POST['item_yomi'],
-            $_POST['category'], 
-            $price, 
-            $back_price,
-            $cost,
-            $_POST['tax_type_id']
-        ]);
-        header('Location: item_mst.php');
-        exit();
-    } elseif (isset($_POST['update'])) {
-        // 修正
-        // 空文字列を0に変換（MySQL 8系の厳格モード対応）
-        $price = $_POST['price'] ?? 0;
-        $back_price = $_POST['back_price'] ?? 0;
-        $cost = $_POST['cost'] ?? 0;
-        if ($price === '' || $price === null) $price = 0;
-        if ($back_price === '' || $back_price === null) $back_price = 0;
-        if ($cost === '' || $cost === null) $cost = 0;
-        $price = intval($price);
-        $back_price = intval($back_price);
-        $cost = intval($cost);
-        
-        $stmt = $pdo->prepare("UPDATE item_mst SET item_name=?, item_yomi=?, category=?, price=?, back_price=?, cost=?, tax_type_id=? WHERE item_id=?");
-        $stmt->execute([
-            $_POST['item_name'], 
-            $_POST['item_yomi'],
-            $_POST['category'], 
-            $price, 
-            $back_price,
-            $cost,
-            $_POST['tax_type_id'],
-            $_POST['item_id']
-        ]);
-        header('Location: item_mst.php');
-        exit();
-    } elseif (isset($_POST['delete'])) {
-        // 削除
-        $stmt = $pdo->prepare("DELETE FROM item_mst WHERE item_id=?");
-        $stmt->execute([$_POST['item_id']]);
-        header('Location: item_mst.php');
-        exit();
+    try {
+        if (isset($_POST['insert'])) {
+            // 新規登録
+            // 空文字列を0に変換（MySQL 8系の厳格モード対応）
+            $price = $_POST['price'] ?? 0;
+            $back_price = $_POST['back_price'] ?? 0;
+            $cost = $_POST['cost'] ?? 0;
+            if ($price === '' || $price === null) $price = 0;
+            if ($back_price === '' || $back_price === null) $back_price = 0;
+            if ($cost === '' || $cost === null) $cost = 0;
+            $price = intval($price);
+            $back_price = intval($back_price);
+            $cost = intval($cost);
+            
+            $stmt = $pdo->prepare("INSERT INTO item_mst (item_name, item_yomi, category, price, back_price, cost, tax_type_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([
+                $_POST['item_name'], 
+                $_POST['item_yomi'],
+                $_POST['category'], 
+                $price, 
+                $back_price,
+                $cost,
+                $_POST['tax_type_id']
+            ]);
+            header('Location: item_mst.php');
+            exit();
+        } elseif (isset($_POST['update'])) {
+            // 修正
+            // 空文字列を0に変換（MySQL 8系の厳格モード対応）
+            $price = $_POST['price'] ?? 0;
+            $back_price = $_POST['back_price'] ?? 0;
+            $cost = $_POST['cost'] ?? 0;
+            if ($price === '' || $price === null) $price = 0;
+            if ($back_price === '' || $back_price === null) $back_price = 0;
+            if ($cost === '' || $cost === null) $cost = 0;
+            $price = intval($price);
+            $back_price = intval($back_price);
+            $cost = intval($cost);
+            
+            $stmt = $pdo->prepare("UPDATE item_mst SET item_name=?, item_yomi=?, category=?, price=?, back_price=?, cost=?, tax_type_id=? WHERE item_id=?");
+            $stmt->execute([
+                $_POST['item_name'], 
+                $_POST['item_yomi'],
+                $_POST['category'], 
+                $price, 
+                $back_price,
+                $cost,
+                $_POST['tax_type_id'],
+                $_POST['item_id']
+            ]);
+            header('Location: item_mst.php');
+            exit();
+        } elseif (isset($_POST['delete'])) {
+            // 削除
+            $stmt = $pdo->prepare("DELETE FROM item_mst WHERE item_id=?");
+            $stmt->execute([$_POST['item_id']]);
+            header('Location: item_mst.php');
+            exit();
+        }
+    } catch (PDOException $e) {
+        error_log("Error in item_mst.php POST processing: " . $e->getMessage());
+        $error[] = "データベースエラー: " . $e->getMessage();
     }
 }
 
 // 修正用データ取得
 $edit_item = null;
 if (isset($_GET['edit_id'])) {
-    $stmt = $pdo->prepare("SELECT * FROM item_mst WHERE item_id = ?");
-    $stmt->execute([$_GET['edit_id']]);
-    $edit_item = $stmt->fetch(PDO::FETCH_ASSOC);
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM item_mst WHERE item_id = ?");
+        $stmt->execute([$_GET['edit_id']]);
+        $edit_item = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Error fetching edit item: " . $e->getMessage());
+        $error[] = "データの取得に失敗しました: " . $e->getMessage();
+    }
 }
 
 // カテゴリと税区分を取得
@@ -189,6 +222,17 @@ $items = get_items($pdo);
         <header>
             <h1>商品マスタ管理</h1>
         </header>
+
+        <?php if (!empty($error)): ?>
+            <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; margin: 20px 0; border-radius: 5px; color: #721c24;">
+                <strong>エラー:</strong>
+                <ul>
+                    <?php foreach ($error as $err_msg): ?>
+                        <li><?= h($err_msg) ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        <?php endif; ?>
 
         <section class="form-section">
             <h2><?php echo $edit_item ? '商品情報の修正' : '商品の新規登録'; ?></h2>
