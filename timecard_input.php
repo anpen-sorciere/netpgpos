@@ -442,11 +442,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (castId && eigyoYmd) {
                 const url = `timecard_get.php?cast_id=${castId}&eigyo_ymd=${eigyoYmd}&shop_id=${shopId}`;
+                console.log('Fetching timecard data from:', url);
                 try {
                     const response = await fetch(url);
                     const data = await response.json();
+                    console.log('Received data:', data);
                     
                     if (data.exists) {
+                        console.log('Data exists, updating form fields');
                         document.getElementById('in_ymd').value = data.in_ymd || '';
                         document.getElementById('in_time').value = data.in_time || '';
                         document.getElementById('out_ymd').value = data.out_ymd || '';
@@ -456,6 +459,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         document.getElementById('break_end_ymd').value = data.break_end_ymd || '';
                         document.getElementById('break_end_time').value = data.break_end_time || '';
                     } else {
+                        console.log('No data exists, clearing form fields');
                         document.getElementById('in_ymd').value = eigyoYmd;
                         document.getElementById('in_time').value = '';
                         document.getElementById('out_ymd').value = eigyoYmd;
