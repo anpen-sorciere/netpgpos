@@ -172,10 +172,11 @@ if ($selected_cast_id !== null) {
 // データベース接続を閉じる
 disconnect($pdo);
 
-// 6時間あたりのバック金額を計算
+// 6時間あたりのバック金額を計算（遠隔金額も含める）
 $back_per_6_hours = 0;
 if ($total_net_working_minutes > 0) {
-    $back_per_6_hours = ($total_back_price / $total_net_working_minutes) * 360;
+    // バック金額と遠隔金額の合計を6時間換算で計算
+    $back_per_6_hours = (($total_back_price + $total_online_amount) / $total_net_working_minutes) * 360;
 }
 
 // 時給マスターから時給を取得
