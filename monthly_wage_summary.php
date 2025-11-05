@@ -166,7 +166,7 @@ if ($selected_cast_id !== null) {
     $stmt_online->bindValue(':online_ym', $selected_month_ym, PDO::PARAM_STR);
     $stmt_online->execute();
     $online_data = $stmt_online->fetch(PDO::FETCH_ASSOC);
-    $total_online_amount = $online_data['online_amount'] ?? 0;
+    $total_online_amount = isset($online_data['online_amount']) ? (int)$online_data['online_amount'] : 0;
 }
 
 // データベース接続を閉じる
@@ -174,9 +174,10 @@ disconnect($pdo);
 
 // 6時間あたりのバック金額を計算（遠隔金額も含める）
 $back_per_6_hours = 0;
-if ($total_net_working_minutes > 0) {
+if ($total_net_working_minutes > 0 && ($total_back_price > 0 || $total_online_amount > 0)) {
     // バック金額と遠隔金額の合計を6時間換算で計算
-    $back_per_6_hours = (($total_back_price + $total_online_amount) / $total_net_working_minutes) * 360;
+    $total_back_and_online = (int)$total_back_price + (int)$total_online_amount;
+    $back_per_6_hours = ($total_back_and_online / $total_net_working_minutes) * 360;
 }
 
 // 時給マスターから時給を取得
@@ -293,7 +294,10 @@ if ($back_per_6_hours > 0) {
                 <p><strong>月給合計: <?php echo number_format($total_daily_wage + $total_back_price + $total_online_amount); ?>円</strong></p>
                 <?php
                 if ($total_net_working_minutes > 0) {
-                    echo "<p><strong>6時間あたりのバック金額: " . number_format(round($back_per_6_hours)) . "円</strong></p>";
+                    $total_back_and_online = (int)$total_back_price + (int)$total_online_amount;
+                    $calc_back_per_6_hours = ($total_back_and_online / $total_net_working_minutes) * 360;
+                    echo "<p><strong>6時間あたりのバック金額（遠隔金額含む）: " . number_format(round($calc_back_per_6_hours)) . "円</strong></p>";
+                    echo "<p><small>※ バック金額: " . number_format($total_back_price) . "円 + 遠隔金額: " . number_format($total_online_amount) . "円 = " . number_format($total_back_and_online) . "円</small></p>";
                 }
                 ?>
             </div>
