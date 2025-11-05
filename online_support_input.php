@@ -67,8 +67,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // YYYY-MM形式をYYYYMMに変換（データベース用）
         $online_ym = str_replace('-', '', $online_ym_input);
         
-        // 支払い状況が未払いの場合はpaid_dateをNULLにする
-        if ($is_paid == 0) {
+        // 支払い状況が未払いでpaid_dateが未入力の場合はNULLにする
+        if ($is_paid == 0 && empty($paid_date)) {
             $paid_date = null;
         }
         
