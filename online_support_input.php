@@ -1,28 +1,36 @@
 ﻿<?php
 // online_support_input.php
 
-// 出力バッファを開始（BOMを防ぐため）
-ob_start();
-
 // AJAXリクエスト処理（既存データ取得）- 最初に処理して出力を制御
 if (isset($_GET['ajax']) && $_GET['ajax'] == '1' && isset($_GET['cast_id']) && isset($_GET['online_ym'])) {
-    // エラー表示を抑制
-    error_reporting(0);
-    ini_set('display_errors', 0);
-    
-    // 出力バッファをすべてクリア
+    // すべての出力バッファをクリア
     while (ob_get_level()) {
         ob_end_clean();
     }
     
+    // 出力バッファを開始して、すべての出力をキャプチャ
+    ob_start();
+    
+    // エラー表示を抑制（最初に実行）
+    $old_error_reporting = error_reporting(0);
+    $old_display_errors = ini_set('display_errors', 0);
+    $old_html_errors = ini_set('html_errors', 0);
+    
     try {
-        // 共通関数の読み込み
-        require_once(__DIR__ . '/../common/config.php');
-        require_once(__DIR__ . '/../common/dbconnect.php');
-        require_once(__DIR__ . '/../common/functions.php');
+        // 共通関数の読み込み（エラーを抑制）
+        @require_once(__DIR__ . '/../common/config.php');
+        @require_once(__DIR__ . '/../common/dbconnect.php');
+        @require_once(__DIR__ . '/../common/functions.php');
+        
+        // 読み込み中に出力されたものをすべてクリア
+        ob_clean();
         
         // データベース接続
-        $pdo = connect();
+        $pdo = @connect();
+        
+        if (!$pdo) {
+            throw new Exception('Database connection failed');
+        }
         
         $ajax_cast_id = (int)$_GET['cast_id'];
         $ajax_online_ym_input = $_GET['online_ym'];
@@ -36,7 +44,10 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1' && isset($_GET['cast_id']) && i
         $stmt_ajax->execute();
         $ajax_data = $stmt_ajax->fetch(PDO::FETCH_ASSOC);
         
-        disconnect($pdo);
+        @disconnect($pdo);
+        
+        // 出力バッファをクリアしてからJSONを出力
+        ob_clean();
         
         header('Content-Type: application/json; charset=UTF-8');
         header('Cache-Control: no-cache, must-revalidate');
@@ -69,6 +80,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1' && isset($_GET['cast_id']) && i
         }
     } catch (Exception $e) {
         // エラーが発生した場合もJSONで返す
+        ob_clean();
         header('Content-Type: application/json; charset=UTF-8');
         header('Cache-Control: no-cache, must-revalidate');
         echo json_encode([
@@ -76,9 +88,33 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1' && isset($_GET['cast_id']) && i
             'error' => 'Database error occurred',
             'data' => null
         ], JSON_UNESCAPED_UNICODE);
+    } catch (Throwable $e) {
+        // PHP 7+ のエラーもキャッチ
+        ob_clean();
+        header('Content-Type: application/json; charset=UTF-8');
+        header('Cache-Control: no-cache, must-revalidate');
+        echo json_encode([
+            'success' => false,
+            'error' => 'Error occurred',
+            'data' => null
+        ], JSON_UNESCAPED_UNICODE);
+    } finally {
+        // エラー設定を復元
+        if ($old_error_reporting !== false) {
+            error_reporting($old_error_reporting);
+        }
+        if ($old_display_errors !== false) {
+            ini_set('display_errors', $old_display_errors);
+        }
+        if ($old_html_errors !== false) {
+            ini_set('html_errors', $old_html_errors);
+        }
     }
     exit;
 }
+
+// 出力バッファを開始（BOMを防ぐため）
+ob_start();
 
 // 共通関数の読み込み
 require_once(__DIR__ . '/../common/config.php');
