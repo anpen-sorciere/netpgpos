@@ -713,6 +713,14 @@ disconnect($pdo);
         </table>
     </div>
 
+    <div class="button-group" style="margin-top: 30px; justify-content: center;">
+        <?php
+        // utypeパラメータを取得（GETまたはセッションから）
+        $utype = isset($_GET['utype']) ? $_GET['utype'] : (isset($_SESSION['utype']) ? $_SESSION['utype'] : '1024');
+        ?>
+        <a href="index.php?utype=<?php echo htmlspecialchars($utype, ENT_QUOTES, 'UTF-8'); ?>" class="btn btn-secondary" style="background-color: #95a5a6; color: #fff;">メニューへ</a>
+    </div>
+
 </div>
 
 </body>
