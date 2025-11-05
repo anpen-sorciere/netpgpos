@@ -54,8 +54,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($online_ym_input)) {
         $errors[] = "対象年月が入力されていません。";
     }
-    if (empty($online_amount) || !is_numeric($online_amount)) {
+    // 金額のバリデーション：0円は許可、マイナスはエラー
+    if (!isset($online_amount) || $online_amount === '' || !is_numeric($online_amount)) {
         $errors[] = "金額が正しく入力されていません。";
+    } elseif ((float)$online_amount < 0) {
+        $errors[] = "金額は0円以上で入力してください。";
     }
 
     // エラーがある場合は処理を中断
@@ -237,7 +240,7 @@ disconnect($pdo);
 
             <p>
                 <label for="online_amount">金額:</label>
-                <input type="number" name="online_amount" id="online_amount" value="<?php echo h($online_amount); ?>" required> 円
+                <input type="number" name="online_amount" id="online_amount" value="<?php echo h($online_amount); ?>" min="0" step="1"> 円
             </p>
 
             <p>
