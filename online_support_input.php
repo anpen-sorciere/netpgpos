@@ -67,9 +67,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // YYYY-MM形式をYYYYMMに変換（データベース用）
         $online_ym = str_replace('-', '', $online_ym_input);
         
-        // 支払い状況が未払いの場合はpaid_dateを0000-00-00にする
+        // 支払い状況が未払いの場合はpaid_dateをNULLにする
         if ($is_paid == 0) {
-            $paid_date = '0000-00-00';
+            $paid_date = null;
         }
         
         try {
@@ -89,7 +89,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $pdo->prepare($sql);
                 $stmt->bindValue(':online_amount', (int)$online_amount, PDO::PARAM_INT);
                 $stmt->bindValue(':is_paid', (int)$is_paid, PDO::PARAM_INT);
-                $stmt->bindValue(':paid_date', $paid_date, PDO::PARAM_STR);
+                if ($paid_date === null) {
+                    $stmt->bindValue(':paid_date', null, PDO::PARAM_NULL);
+                } else {
+                    $stmt->bindValue(':paid_date', $paid_date, PDO::PARAM_STR);
+                }
                 $stmt->bindValue(':id', (int)$id, PDO::PARAM_INT);
                 $stmt->execute();
                 $message = "データが既に存在するため、更新しました。";
@@ -103,7 +107,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->bindValue(':online_ym', $online_ym, PDO::PARAM_STR);
                 $stmt->bindValue(':online_amount', (int)$online_amount, PDO::PARAM_INT);
                 $stmt->bindValue(':is_paid', (int)$is_paid, PDO::PARAM_INT);
-                $stmt->bindValue(':paid_date', $paid_date, PDO::PARAM_STR);
+                if ($paid_date === null) {
+                    $stmt->bindValue(':paid_date', null, PDO::PARAM_NULL);
+                } else {
+                    $stmt->bindValue(':paid_date', $paid_date, PDO::PARAM_STR);
+                }
                 $stmt->execute();
                 $message = "データを追加しました。";
                 // フォーム表示用にYYYY-MM形式に戻す
@@ -118,7 +126,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bindValue(':online_ym', $online_ym, PDO::PARAM_STR);
             $stmt->bindValue(':online_amount', (int)$online_amount, PDO::PARAM_INT);
             $stmt->bindValue(':is_paid', (int)$is_paid, PDO::PARAM_INT);
-            $stmt->bindValue(':paid_date', $paid_date, PDO::PARAM_STR);
+            if ($paid_date === null) {
+                $stmt->bindValue(':paid_date', null, PDO::PARAM_NULL);
+            } else {
+                $stmt->bindValue(':paid_date', $paid_date, PDO::PARAM_STR);
+            }
             $stmt->bindValue(':id', (int)$id, PDO::PARAM_INT);
             $stmt->execute();
             $message = "データを更新しました。";
@@ -159,7 +171,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
         $online_ym = substr($edit_data['online_ym'], 0, 4) . '-' . substr($edit_data['online_ym'], 4, 2);
         $online_amount = $edit_data['online_amount'];
         $is_paid = $edit_data['is_paid'];
-        $paid_date = $edit_data['paid_date'];
+        // NULLまたは'0000-00-00'の場合は空文字列にする
+        $paid_date = ($edit_data['paid_date'] && $edit_data['paid_date'] != '0000-00-00') ? $edit_data['paid_date'] : '';
     }
 }
 
@@ -237,7 +250,7 @@ disconnect($pdo);
 
             <p>
                 <label for="paid_date">支払い日:</label>
-                <input type="date" name="paid_date" id="paid_date" value="<?php echo h($paid_date); ?>">
+                <input type="date" name="paid_date" id="paid_date" value="<?php echo ($paid_date && $paid_date != '0000-00-00') ? h($paid_date) : ''; ?>">
             </p>
             
             <p>
@@ -271,7 +284,7 @@ disconnect($pdo);
                     <td><?php echo h(date('Y年m月', strtotime($data['online_ym'] . '01'))); ?></td>
                     <td><?php echo number_format(h($data['online_amount'])); ?> 円</td>
                     <td><?php echo ($data['is_paid'] == 1) ? '支払い済み' : '未払い'; ?></td>
-                    <td><?php echo ($data['is_paid'] == 1 && $data['paid_date'] != '0000-00-00') ? h($data['paid_date']) : ''; ?></td>
+                    <td><?php echo ($data['is_paid'] == 1 && $data['paid_date'] && $data['paid_date'] != '0000-00-00') ? h($data['paid_date']) : ''; ?></td>
                     <td>
                         <a href="?action=edit&id=<?php echo h($data['id']); ?>">編集</a>
                         <a href="online_support_input.php" onclick="event.preventDefault(); if(confirm('本当に削除しますか？')) { document.getElementById('delete-form-<?php echo h($data['id']); ?>').submit(); }">削除</a>
