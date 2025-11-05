@@ -398,17 +398,104 @@ disconnect($pdo);
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>遠隔サポート売上入力・編集</title>
+    <link href="https://use.fontawesome.com/releases/v5.6.1/css/all.css" rel="stylesheet">
+    <link href="https://unpkg.com/sanitize.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="css/style.css">
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .container { max-width: 900px; margin: auto; }
-        .form-section, .list-section { margin-bottom: 40px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-        .button-group a, .button-group button { margin-right: 5px; }
-        .message { color: green; font-weight: bold; }
-        .error { color: red; font-weight: bold; }
+        .container {
+            max-width: 900px;
+        }
+        .form-section {
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .list-section {
+            margin-top: 30px;
+        }
+        .table-section h2 {
+            margin-top: 0;
+            border-left: 5px solid #3498db;
+            padding-left: 10px;
+        }
+        .table-section table {
+            width: 100%;
+            border-collapse: collapse;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+        .table-section th, .table-section td {
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            text-align: left;
+        }
+        .table-section th {
+            background-color: #f5f7f9;
+            font-weight: bold;
+        }
+        .table-section tbody tr:nth-child(even) {
+            background-color: #fbfbfb;
+        }
+        .button-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+        }
+        .button-group .btn {
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .button-group .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .message {
+            color: #27ae60;
+            font-weight: bold;
+            padding: 10px;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+            padding: 10px;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .form-section p {
+            margin-bottom: 15px;
+        }
+        .form-section label {
+            display: inline-block;
+            width: 150px;
+            font-weight: bold;
+            color: #555;
+        }
+        .form-section input[type="text"],
+        .form-section input[type="number"],
+        .form-section input[type="month"],
+        .form-section input[type="date"],
+        .form-section select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 200px;
+            transition: border-color 0.3s;
+        }
+        .form-section input:focus,
+        .form-section select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
     </style>
     <script>
     function loadExistingData() {
@@ -573,16 +660,16 @@ disconnect($pdo);
                 <input type="date" name="paid_date" id="paid_date" value="<?php echo ($paid_date && $paid_date != '0000-00-00') ? h($paid_date) : ''; ?>">
             </p>
             
-            <p>
-                <button type="submit"><?php echo ($action === 'create') ? '登録' : '更新'; ?></button>
+            <div class="button-group">
+                <button type="submit" class="btn" style="background-color: #3498db; color: #fff; border: none; cursor: pointer;"><?php echo ($action === 'create') ? '登録' : '更新'; ?></button>
                 <?php if ($action === 'update'): ?>
-                    <a href="online_support_input.php">キャンセル</a>
+                    <a href="online_support_input.php" class="btn" style="background-color: #95a5a6; color: #fff;">キャンセル</a>
                 <?php endif; ?>
-            </p>
+            </div>
         </form>
     </div>
 
-    <div class="list-section">
+    <div class="list-section table-section">
         <h2>データ一覧</h2>
         <table>
             <thead>
@@ -606,8 +693,10 @@ disconnect($pdo);
                     <td><?php echo ($data['is_paid'] == 1) ? '支払い済み' : '未払い'; ?></td>
                     <td><?php echo ($data['is_paid'] == 1 && $data['paid_date'] && $data['paid_date'] != '0000-00-00') ? h($data['paid_date']) : ''; ?></td>
                     <td>
-                        <a href="?action=edit&id=<?php echo h($data['id']); ?>">編集</a>
-                        <a href="online_support_input.php" onclick="event.preventDefault(); if(confirm('本当に削除しますか？')) { document.getElementById('delete-form-<?php echo h($data['id']); ?>').submit(); }">削除</a>
+                        <div class="action-buttons">
+                            <a href="?action=edit&id=<?php echo h($data['id']); ?>" class="btn btn-edit">編集</a>
+                            <a href="online_support_input.php" class="btn btn-delete" onclick="event.preventDefault(); if(confirm('本当に削除しますか？')) { document.getElementById('delete-form-<?php echo h($data['id']); ?>').submit(); }">削除</a>
+                        </div>
                         <form id="delete-form-<?php echo h($data['id']); ?>" action="online_support_input.php" method="POST" style="display:none;">
                             <input type="hidden" name="action" value="delete">
                             <input type="hidden" name="id" value="<?php echo h($data['id']); ?>">
@@ -617,7 +706,7 @@ disconnect($pdo);
                 <?php endforeach; ?>
                 <?php if (empty($online_data)): ?>
                 <tr>
-                    <td colspan="7">データがありません。</td>
+                    <td colspan="7" style="text-align: center;">データがありません。</td>
                 </tr>
                 <?php endif; ?>
             </tbody>
