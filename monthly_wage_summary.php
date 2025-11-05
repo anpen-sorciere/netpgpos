@@ -24,6 +24,7 @@ $summary_data = [];
 $total_net_working_minutes = 0;
 $total_daily_wage = 0;
 $total_back_price = 0;
+$total_online_amount = 0;
 $message = '';
 
 // connect()関数を呼び出してPDOオブジェクトを取得
@@ -157,6 +158,15 @@ if ($selected_cast_id !== null) {
             'total_back_price' => $total_back_price_day,
         ];
     }
+    
+    // online_monthテーブルから該当キャスト・該当月のデータを取得
+    $sql_online = "SELECT online_amount FROM online_month WHERE cast_id = :cast_id AND online_ym = :online_ym";
+    $stmt_online = $pdo->prepare($sql_online);
+    $stmt_online->bindValue(':cast_id', $selected_cast_id, PDO::PARAM_INT);
+    $stmt_online->bindValue(':online_ym', $selected_month_ym, PDO::PARAM_STR);
+    $stmt_online->execute();
+    $online_data = $stmt_online->fetch(PDO::FETCH_ASSOC);
+    $total_online_amount = $online_data['online_amount'] ?? 0;
 }
 
 // データベース接続を閉じる
@@ -278,7 +288,8 @@ if ($back_per_6_hours > 0) {
                 <p><strong>合計実働時間: <?php echo format_minutes_to_hours_minutes($total_net_working_minutes); ?></strong></p>
                 <p><strong>合計日当: <?php echo number_format($total_daily_wage); ?>円</strong></p>
                 <p><strong>合計バック: <?php echo number_format($total_back_price); ?>円</strong></p>
-                <p><strong>月給合計: <?php echo number_format($total_daily_wage + $total_back_price); ?>円</strong></p>
+                <p><strong>遠隔金額: <?php echo number_format($total_online_amount); ?>円</strong></p>
+                <p><strong>月給合計: <?php echo number_format($total_daily_wage + $total_back_price + $total_online_amount); ?>円</strong></p>
                 <?php
                 if ($total_net_working_minutes > 0) {
                     echo "<p><strong>6時間あたりのバック金額: " . number_format(round($back_per_6_hours)) . "円</strong></p>";
