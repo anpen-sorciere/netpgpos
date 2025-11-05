@@ -30,6 +30,10 @@ if (isset($_GET['filter_month'])) {
 } elseif (isset($_POST['online_ym'])) {
     $online_ym = $_POST['online_ym'];
 }
+// GETパラメータでcast_idが渡されている場合（年月変更時に保持）
+if (isset($_GET['cast_id']) && !isset($_POST['cast_id'])) {
+    $cast_id = $_GET['cast_id'];
+}
 $online_amount = '';
 $is_paid = 0;
 $paid_date = date('Y-m-d');
@@ -168,7 +172,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // AJAXリクエスト処理（既存データ取得）
 if (isset($_GET['ajax']) && $_GET['ajax'] == '1' && isset($_GET['cast_id']) && isset($_GET['online_ym'])) {
     $ajax_cast_id = (int)$_GET['cast_id'];
-    $ajax_online_ym = str_replace('-', '', $_GET['online_ym']);
+    $ajax_online_ym_input = $_GET['online_ym'];
+    // YYYY-MM形式をYYYYMM形式に変換
+    $ajax_online_ym = str_replace('-', '', $ajax_online_ym_input);
     
     $sql_ajax = "SELECT * FROM online_month WHERE cast_id = :cast_id AND online_ym = :online_ym";
     $stmt_ajax = $pdo->prepare($sql_ajax);
@@ -182,13 +188,27 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1' && isset($_GET['cast_id']) && i
         echo json_encode([
             'success' => true,
             'data' => [
-                'online_amount' => $ajax_data['online_amount'],
-                'is_paid' => $ajax_data['is_paid'],
+                'online_amount' => (int)$ajax_data['online_amount'],
+                'is_paid' => (int)$ajax_data['is_paid'],
                 'paid_date' => ($ajax_data['paid_date'] && $ajax_data['paid_date'] != '0000-00-00') ? $ajax_data['paid_date'] : null
+            ],
+            'debug' => [
+                'cast_id' => $ajax_cast_id,
+                'online_ym' => $ajax_online_ym,
+                'found' => true
             ]
         ]);
     } else {
-        echo json_encode(['success' => false, 'data' => null]);
+        echo json_encode([
+            'success' => false,
+            'data' => null,
+            'debug' => [
+                'cast_id' => $ajax_cast_id,
+                'online_ym' => $ajax_online_ym,
+                'online_ym_input' => $ajax_online_ym_input,
+                'found' => false
+            ]
+        ]);
     }
     disconnect($pdo);
     exit;
@@ -260,9 +280,18 @@ disconnect($pdo);
         
         // 既存データを取得して入力欄に表示
         if (castId && onlineYm) {
-            fetch('online_support_input.php?ajax=1&cast_id=' + encodeURIComponent(castId) + '&online_ym=' + encodeURIComponent(onlineYm))
-                .then(response => response.json())
+            const url = 'online_support_input.php?ajax=1&cast_id=' + encodeURIComponent(castId) + '&online_ym=' + encodeURIComponent(onlineYm);
+            console.log('Loading existing data:', url);
+            
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    console.log('Response data:', data);
                     if (data.success && data.data) {
                         document.getElementById('online_amount').value = data.data.online_amount || '';
                         document.getElementById('is_paid').value = data.data.is_paid || '0';
@@ -271,15 +300,17 @@ disconnect($pdo);
                         } else {
                             document.getElementById('paid_date').value = '';
                         }
+                        console.log('Data loaded successfully');
                     } else {
                         // 既存データがない場合は入力欄をクリア
                         document.getElementById('online_amount').value = '';
                         document.getElementById('is_paid').value = '0';
                         document.getElementById('paid_date').value = '';
+                        console.log('No existing data found');
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
+                    console.error('Error loading data:', error);
                 });
         }
     }
@@ -290,9 +321,15 @@ disconnect($pdo);
         if (onlineYmInput) {
             onlineYmInput.addEventListener('change', function() {
                 const onlineYm = this.value;
+                const castId = document.getElementById('cast_id').value;
                 // データ一覧を更新（年月でフィルタリング）
                 if (onlineYm) {
-                    window.location.href = '?filter_month=' + encodeURIComponent(onlineYm);
+                    // キャストIDも保持するためにURLに含める
+                    let url = '?filter_month=' + encodeURIComponent(onlineYm);
+                    if (castId) {
+                        url += '&cast_id=' + encodeURIComponent(castId);
+                    }
+                    window.location.href = url;
                 }
             });
         }
@@ -305,11 +342,15 @@ disconnect($pdo);
         }
         
         // ページ読み込み時に既存データを読み込む（キャストと年月が選択されている場合）
-        const castId = document.getElementById('cast_id').value;
-        const onlineYm = document.getElementById('online_ym').value;
-        if (castId && onlineYm) {
-            loadExistingData();
-        }
+        // 少し遅延を入れて確実にDOM要素が読み込まれてから実行
+        setTimeout(function() {
+            const castId = document.getElementById('cast_id').value;
+            const onlineYm = document.getElementById('online_ym').value;
+            console.log('Page loaded, checking for existing data. castId:', castId, 'onlineYm:', onlineYm);
+            if (castId && onlineYm) {
+                loadExistingData();
+            }
+        }, 200);
     });
     </script>
 </head>
