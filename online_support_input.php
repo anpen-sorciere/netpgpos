@@ -24,12 +24,19 @@ $pdo = connect();
 $id = null;
 $cast_id = '';
 $online_ym = date('Y-m'); // YYYY-MM形式（HTMLのmonth input用）
+// GETパラメータまたはPOST後の値で年月を取得
+if (isset($_GET['filter_month'])) {
+    $online_ym = $_GET['filter_month'];
+} elseif (isset($_POST['online_ym'])) {
+    $online_ym = $_POST['online_ym'];
+}
 $online_amount = '';
 $is_paid = 0;
 $paid_date = date('Y-m-d');
 $action = 'create';
 $message = '';
 $online_data = [];
+$filter_month_ym = str_replace('-', '', $online_ym); // フィルタ用のYYYYMM形式
 
 // 全キャスト情報の取得
 $casts = cast_get_all($pdo);
@@ -158,6 +165,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// AJAXリクエスト処理（既存データ取得）
+if (isset($_GET['ajax']) && $_GET['ajax'] == '1' && isset($_GET['cast_id']) && isset($_GET['online_ym'])) {
+    $ajax_cast_id = (int)$_GET['cast_id'];
+    $ajax_online_ym = str_replace('-', '', $_GET['online_ym']);
+    
+    $sql_ajax = "SELECT * FROM online_month WHERE cast_id = :cast_id AND online_ym = :online_ym";
+    $stmt_ajax = $pdo->prepare($sql_ajax);
+    $stmt_ajax->bindValue(':cast_id', $ajax_cast_id, PDO::PARAM_INT);
+    $stmt_ajax->bindValue(':online_ym', $ajax_online_ym, PDO::PARAM_STR);
+    $stmt_ajax->execute();
+    $ajax_data = $stmt_ajax->fetch(PDO::FETCH_ASSOC);
+    
+    header('Content-Type: application/json');
+    if ($ajax_data) {
+        echo json_encode([
+            'success' => true,
+            'data' => [
+                'online_amount' => $ajax_data['online_amount'],
+                'is_paid' => $ajax_data['is_paid'],
+                'paid_date' => ($ajax_data['paid_date'] && $ajax_data['paid_date'] != '0000-00-00') ? $ajax_data['paid_date'] : null
+            ]
+        ]);
+    } else {
+        echo json_encode(['success' => false, 'data' => null]);
+    }
+    disconnect($pdo);
+    exit;
+}
+
 // GETパラメータ処理（編集ボタンクリック時）
 if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) {
     $action = 'update';
@@ -176,13 +212,25 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
         $is_paid = $edit_data['is_paid'];
         // NULLまたは'0000-00-00'の場合は空文字列にする
         $paid_date = ($edit_data['paid_date'] && $edit_data['paid_date'] != '0000-00-00') ? $edit_data['paid_date'] : '';
+        $filter_month_ym = $edit_data['online_ym']; // 編集時はその月のデータを表示
     }
 }
 
-// データ一覧取得
-$sql_select = "SELECT om.*, cm.cast_name FROM online_month AS om JOIN cast_mst AS cm ON om.cast_id = cm.cast_id ORDER BY online_ym DESC, cast_id ASC";
-$stmt_select = $pdo->query($sql_select);
-$online_data = $stmt_select->fetchAll(PDO::FETCH_ASSOC);
+// データ一覧取得（選択された年月でフィルタリング）
+$sql_select = "SELECT om.*, cm.cast_name FROM online_month AS om JOIN cast_mst AS cm ON om.cast_id = cm.cast_id";
+if (!empty($filter_month_ym)) {
+    $sql_select .= " WHERE om.online_ym = :filter_month";
+}
+$sql_select .= " ORDER BY om.online_ym DESC, om.cast_id ASC";
+if (!empty($filter_month_ym)) {
+    $stmt_select = $pdo->prepare($sql_select);
+    $stmt_select->bindValue(':filter_month', $filter_month_ym, PDO::PARAM_STR);
+    $stmt_select->execute();
+    $online_data = $stmt_select->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $stmt_select = $pdo->query($sql_select);
+    $online_data = $stmt_select->fetchAll(PDO::FETCH_ASSOC);
+}
 
 // データベース接続を閉じる
 disconnect($pdo);
@@ -205,6 +253,65 @@ disconnect($pdo);
         .message { color: green; font-weight: bold; }
         .error { color: red; font-weight: bold; }
     </style>
+    <script>
+    function loadExistingData() {
+        const castId = document.getElementById('cast_id').value;
+        const onlineYm = document.getElementById('online_ym').value;
+        
+        // 既存データを取得して入力欄に表示
+        if (castId && onlineYm) {
+            fetch('online_support_input.php?ajax=1&cast_id=' + encodeURIComponent(castId) + '&online_ym=' + encodeURIComponent(onlineYm))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data) {
+                        document.getElementById('online_amount').value = data.data.online_amount || '';
+                        document.getElementById('is_paid').value = data.data.is_paid || '0';
+                        if (data.data.paid_date && data.data.paid_date !== '0000-00-00' && data.data.paid_date !== null) {
+                            document.getElementById('paid_date').value = data.data.paid_date;
+                        } else {
+                            document.getElementById('paid_date').value = '';
+                        }
+                    } else {
+                        // 既存データがない場合は入力欄をクリア
+                        document.getElementById('online_amount').value = '';
+                        document.getElementById('is_paid').value = '0';
+                        document.getElementById('paid_date').value = '';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+    }
+    
+    // 年月が変更された時に一覧を更新し、既存データを読み込む
+    document.addEventListener('DOMContentLoaded', function() {
+        const onlineYmInput = document.getElementById('online_ym');
+        if (onlineYmInput) {
+            onlineYmInput.addEventListener('change', function() {
+                const onlineYm = this.value;
+                // データ一覧を更新（年月でフィルタリング）
+                if (onlineYm) {
+                    window.location.href = '?filter_month=' + encodeURIComponent(onlineYm);
+                }
+            });
+        }
+        
+        const castIdSelect = document.getElementById('cast_id');
+        if (castIdSelect) {
+            castIdSelect.addEventListener('change', function() {
+                loadExistingData();
+            });
+        }
+        
+        // ページ読み込み時に既存データを読み込む（キャストと年月が選択されている場合）
+        const castId = document.getElementById('cast_id').value;
+        const onlineYm = document.getElementById('online_ym').value;
+        if (castId && onlineYm) {
+            loadExistingData();
+        }
+    });
+    </script>
 </head>
 <body>
 
