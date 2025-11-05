@@ -341,8 +341,18 @@ disconnect($pdo);
     </style>
     <script>
     function loadExistingData() {
-        const castId = document.getElementById('cast_id').value;
-        const onlineYm = document.getElementById('online_ym').value;
+        const castIdEl = document.getElementById('cast_id');
+        const onlineYmEl = document.getElementById('online_ym');
+        
+        if (!castIdEl || !onlineYmEl) {
+            console.error('Required elements not found');
+            return;
+        }
+        
+        const castId = castIdEl.value;
+        const onlineYm = onlineYmEl.value;
+        
+        console.log('loadExistingData called - castId:', castId, 'onlineYm:', onlineYm);
         
         // 既存データを取得して入力欄に表示
         if (castId && onlineYm) {
@@ -359,25 +369,37 @@ disconnect($pdo);
                 .then(data => {
                     console.log('Response data:', data);
                     if (data.success && data.data) {
-                        document.getElementById('online_amount').value = data.data.online_amount || '';
-                        document.getElementById('is_paid').value = data.data.is_paid || '0';
-                        if (data.data.paid_date && data.data.paid_date !== '0000-00-00' && data.data.paid_date !== null) {
-                            document.getElementById('paid_date').value = data.data.paid_date;
-                        } else {
-                            document.getElementById('paid_date').value = '';
+                        const amountEl = document.getElementById('online_amount');
+                        const paidEl = document.getElementById('is_paid');
+                        const paidDateEl = document.getElementById('paid_date');
+                        
+                        if (amountEl) amountEl.value = data.data.online_amount || '';
+                        if (paidEl) paidEl.value = data.data.is_paid || '0';
+                        if (paidDateEl) {
+                            if (data.data.paid_date && data.data.paid_date !== '0000-00-00' && data.data.paid_date !== null) {
+                                paidDateEl.value = data.data.paid_date;
+                            } else {
+                                paidDateEl.value = '';
+                            }
                         }
-                        console.log('Data loaded successfully');
+                        console.log('Data loaded successfully - amount:', data.data.online_amount, 'is_paid:', data.data.is_paid);
                     } else {
                         // 既存データがない場合は入力欄をクリア
-                        document.getElementById('online_amount').value = '';
-                        document.getElementById('is_paid').value = '0';
-                        document.getElementById('paid_date').value = '';
+                        const amountEl = document.getElementById('online_amount');
+                        const paidEl = document.getElementById('is_paid');
+                        const paidDateEl = document.getElementById('paid_date');
+                        
+                        if (amountEl) amountEl.value = '';
+                        if (paidEl) paidEl.value = '0';
+                        if (paidDateEl) paidDateEl.value = '';
                         console.log('No existing data found');
                     }
                 })
                 .catch(error => {
                     console.error('Error loading data:', error);
                 });
+        } else {
+            console.log('castId or onlineYm is empty, skipping load');
         }
     }
     
@@ -403,7 +425,17 @@ disconnect($pdo);
         const castIdSelect = document.getElementById('cast_id');
         if (castIdSelect) {
             castIdSelect.addEventListener('change', function() {
-                loadExistingData();
+                const castId = this.value;
+                const onlineYm = document.getElementById('online_ym').value;
+                // キャスト名と対象年月の両方が選択されている場合のみ既存データを読み込む
+                if (castId && onlineYm) {
+                    loadExistingData();
+                } else {
+                    // どちらかが未選択の場合は入力欄をクリア
+                    document.getElementById('online_amount').value = '';
+                    document.getElementById('is_paid').value = '0';
+                    document.getElementById('paid_date').value = '';
+                }
             });
         }
         
