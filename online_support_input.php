@@ -6,60 +6,75 @@ ob_start();
 
 // AJAXリクエスト処理（既存データ取得）- 最初に処理して出力を制御
 if (isset($_GET['ajax']) && $_GET['ajax'] == '1' && isset($_GET['cast_id']) && isset($_GET['online_ym'])) {
+    // エラー表示を抑制
+    error_reporting(0);
+    ini_set('display_errors', 0);
+    
     // 出力バッファをすべてクリア
     while (ob_get_level()) {
         ob_end_clean();
     }
     
-    // 共通関数の読み込み
-    require_once(__DIR__ . '/../common/config.php');
-    require_once(__DIR__ . '/../common/dbconnect.php');
-    require_once(__DIR__ . '/../common/functions.php');
-    
-    // データベース接続
-    $pdo = connect();
-    
-    $ajax_cast_id = (int)$_GET['cast_id'];
-    $ajax_online_ym_input = $_GET['online_ym'];
-    // YYYY-MM形式をYYYYMM形式に変換
-    $ajax_online_ym = str_replace('-', '', $ajax_online_ym_input);
-    
-    $sql_ajax = "SELECT * FROM online_month WHERE cast_id = :cast_id AND online_ym = :online_ym";
-    $stmt_ajax = $pdo->prepare($sql_ajax);
-    $stmt_ajax->bindValue(':cast_id', $ajax_cast_id, PDO::PARAM_INT);
-    $stmt_ajax->bindValue(':online_ym', $ajax_online_ym, PDO::PARAM_STR);
-    $stmt_ajax->execute();
-    $ajax_data = $stmt_ajax->fetch(PDO::FETCH_ASSOC);
-    
-    disconnect($pdo);
-    
-    header('Content-Type: application/json; charset=UTF-8');
-    header('Cache-Control: no-cache, must-revalidate');
-    
-    if ($ajax_data) {
-        echo json_encode([
-            'success' => true,
-            'data' => [
-                'online_amount' => (int)$ajax_data['online_amount'],
-                'is_paid' => (int)$ajax_data['is_paid'],
-                'paid_date' => ($ajax_data['paid_date'] && $ajax_data['paid_date'] != '0000-00-00') ? $ajax_data['paid_date'] : null
-            ],
-            'debug' => [
-                'cast_id' => $ajax_cast_id,
-                'online_ym' => $ajax_online_ym,
-                'found' => true
-            ]
-        ], JSON_UNESCAPED_UNICODE);
-    } else {
+    try {
+        // 共通関数の読み込み
+        require_once(__DIR__ . '/../common/config.php');
+        require_once(__DIR__ . '/../common/dbconnect.php');
+        require_once(__DIR__ . '/../common/functions.php');
+        
+        // データベース接続
+        $pdo = connect();
+        
+        $ajax_cast_id = (int)$_GET['cast_id'];
+        $ajax_online_ym_input = $_GET['online_ym'];
+        // YYYY-MM形式をYYYYMM形式に変換
+        $ajax_online_ym = str_replace('-', '', $ajax_online_ym_input);
+        
+        $sql_ajax = "SELECT * FROM online_month WHERE cast_id = :cast_id AND online_ym = :online_ym";
+        $stmt_ajax = $pdo->prepare($sql_ajax);
+        $stmt_ajax->bindValue(':cast_id', $ajax_cast_id, PDO::PARAM_INT);
+        $stmt_ajax->bindValue(':online_ym', $ajax_online_ym, PDO::PARAM_STR);
+        $stmt_ajax->execute();
+        $ajax_data = $stmt_ajax->fetch(PDO::FETCH_ASSOC);
+        
+        disconnect($pdo);
+        
+        header('Content-Type: application/json; charset=UTF-8');
+        header('Cache-Control: no-cache, must-revalidate');
+        
+        if ($ajax_data) {
+            echo json_encode([
+                'success' => true,
+                'data' => [
+                    'online_amount' => (int)$ajax_data['online_amount'],
+                    'is_paid' => (int)$ajax_data['is_paid'],
+                    'paid_date' => ($ajax_data['paid_date'] && $ajax_data['paid_date'] != '0000-00-00') ? $ajax_data['paid_date'] : null
+                ],
+                'debug' => [
+                    'cast_id' => $ajax_cast_id,
+                    'online_ym' => $ajax_online_ym,
+                    'found' => true
+                ]
+            ], JSON_UNESCAPED_UNICODE);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'data' => null,
+                'debug' => [
+                    'cast_id' => $ajax_cast_id,
+                    'online_ym' => $ajax_online_ym,
+                    'online_ym_input' => $ajax_online_ym_input,
+                    'found' => false
+                ]
+            ], JSON_UNESCAPED_UNICODE);
+        }
+    } catch (Exception $e) {
+        // エラーが発生した場合もJSONで返す
+        header('Content-Type: application/json; charset=UTF-8');
+        header('Cache-Control: no-cache, must-revalidate');
         echo json_encode([
             'success' => false,
-            'data' => null,
-            'debug' => [
-                'cast_id' => $ajax_cast_id,
-                'online_ym' => $ajax_online_ym,
-                'online_ym_input' => $ajax_online_ym_input,
-                'found' => false
-            ]
+            'error' => 'Database error occurred',
+            'data' => null
         ], JSON_UNESCAPED_UNICODE);
     }
     exit;
