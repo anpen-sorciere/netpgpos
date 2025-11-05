@@ -23,7 +23,7 @@ $pdo = connect();
 // 変数初期化
 $id = null;
 $cast_id = '';
-$online_ym = date('Ym');
+$online_ym = date('Y-m'); // YYYY-MM形式（HTMLのmonth input用）
 $online_amount = '';
 $is_paid = 0;
 $paid_date = date('Y-m-d');
@@ -41,22 +41,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // フォームデータの取得
     $id = $_POST['id'] ?? null;
     $cast_id = $_POST['cast_id'] ?? '';
-    $online_ym = str_replace('-', '', $_POST['online_ym']); // YYYY-MM形式をYYYYMMに変換
+    $online_ym_input = $_POST['online_ym'] ?? '';
     $online_amount = $_POST['online_amount'] ?? '';
     $is_paid = $_POST['is_paid'] ?? 0;
     $paid_date = $_POST['paid_date'] ?? date('Y-m-d');
 
-    // 支払い状況が未払いの場合はpaid_dateを0000-00-00にする
-    if ($is_paid == 0) {
-        $paid_date = '0000-00-00';
+    // バリデーション
+    $errors = [];
+    if (empty($cast_id)) {
+        $errors[] = "キャスト名が選択されていません。";
     }
-    
-    try {
-        if ($action === 'create') {
+    if (empty($online_ym_input)) {
+        $errors[] = "対象年月が入力されていません。";
+    }
+    if (empty($online_amount) || !is_numeric($online_amount)) {
+        $errors[] = "金額が正しく入力されていません。";
+    }
+
+    // エラーがある場合は処理を中断
+    if (!empty($errors)) {
+        $message = "エラー: " . implode(" ", $errors);
+        // フォーム表示用に値を保持（YYYY-MM形式）
+        $online_ym = $online_ym_input;
+    } else {
+        // YYYY-MM形式をYYYYMMに変換（データベース用）
+        $online_ym = str_replace('-', '', $online_ym_input);
+        
+        // 支払い状況が未払いの場合はpaid_dateを0000-00-00にする
+        if ($is_paid == 0) {
+            $paid_date = '0000-00-00';
+        }
+        
+        try {
+            if ($action === 'create') {
             // 新規作成時、既存レコードがあるかチェック
             $sql_check = "SELECT id FROM online_month WHERE cast_id = :cast_id AND online_ym = :online_ym";
             $stmt_check = $pdo->prepare($sql_check);
-            $stmt_check->bindValue(':cast_id', $cast_id, PDO::PARAM_INT);
+            $stmt_check->bindValue(':cast_id', (int)$cast_id, PDO::PARAM_INT);
             $stmt_check->bindValue(':online_ym', $online_ym, PDO::PARAM_STR);
             $stmt_check->execute();
             $existing_record = $stmt_check->fetch(PDO::FETCH_ASSOC);
@@ -66,50 +87,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $id = $existing_record['id'];
                 $sql = "UPDATE online_month SET online_amount = :online_amount, is_paid = :is_paid, paid_date = :paid_date WHERE id = :id";
                 $stmt = $pdo->prepare($sql);
-                $stmt->bindValue(':online_amount', $online_amount, PDO::PARAM_INT);
-                $stmt->bindValue(':is_paid', $is_paid, PDO::PARAM_INT);
+                $stmt->bindValue(':online_amount', (int)$online_amount, PDO::PARAM_INT);
+                $stmt->bindValue(':is_paid', (int)$is_paid, PDO::PARAM_INT);
                 $stmt->bindValue(':paid_date', $paid_date, PDO::PARAM_STR);
-                $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+                $stmt->bindValue(':id', (int)$id, PDO::PARAM_INT);
                 $stmt->execute();
                 $message = "データが既に存在するため、更新しました。";
+                // フォーム表示用にYYYY-MM形式に戻す
+                $online_ym = $online_ym_input;
             } else {
                 // 既存レコードがなければ新規作成
                 $sql = "INSERT INTO online_month (cast_id, online_ym, online_amount, is_paid, paid_date) VALUES (:cast_id, :online_ym, :online_amount, :is_paid, :paid_date)";
                 $stmt = $pdo->prepare($sql);
-                $stmt->bindValue(':cast_id', $cast_id, PDO::PARAM_INT);
+                $stmt->bindValue(':cast_id', (int)$cast_id, PDO::PARAM_INT);
                 $stmt->bindValue(':online_ym', $online_ym, PDO::PARAM_STR);
-                $stmt->bindValue(':online_amount', $online_amount, PDO::PARAM_INT);
-                $stmt->bindValue(':is_paid', $is_paid, PDO::PARAM_INT);
+                $stmt->bindValue(':online_amount', (int)$online_amount, PDO::PARAM_INT);
+                $stmt->bindValue(':is_paid', (int)$is_paid, PDO::PARAM_INT);
                 $stmt->bindValue(':paid_date', $paid_date, PDO::PARAM_STR);
                 $stmt->execute();
                 $message = "データを追加しました。";
+                // フォーム表示用にYYYY-MM形式に戻す
+                $online_ym = $online_ym_input;
             }
 
         } elseif ($action === 'update' && $id !== null) {
             // 更新
             $sql = "UPDATE online_month SET cast_id = :cast_id, online_ym = :online_ym, online_amount = :online_amount, is_paid = :is_paid, paid_date = :paid_date WHERE id = :id";
             $stmt = $pdo->prepare($sql);
-            $stmt->bindValue(':cast_id', $cast_id, PDO::PARAM_INT);
+            $stmt->bindValue(':cast_id', (int)$cast_id, PDO::PARAM_INT);
             $stmt->bindValue(':online_ym', $online_ym, PDO::PARAM_STR);
-            $stmt->bindValue(':online_amount', $online_amount, PDO::PARAM_INT);
-            $stmt->bindValue(':is_paid', $is_paid, PDO::PARAM_INT);
+            $stmt->bindValue(':online_amount', (int)$online_amount, PDO::PARAM_INT);
+            $stmt->bindValue(':is_paid', (int)$is_paid, PDO::PARAM_INT);
             $stmt->bindValue(':paid_date', $paid_date, PDO::PARAM_STR);
-            $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+            $stmt->bindValue(':id', (int)$id, PDO::PARAM_INT);
             $stmt->execute();
             $message = "データを更新しました。";
             $action = 'create'; // 更新後は新規作成モードに戻す
+            // フォーム表示用にYYYY-MM形式に戻す
+            $online_ym = $online_ym_input;
 
         } elseif ($action === 'delete' && $id !== null) {
             // 削除
             $sql = "DELETE FROM online_month WHERE id = :id";
             $stmt = $pdo->prepare($sql);
-            $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+            $stmt->bindValue(':id', (int)$id, PDO::PARAM_INT);
             $stmt->execute();
             $message = "データを削除しました。";
             $action = 'create'; // 削除後は新規作成モードに戻す
         }
-    } catch (PDOException $e) {
-        $message = "エラーが発生しました: " . $e->getMessage();
+        } catch (PDOException $e) {
+            $message = "エラーが発生しました: " . $e->getMessage();
+            // エラー時もフォーム表示用に値を保持
+            $online_ym = $online_ym_input;
+        }
     }
 }
 
@@ -166,7 +196,7 @@ disconnect($pdo);
     <h1>遠隔売上入力・編集</h1>
 
     <?php if ($message): ?>
-        <p class="message"><?php echo h($message); ?></p>
+        <p class="<?php echo (strpos($message, 'エラー') !== false) ? 'error' : 'message'; ?>"><?php echo h($message); ?></p>
     <?php endif; ?>
 
     <div class="form-section">

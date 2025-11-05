@@ -45,8 +45,7 @@ $sql .= "ORDER BY cast_id ASC, eigyo_ymd ASC";
 
 try {
     $pdo = connect();
-    $casts = cast_get_all($pdo, 0);
-
+    
     // 店舗リストを動的に取得
     $shops = [
         ['id' => 'all', 'name' => '全店'],
@@ -58,6 +57,25 @@ try {
     $statement = $pdo->prepare($sql);
     $statement->execute($params);
     $timecard_list = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+    // タイムカードデータから実際に存在するキャストIDを取得
+    $existing_cast_ids = [];
+    foreach ($timecard_list as $row) {
+        $cast_id = $row['cast_id'];
+        if (!in_array($cast_id, $existing_cast_ids)) {
+            $existing_cast_ids[] = $cast_id;
+        }
+    }
+
+    // 存在するキャストIDに基づいてキャスト情報を取得
+    $casts = [];
+    if (!empty($existing_cast_ids)) {
+        $placeholders = str_repeat('?,', count($existing_cast_ids) - 1) . '?';
+        $cast_sql = "SELECT * FROM cast_mst WHERE cast_id IN ($placeholders) AND drop_flg = 0 ORDER BY cast_yomi";
+        $cast_stmt = $pdo->prepare($cast_sql);
+        $cast_stmt->execute($existing_cast_ids);
+        $casts = $cast_stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 
     // キャストごとにデータを集計
     $cast_timecard_data = [];
