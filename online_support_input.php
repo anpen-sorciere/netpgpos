@@ -32,7 +32,7 @@ if (isset($_GET['filter_month'])) {
 }
 // GETパラメータでcast_idが渡されている場合（年月変更時に保持）
 if (isset($_GET['cast_id']) && !isset($_POST['cast_id'])) {
-    $cast_id = $_GET['cast_id'];
+    $cast_id = (int)$_GET['cast_id'];
 }
 $online_amount = '';
 $is_paid = 0;
@@ -41,6 +41,30 @@ $action = 'create';
 $message = '';
 $online_data = [];
 $filter_month_ym = str_replace('-', '', $online_ym); // フィルタ用のYYYYMM形式
+
+// GETパラメータでcast_idと年月が渡されている場合、既存データを読み込む（編集モードでない場合のみ、GETリクエスト時のみ）
+if ($_SERVER['REQUEST_METHOD'] !== 'POST' && $action === 'create') {
+    // cast_idが空の場合はGETパラメータから取得を試みる
+    if (empty($cast_id) && isset($_GET['cast_id']) && $_GET['cast_id'] !== '') {
+        $cast_id = (int)$_GET['cast_id'];
+    }
+    
+    // cast_idが数値で、filter_month_ymが存在する場合、既存データを読み込む
+    if (!empty($cast_id) && is_numeric($cast_id) && $cast_id > 0 && !empty($filter_month_ym) && strlen($filter_month_ym) === 6) {
+        $sql_preload = "SELECT * FROM online_month WHERE cast_id = :cast_id AND online_ym = :online_ym";
+        $stmt_preload = $pdo->prepare($sql_preload);
+        $stmt_preload->bindValue(':cast_id', (int)$cast_id, PDO::PARAM_INT);
+        $stmt_preload->bindValue(':online_ym', $filter_month_ym, PDO::PARAM_STR);
+        $stmt_preload->execute();
+        $preload_data = $stmt_preload->fetch(PDO::FETCH_ASSOC);
+        
+        if ($preload_data) {
+            $online_amount = $preload_data['online_amount'];
+            $is_paid = $preload_data['is_paid'];
+            $paid_date = ($preload_data['paid_date'] && $preload_data['paid_date'] != '0000-00-00') ? $preload_data['paid_date'] : '';
+        }
+    }
+}
 
 // 全キャスト情報の取得
 $casts = cast_get_all($pdo);
@@ -77,6 +101,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = "エラー: " . implode(" ", $errors);
         // フォーム表示用に値を保持（YYYY-MM形式）
         $online_ym = $online_ym_input;
+        $filter_month_ym = str_replace('-', '', $online_ym_input);
+        // エラー時も既存データを読み込む
+        if (!empty($cast_id) && !empty($filter_month_ym)) {
+            $sql_preload_error = "SELECT * FROM online_month WHERE cast_id = :cast_id AND online_ym = :online_ym";
+            $stmt_preload_error = $pdo->prepare($sql_preload_error);
+            $stmt_preload_error->bindValue(':cast_id', (int)$cast_id, PDO::PARAM_INT);
+            $stmt_preload_error->bindValue(':online_ym', $filter_month_ym, PDO::PARAM_STR);
+            $stmt_preload_error->execute();
+            $preload_data_error = $stmt_preload_error->fetch(PDO::FETCH_ASSOC);
+            
+            if ($preload_data_error) {
+                $online_amount = $preload_data_error['online_amount'];
+                $is_paid = $preload_data_error['is_paid'];
+                $paid_date = ($preload_data_error['paid_date'] && $preload_data_error['paid_date'] != '0000-00-00') ? $preload_data_error['paid_date'] : '';
+            }
+        }
     } else {
         // YYYY-MM形式をYYYYMMに変換（データベース用）
         $online_ym = str_replace('-', '', $online_ym_input);
@@ -167,6 +207,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $online_ym = $online_ym_input;
         }
     }
+    
+    // POST処理後、成功した場合はcast_idと年月を保持してリダイレクト
+    if (!empty($message) && strpos($message, 'エラー') === false) {
+        // フォーム表示用にYYYY-MM形式に戻す
+        $online_ym_display = $online_ym_input ?? date('Y-m');
+        $redirect_url = 'online_support_input.php?filter_month=' . urlencode($online_ym_display);
+        if (!empty($cast_id)) {
+            $redirect_url .= '&cast_id=' . urlencode($cast_id);
+        }
+        header('Location: ' . $redirect_url);
+        exit;
+    }
 }
 
 // AJAXリクエスト処理（既存データ取得）
@@ -233,6 +285,20 @@ if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) 
         // NULLまたは'0000-00-00'の場合は空文字列にする
         $paid_date = ($edit_data['paid_date'] && $edit_data['paid_date'] != '0000-00-00') ? $edit_data['paid_date'] : '';
         $filter_month_ym = $edit_data['online_ym']; // 編集時はその月のデータを表示
+    }
+} elseif ($_SERVER['REQUEST_METHOD'] !== 'POST' && $action === 'create' && !empty($cast_id) && !empty($filter_month_ym)) {
+    // GETリクエスト時、編集モードでない場合、既存データを読み込む
+    $sql_preload2 = "SELECT * FROM online_month WHERE cast_id = :cast_id AND online_ym = :online_ym";
+    $stmt_preload2 = $pdo->prepare($sql_preload2);
+    $stmt_preload2->bindValue(':cast_id', (int)$cast_id, PDO::PARAM_INT);
+    $stmt_preload2->bindValue(':online_ym', $filter_month_ym, PDO::PARAM_STR);
+    $stmt_preload2->execute();
+    $preload_data2 = $stmt_preload2->fetch(PDO::FETCH_ASSOC);
+    
+    if ($preload_data2) {
+        $online_amount = $preload_data2['online_amount'];
+        $is_paid = $preload_data2['is_paid'];
+        $paid_date = ($preload_data2['paid_date'] && $preload_data2['paid_date'] != '0000-00-00') ? $preload_data2['paid_date'] : '';
     }
 }
 
@@ -374,7 +440,7 @@ disconnect($pdo);
                 <select name="cast_id" id="cast_id" required>
                     <option value="">--選択してください--</option>
                     <?php foreach ($casts as $cast): ?>
-                        <option value="<?php echo h($cast['cast_id']); ?>" <?php echo ($cast_id == $cast['cast_id']) ? 'selected' : ''; ?>>
+                        <option value="<?php echo h($cast['cast_id']); ?>" <?php echo ((string)$cast_id === (string)$cast['cast_id'] || (isset($_GET['cast_id']) && (string)$_GET['cast_id'] === (string)$cast['cast_id'])) ? 'selected' : ''; ?>>
                             <?php echo h($cast['cast_name']); ?>
                         </option>
                     <?php endforeach; ?>
@@ -388,7 +454,7 @@ disconnect($pdo);
 
             <p>
                 <label for="online_amount">金額:</label>
-                <input type="number" name="online_amount" id="online_amount" value="<?php echo h($online_amount); ?>" min="0" step="1"> 円
+                <input type="number" name="online_amount" id="online_amount" value="<?php echo isset($online_amount) ? h($online_amount) : ''; ?>" min="0" step="1"> 円
             </p>
 
             <p>
