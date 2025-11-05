@@ -223,6 +223,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // AJAXリクエスト処理（既存データ取得）
 if (isset($_GET['ajax']) && $_GET['ajax'] == '1' && isset($_GET['cast_id']) && isset($_GET['online_ym'])) {
+    // 出力バッファをクリアしてBOMを除去
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+    
     $ajax_cast_id = (int)$_GET['cast_id'];
     $ajax_online_ym_input = $_GET['online_ym'];
     // YYYY-MM形式をYYYYMM形式に変換
@@ -235,7 +240,11 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1' && isset($_GET['cast_id']) && i
     $stmt_ajax->execute();
     $ajax_data = $stmt_ajax->fetch(PDO::FETCH_ASSOC);
     
-    header('Content-Type: application/json');
+    disconnect($pdo);
+    
+    header('Content-Type: application/json; charset=UTF-8');
+    header('Cache-Control: no-cache, must-revalidate');
+    
     if ($ajax_data) {
         echo json_encode([
             'success' => true,
@@ -249,7 +258,7 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1' && isset($_GET['cast_id']) && i
                 'online_ym' => $ajax_online_ym,
                 'found' => true
             ]
-        ]);
+        ], JSON_UNESCAPED_UNICODE);
     } else {
         echo json_encode([
             'success' => false,
@@ -260,9 +269,8 @@ if (isset($_GET['ajax']) && $_GET['ajax'] == '1' && isset($_GET['cast_id']) && i
                 'online_ym_input' => $ajax_online_ym_input,
                 'found' => false
             ]
-        ]);
+        ], JSON_UNESCAPED_UNICODE);
     }
-    disconnect($pdo);
     exit;
 }
 
