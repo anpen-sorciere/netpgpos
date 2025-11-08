@@ -27,6 +27,9 @@ $formatted_date = DateTime::createFromFormat('Y-m-d', $selected_date);
 $target_ymd = $formatted_date ? $formatted_date->format('Ymd') : date('Ymd');
 $customer_map = [];
 $cast_totals = [];
+$cast_work_minutes = [];
+$cast_pay = [];
+$cast_targets = [];
 
 if ($shop_id !== null) {
     try {
@@ -87,12 +90,38 @@ if ($shop_id !== null) {
                     $rid = $sr['receipt_id'];
                     $cast_totals[$sid] = ($cast_totals[$sid] ?? 0) + ($detail_totals[$rid] ?? 0);
                 }
+                
+            }
+            
+            $time_stmt = $pdo->prepare("
+                SELECT cast_id, in_ymd, in_time, out_ymd, out_time, break_start_ymd, break_start_time, break_end_ymd, break_end_time
+                FROM timecard_tbl
+                WHERE eigyo_ymd = ? AND shop_id = ? AND cast_id IN ($placeholders)
+            ");
+            $time_stmt->execute(array_merge([$target_ymd, $shop_id], $castIds));
+            while ($time_row = $time_stmt->fetch(PDO::FETCH_ASSOC)) {
+                $times = calculate_working_hours_minutes($time_row);
+                $cast_id = $time_row['cast_id'];
+                $cast_work_minutes[$cast_id] = ($cast_work_minutes[$cast_id] ?? 0) + ($times['work_time_minutes'] ?? 0);
+            }
+            
+            $set_month = $formatted_date ? $formatted_date->format('Ym') : date('Ym');
+            $pay_stmt = $pdo->prepare("
+                SELECT cast_id, pay
+                FROM pay_tbl
+                WHERE set_month = ? AND cast_id IN ($placeholders)
+            ");
+            $pay_stmt->execute(array_merge([$set_month], $castIds));
+            while ($pay_row = $pay_stmt->fetch(PDO::FETCH_ASSOC)) {
+                $cast_pay[$pay_row['cast_id']] = (int)$pay_row['pay'];
             }
         }
     } catch (PDOException $e) {
         error_log("Error fetching working casts: " . $e->getMessage());
     }
 }
+
+disconnect($pdo);
 ?>
 <!DOCTYPE html>
 <html lang="ja">
@@ -247,8 +276,12 @@ if ($shop_id !== null) {
                     <thead>
                         <tr>
                             <th>キャスト名</th>
+                            <th>時給</th>
+                            <th>勤務時間</th>
                             <th>担当顧客一覧</th>
+                            <th>目標売上</th>
                             <th>金額</th>
+                            <th>達成率</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -256,11 +289,23 @@ if ($shop_id !== null) {
                             <?php
                                 $customers = $customer_map[$cast['cast_id']] ?? [];
                                 $customer_text = !empty($customers) ? implode(', ', $customers) : '';
+                                $minutes = $cast_work_minutes[$cast['cast_id']] ?? 0;
+                                $hours = intdiv($minutes, 60);
+                                $mins = $minutes % 60;
+                                $work_display = $minutes > 0 ? sprintf('%d時間%d分', $hours, $mins) : '-';
+                                $pay_amount = $cast_pay[$cast['cast_id']] ?? 0;
+                                $target_amount = $cast_targets[$cast['cast_id']] ?? 0;
+                                $sales_amount = $cast_totals[$cast['cast_id']] ?? 0;
+                                $achievement = ($target_amount > 0) ? round(($sales_amount / $target_amount) * 100, 1) . '%' : '-';
                             ?>
                             <tr>
                                 <td><?= htmlspecialchars($cast['cast_name'] ?? '不明') ?></td>
+                                <td><?= $pay_amount > 0 ? number_format($pay_amount) . '円' : '-' ?></td>
+                                <td><?= htmlspecialchars($work_display) ?></td>
                                 <td><?= htmlspecialchars($customer_text) ?></td>
-                                <td><?= number_format($cast_totals[$cast['cast_id']] ?? 0) ?>円</td>
+                                <td><?= $target_amount > 0 ? number_format($target_amount) . '円' : '-' ?></td>
+                                <td><?= number_format($sales_amount) ?>円</td>
+                                <td><?= $achievement ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
