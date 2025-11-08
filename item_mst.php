@@ -314,6 +314,17 @@ if ($search_query !== '') {
             <h1>商品マスタ管理</h1>
         </header>
 
+        <form class="search-form" method="get" action="item_mst.php" style="margin-top: 10px;">
+            <?php if (isset($_GET['utype'])): ?>
+                <input type="hidden" name="utype" value="<?= h($_GET['utype']) ?>">
+            <?php endif; ?>
+            <input type="text" name="search_query" placeholder="商品名またはヨミガナで検索" value="<?= h($search_query) ?>">
+            <button type="submit" class="btn btn-primary">検索</button>
+            <?php if ($search_query !== ''): ?>
+                <a href="item_mst.php<?= isset($_GET['utype']) ? '?utype=' . h($_GET['utype']) : '' ?>" class="btn btn-secondary">クリア</a>
+            <?php endif; ?>
+        </form>
+
         <?php if (!empty($error)): ?>
             <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; margin: 20px 0; border-radius: 5px; color: #721c24;">
                 <strong>エラー:</strong>
@@ -393,16 +404,6 @@ if ($search_query !== '') {
         </section>
 
         <section class="table-section">
-            <form class="search-form" method="get" action="item_mst.php">
-                <?php if (isset($_GET['utype'])): ?>
-                    <input type="hidden" name="utype" value="<?= h($_GET['utype']) ?>">
-                <?php endif; ?>
-                <input type="text" name="search_query" placeholder="商品名またはヨミガナで検索" value="<?= h($search_query) ?>">
-                <button type="submit" class="btn btn-primary">検索</button>
-                <?php if ($search_query !== ''): ?>
-                    <a href="item_mst.php<?= isset($_GET['utype']) ? '?utype=' . h($_GET['utype']) : '' ?>" class="btn btn-secondary">クリア</a>
-                <?php endif; ?>
-            </form>
             <h2>商品一覧</h2>
             <table class="result-table">
                 <thead>
