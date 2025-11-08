@@ -31,8 +31,8 @@ if ($shop_id !== null) {
         $stmt = $pdo->prepare("
             SELECT DISTINCT tc.cast_id, cm.cast_name
             FROM timecard_tbl tc
-            LEFT JOIN cast_mst cm ON tc.cast_id = cm.cast_id
-            WHERE tc.eigyo_ymd = ? AND tc.shop_id = ?
+            INNER JOIN cast_mst cm ON tc.cast_id = cm.cast_id
+            WHERE tc.eigyo_ymd = ? AND tc.shop_id = ? AND cm.cast_type = 0
             ORDER BY cm.cast_yomi ASC
         ");
         $stmt->execute([$target_ymd, $shop_id]);
