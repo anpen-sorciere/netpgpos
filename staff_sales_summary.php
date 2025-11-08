@@ -26,6 +26,7 @@ $working_casts = [];
 $formatted_date = DateTime::createFromFormat('Y-m-d', $selected_date);
 $target_ymd = $formatted_date ? $formatted_date->format('Ymd') : date('Ymd');
 $customer_map = [];
+$cast_totals = [];
 
 if ($shop_id !== null) {
     try {
@@ -54,6 +55,37 @@ if ($shop_id !== null) {
                 }
                 if (!empty($row['customer_name'])) {
                     $customer_map[$row['staff_id']][] = $row['customer_name'];
+                }
+            }
+            
+            $receipt_stmt = $pdo->prepare("
+                SELECT receipt_id, staff_id
+                FROM receipt_tbl
+                WHERE receipt_day = ? AND staff_id IN ($placeholders)
+            ");
+            $receipt_stmt->execute(array_merge([$target_ymd], $castIds));
+            $staff_receipts = $receipt_stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            if (!empty($staff_receipts)) {
+                $receiptIds = array_column($staff_receipts, 'receipt_id');
+                $receiptIdPlaceholders = implode(',', array_fill(0, count($receiptIds), '?'));
+                
+                $detail_stmt = $pdo->prepare("
+                    SELECT d.receipt_id, d.price, d.quantity
+                    FROM receipt_detail_tbl d
+                    WHERE d.receipt_id IN ($receiptIdPlaceholders)
+                ");
+                $detail_stmt->execute($receiptIds);
+                $detail_totals = [];
+                while ($detail = $detail_stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $rid = $detail['receipt_id'];
+                    $detail_totals[$rid] = ($detail_totals[$rid] ?? 0) + ($detail['price'] * $detail['quantity']);
+                }
+                
+                foreach ($staff_receipts as $sr) {
+                    $sid = $sr['staff_id'];
+                    $rid = $sr['receipt_id'];
+                    $cast_totals[$sid] = ($cast_totals[$sid] ?? 0) + ($detail_totals[$rid] ?? 0);
                 }
             }
         }
@@ -228,7 +260,7 @@ if ($shop_id !== null) {
                             <tr>
                                 <td><?= htmlspecialchars($cast['cast_name'] ?? '不明') ?></td>
                                 <td><?= htmlspecialchars($customer_text) ?></td>
-                                <td>0円</td>
+                                <td><?= number_format($cast_totals[$cast['cast_id']] ?? 0) ?>円</td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
