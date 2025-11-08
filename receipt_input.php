@@ -296,6 +296,20 @@ try {
                         </td>
                     </tr>
                     <tr>
+                        <th>担当キャスト</th>
+                        <td colspan="3">
+                            <select name="staff_id">
+                                <option value="0"></option>
+                                <?php foreach ($casts as $cast): ?>
+                                    <option value="<?= htmlspecialchars($cast['cast_id']) ?>"
+                                        <?= (isset($_SESSION['join']['staff_id']) && $_SESSION['join']['staff_id'] == $cast['cast_id']) ? 'selected' : ''; ?>>
+                                        <?= htmlspecialchars($cast['cast_name']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
                         <th>新規顧客</th>
                         <td colspan="3">
                             <label>

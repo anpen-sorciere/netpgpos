@@ -33,6 +33,7 @@ if (!empty($_POST['check'])) {
     $in_time = str_replace(':', '', $_SESSION['join']['in_time'] ?? '');
     $customer_name = $_SESSION['join']['customer_name'] ?? '';
     $issuer_id = $_SESSION['join']['issuer_id'] ?? null;
+    $staff_id = $_SESSION['join']['staff_id'] ?? null;
     $p_type = $_SESSION['join']['p_type'] ?? null;
     $adjust_price = $_SESSION['join']['adjust_price'] ?? 0;
     $is_new_customer = isset($_SESSION['join']['is_new_customer']) ? intval($_SESSION['join']['is_new_customer']) : 0;
@@ -51,11 +52,16 @@ if (!empty($_POST['check'])) {
     }
     $issuer_id = intval($issuer_id);
     
+    if ($staff_id === '' || $staff_id === null) {
+        $staff_id = 0;
+    }
+    $staff_id = intval($staff_id);
+    
     // out_dateとout_timeには空文字列を挿入
     $out_date = '';
     $out_time = '';
 
-    $stmt_base = $pdo->prepare("INSERT INTO receipt_tbl (receipt_id, shop_id, sheet_no, receipt_day, in_date, in_time, out_date, out_time, customer_name, issuer_id, rep_id, payment_type, adjust_price, is_new_customer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt_base = $pdo->prepare("INSERT INTO receipt_tbl (receipt_id, shop_id, sheet_no, receipt_day, in_date, in_time, out_date, out_time, customer_name, issuer_id, staff_id, rep_id, payment_type, adjust_price, is_new_customer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     $stmt_base->execute([
         $receipt_id,
         $shop_mst,
@@ -67,6 +73,7 @@ if (!empty($_POST['check'])) {
         $out_time,
         $customer_name,
         $issuer_id,
+        $staff_id,
         0, // rep_idは現状使っていないので0
         $p_type,
         $adjust_price,
@@ -123,6 +130,7 @@ $in_date = $_SESSION['join']['in_date'] ?? '';
 $in_time = $_SESSION['join']['in_time'] ?? '';
 $customer_name = $_SESSION['join']['customer_name'] ?? '';
 $issuer_id = $_SESSION['join']['issuer_id'] ?? null;
+$staff_id = $_SESSION['join']['staff_id'] ?? null;
 $p_type = $_SESSION['join']['p_type'] ?? null;
 $adjust_price = intval($_SESSION['join']['adjust_price'] ?? 0); 
 $is_new_customer = isset($_SESSION['join']['is_new_customer']) ? intval($_SESSION['join']['is_new_customer']) : 0;
@@ -131,6 +139,8 @@ $p_data = payment_data_get($pdo, $p_type);
 $payment_name = $p_data['payment_name'] ?? '未指定';
 $issuer_data = cast_get($pdo, $issuer_id);
 $issuer_name = $issuer_data['cast_name'] ?? '未指定';
+$staff_data = cast_get($pdo, $staff_id);
+$staff_name = $staff_data['cast_name'] ?? '未指定';
 
 $total_subtotal = 0;
 $items_to_display = [];
@@ -252,6 +262,10 @@ $final_total = $total_with_tax + $adjust_price;
                     <td><span class="check-info"><?= htmlspecialchars($payment_name ?? '', ENT_QUOTES); ?></span></td>
                     <th>調整額</th>
                     <td><span class="check-info"><?= number_format($adjust_price); ?></span></td>
+                </tr>
+                <tr>
+                    <th>担当キャスト</th>
+                    <td colspan="3"><span class="check-info"><?= htmlspecialchars($staff_name ?? '未指定', ENT_QUOTES); ?></span></td>
                 </tr>
                 <tr>
                     <th>新規顧客</th>
