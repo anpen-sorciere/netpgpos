@@ -25,6 +25,7 @@ $total_net_working_minutes = 0;
 $total_daily_wage = 0;
 $total_back_price = 0;
 $total_online_amount = 0;
+$total_gem_count = 0;
 $message = '';
 
 // connect()関数を呼び出してPDOオブジェクトを取得
@@ -131,7 +132,9 @@ if ($selected_cast_id !== null) {
         $total_daily_wage += $daily_wage;
 
         // バック金額を1回のクエリで取得 (receipt_detail_tblのcast_idを使用するように修正)
-        $sql_back_price = "SELECT SUM(cast_back_price) AS total_back_price_day
+        $sql_back_price = "SELECT 
+                                SUM(cast_back_price) AS total_back_price_day,
+                                SUM(price * quantity) AS total_sales_day
                              FROM receipt_detail_tbl
                              WHERE cast_id = :cast_id 
                              AND shop_id = :shop_mst 
@@ -142,9 +145,13 @@ if ($selected_cast_id !== null) {
         $stmt_back_price->bindValue(':shop_mst', $timecard_data['shop_id'], PDO::PARAM_INT);
         $stmt_back_price->bindValue(':receipt_day', $eigyo_ymd, PDO::PARAM_STR);
         $stmt_back_price->execute();
-        $total_back_price_day = $stmt_back_price->fetchColumn() ?? 0;
+        $back_price_row = $stmt_back_price->fetch(PDO::FETCH_ASSOC);
+        $total_back_price_day = $back_price_row['total_back_price_day'] ?? 0;
+        $total_sales_day = $back_price_row['total_sales_day'] ?? 0;
+        $daily_gem_count = ($total_sales_day > 0) ? intdiv((int)$total_sales_day, 1000) : 0;
         
         $total_back_price += $total_back_price_day;
+        $total_gem_count += $daily_gem_count;
         
         // timecard_tblのshop_idから店舗名を取得
         $shop_info_day = get_shop_info($timecard_data['shop_id']);
@@ -156,6 +163,7 @@ if ($selected_cast_id !== null) {
             'net_working_minutes' => $net_working_time,
             'daily_wage' => $daily_wage,
             'total_back_price' => $total_back_price_day,
+            'gem_count' => $daily_gem_count,
         ];
     }
     
@@ -269,6 +277,7 @@ if ($back_per_6_hours > 0) {
                         <th>日当</th>
                         <th>バック金額</th>
                         <th>日給合計</th>
+                        <th>ジェム数</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -279,7 +288,8 @@ if ($back_per_6_hours > 0) {
                             <td><?php echo format_minutes_to_hours_minutes($day['net_working_minutes']); ?></td>
                             <td><?php echo number_format($day['daily_wage']); ?>円</td>
                             <td><?php echo number_format($day['total_back_price']); ?>円</td>
-                            <td><?php echo number_format($day['daily_wage'] + $day['total_back_price']); ?>円</td>
+                        <td><?php echo number_format($day['daily_wage'] + $day['total_back_price']); ?>円</td>
+                        <td><?php echo number_format($day['gem_count']); ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -291,6 +301,7 @@ if ($back_per_6_hours > 0) {
                 <p><strong>合計日当: <?php echo number_format($total_daily_wage); ?>円</strong></p>
                 <p><strong>合計バック: <?php echo number_format($total_back_price); ?>円</strong></p>
                 <p><strong>遠隔金額: <?php echo number_format($total_online_amount); ?>円</strong></p>
+                <p><strong>月次ジェム数: <?php echo number_format($total_gem_count); ?></strong></p>
                 <p><strong>月給合計: <?php echo number_format($total_daily_wage + $total_back_price + $total_online_amount); ?>円</strong></p>
                 <?php
                 if ($total_net_working_minutes > 0) {
