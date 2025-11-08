@@ -58,7 +58,6 @@ if(isset($_GET['utype'])) {
             <?php elseif ($utype == 3) : ?>
                 <li class="menu-item"><a href="card_sales.php?utype=3" class="menu-button">カード販売仕入れ・全人件費入力</a></li>
                 <li class="menu-item"><a href="card_sales_summary.php?utype=3" class="menu-button">カード販売仕入れ・全人件費確認</a></li>
-                <li class="menu-item"><a href="daydata_sendmail.php?utype=3" class="menu-button">※管理用 gmail専用送信テスト</a></li>
             <?php endif; ?>
             <li class="menu-item"><a href="item_mst.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">商品マスタ登録</a></li>
             <li class="menu-item"><a href="cast_regist.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">キャスト登録</a></li>
