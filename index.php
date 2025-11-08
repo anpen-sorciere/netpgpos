@@ -48,10 +48,10 @@ if(isset($_GET['utype'])) {
         <ul class="menu-list">
             <li class="menu-item"><a href="receipt_input.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">伝票入力</a></li>
             <li class="menu-item"><a href="timecard_input.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">タイムカード入力</a></li>
-            <li class="menu-item"><a href="timecard_list.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">月別出勤簿一覧</a></li>
             <li class="menu-item"><a href="summary.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">集計確認</a></li>
             <li class="menu-item"><a href="daily_wage_summary.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">日当確認</a></li>
             <li class="menu-item"><a href="monthly_wage_summary.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">キャスト月データ確認</a></li>
+            <li class="menu-item"><a href="timecard_list.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">月別出勤簿一覧</a></li>
             <?php if ($utype == 1024) : ?>
                 <li class="menu-item"><a href="online_support.php?utype=1024" class="menu-button">遠隔確認</a></li>
                 <li class="menu-item"><a href="online_support_input.php?utype=1024" class="menu-button">遠隔入力</a></li>
