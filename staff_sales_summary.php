@@ -25,6 +25,7 @@ $selected_date = $_POST['target_date'] ?? date('Y-m-d');
 $working_casts = [];
 $formatted_date = DateTime::createFromFormat('Y-m-d', $selected_date);
 $target_ymd = $formatted_date ? $formatted_date->format('Ymd') : date('Ymd');
+$customer_map = [];
 
 if ($shop_id !== null) {
     try {
@@ -37,6 +38,25 @@ if ($shop_id !== null) {
         ");
         $stmt->execute([$target_ymd, $shop_id]);
         $working_casts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        if (!empty($working_casts)) {
+            $castIds = array_column($working_casts, 'cast_id');
+            $placeholders = implode(',', array_fill(0, count($castIds), '?'));
+            $customer_stmt = $pdo->prepare("
+                SELECT staff_id, customer_name
+                FROM receipt_tbl
+                WHERE receipt_day = ? AND staff_id IN ($placeholders)
+            ");
+            $customer_stmt->execute(array_merge([$target_ymd], $castIds));
+            while ($row = $customer_stmt->fetch(PDO::FETCH_ASSOC)) {
+                if (!isset($customer_map[$row['staff_id']])) {
+                    $customer_map[$row['staff_id']] = [];
+                }
+                if (!empty($row['customer_name'])) {
+                    $customer_map[$row['staff_id']][] = $row['customer_name'];
+                }
+            }
+        }
     } catch (PDOException $e) {
         error_log("Error fetching working casts: " . $e->getMessage());
     }
@@ -195,13 +215,19 @@ if ($shop_id !== null) {
                     <thead>
                         <tr>
                             <th>キャスト名</th>
+                            <th>担当顧客一覧</th>
                             <th>金額</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($working_casts as $cast): ?>
+                            <?php
+                                $customers = $customer_map[$cast['cast_id']] ?? [];
+                                $customer_text = !empty($customers) ? implode(', ', $customers) : '';
+                            ?>
                             <tr>
                                 <td><?= htmlspecialchars($cast['cast_name'] ?? '不明') ?></td>
+                                <td><?= htmlspecialchars($customer_text) ?></td>
                                 <td>0円</td>
                             </tr>
                         <?php endforeach; ?>
