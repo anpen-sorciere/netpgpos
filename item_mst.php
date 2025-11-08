@@ -393,7 +393,6 @@ if ($search_query !== '') {
         </section>
 
         <section class="table-section">
-            <h2>商品一覧</h2>
             <form class="search-form" method="get" action="item_mst.php">
                 <?php if (isset($_GET['utype'])): ?>
                     <input type="hidden" name="utype" value="<?= h($_GET['utype']) ?>">
@@ -404,6 +403,7 @@ if ($search_query !== '') {
                     <a href="item_mst.php<?= isset($_GET['utype']) ? '?utype=' . h($_GET['utype']) : '' ?>" class="btn btn-secondary">クリア</a>
                 <?php endif; ?>
             </form>
+            <h2>商品一覧</h2>
             <table class="result-table">
                 <thead>
                     <tr>
