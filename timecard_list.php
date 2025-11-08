@@ -259,7 +259,7 @@ try {
                                 $break_time_formatted = format_minutes_to_hours_minutes($calculated_times['break_time_minutes']);
                             ?>
                             <tr>
-                                <td><?= htmlspecialchars(get_shop_info($detail['shop_mst'])['name'] ?? '不明') ?></td>
+                                <td><?= htmlspecialchars(get_shop_info($detail['shop_id'])['name'] ?? '不明') ?></td>
                                 <td><?= htmlspecialchars(format_ymd($detail['eigyo_ymd'])) ?></td>
                                 <td><?= $in_datetime ? htmlspecialchars($in_datetime->format('Y-m-d H:i')) : '-' ?></td>
                                 <td><?= $out_datetime ? htmlspecialchars($out_datetime->format('Y-m-d H:i')) : '-' ?></td>
