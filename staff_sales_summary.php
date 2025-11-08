@@ -294,7 +294,7 @@ disconnect($pdo);
                                 $mins = $minutes % 60;
                                 $work_display = $minutes > 0 ? sprintf('%d時間%d分', $hours, $mins) : '-';
                                 $pay_amount = $cast_pay[$cast['cast_id']] ?? 0;
-                                $target_amount = $cast_targets[$cast['cast_id']] ?? 0;
+                                $target_amount = ($pay_amount > 0 && $minutes > 0) ? (int)round($pay_amount * 2 * ($minutes / 60), 0) : 0;
                                 $sales_amount = $cast_totals[$cast['cast_id']] ?? 0;
                                 $achievement = ($target_amount > 0) ? round(($sales_amount / $target_amount) * 100, 1) . '%' : '-';
                             ?>
