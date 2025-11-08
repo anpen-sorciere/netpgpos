@@ -61,6 +61,32 @@ function get_items($pdo) {
     }
 }
 
+function search_items($pdo, $keyword) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT 
+                im.item_id,
+                im.item_name,
+                im.item_yomi,
+                cm.category_name,
+                im.price,
+                im.back_price,
+                im.cost,
+                tm.tax_type_name
+            FROM item_mst AS im
+            LEFT JOIN category_mst AS cm ON im.category = cm.category_id
+            LEFT JOIN tax_mst AS tm ON im.tax_type_id = tm.tax_type_id
+            WHERE im.item_name LIKE :keyword OR im.item_yomi LIKE :keyword
+            ORDER BY im.item_id DESC
+        ");
+        $stmt->execute([':keyword' => '%' . $keyword . '%']);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Error searching items: " . $e->getMessage());
+        return [];
+    }
+}
+
 // 商品の登録、修正、削除
 if (!empty($_POST)) {
     try {
@@ -144,7 +170,15 @@ if (isset($_GET['edit_id'])) {
 // カテゴリと税区分を取得
 $categories = get_categories($pdo);
 $tax_types = get_tax_types($pdo);
+$search_query = trim($_GET['search_query'] ?? '');
 $items = get_items($pdo);
+$search_results = [];
+$show_search_modal = false;
+
+if ($search_query !== '') {
+    $search_results = search_items($pdo, $search_query);
+    $show_search_modal = true;
+}
 
 ?>
 <!DOCTYPE html>
@@ -208,6 +242,69 @@ $items = get_items($pdo);
         }
         .action-buttons .btn-delete:hover {
             background-color: #c0392b;
+        }
+        .search-form {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .search-form input[type="text"] {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .search-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            z-index: 1000;
+        }
+        .search-modal.show {
+            display: flex;
+        }
+        .search-modal-content {
+            background: #fff;
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 20px;
+            border-radius: 8px;
+            position: relative;
+        }
+        .search-modal-content h3 {
+            margin-top: 0;
+        }
+        .modal-close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #666;
+        }
+        .search-result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .search-result-table th,
+        .search-result-table td {
+            padding: 10px;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+        .search-result-table th {
+            background-color: #f1f1f1;
         }
     </style>
 </head>
@@ -297,6 +394,16 @@ $items = get_items($pdo);
 
         <section class="table-section">
             <h2>商品一覧</h2>
+            <form class="search-form" method="get" action="item_mst.php">
+                <?php if (isset($_GET['utype'])): ?>
+                    <input type="hidden" name="utype" value="<?= h($_GET['utype']) ?>">
+                <?php endif; ?>
+                <input type="text" name="search_query" placeholder="商品名またはヨミガナで検索" value="<?= h($search_query) ?>">
+                <button type="submit" class="btn btn-primary">検索</button>
+                <?php if ($search_query !== ''): ?>
+                    <a href="item_mst.php<?= isset($_GET['utype']) ? '?utype=' . h($_GET['utype']) : '' ?>" class="btn btn-secondary">クリア</a>
+                <?php endif; ?>
+            </form>
             <table class="result-table">
                 <thead>
                     <tr>
@@ -348,5 +455,80 @@ $items = get_items($pdo);
             </table>
         </section>
     </div>
+
+    <div id="searchModal" class="search-modal<?= $show_search_modal ? ' show' : '' ?>" data-open="<?= $show_search_modal ? '1' : '0' ?>">
+        <div class="search-modal-content">
+            <span class="modal-close-btn" data-close="modal">&times;</span>
+            <h3>検索結果</h3>
+            <?php if ($search_query === ''): ?>
+                <p>検索キーワードを入力してください。</p>
+            <?php else: ?>
+                <p>「<?= h($search_query) ?>」の検索結果: <?= count($search_results) ?>件</p>
+                <?php if (!empty($search_results)): ?>
+                    <table class="search-result-table">
+                        <thead>
+                            <tr>
+                                <th>商品ID</th>
+                                <th>商品名</th>
+                                <th>ヨミガナ</th>
+                                <th>カテゴリー</th>
+                                <th>価格</th>
+                                <th>バック価格</th>
+                                <th>仕入価格</th>
+                                <th>税区分</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($search_results as $result): ?>
+                                <tr>
+                                    <td><?= h($result['item_id']) ?></td>
+                                    <td><?= h($result['item_name']) ?></td>
+                                    <td><?= h($result['item_yomi']) ?></td>
+                                    <td><?= h($result['category_name']) ?></td>
+                                    <td><?= number_format((int)$result['price']) ?></td>
+                                    <td><?= number_format((int)$result['back_price']) ?></td>
+                                    <td><?= number_format((int)$result['cost']) ?></td>
+                                    <td><?= h($result['tax_type_name']) ?></td>
+                                    <td>
+                                        <a href="item_mst.php?edit_id=<?= h($result['item_id']) ?><?= isset($_GET['utype']) ? '&utype=' . h($_GET['utype']) : '' ?>" class="btn btn-edit" style="padding:6px 10px;">修正</a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php else: ?>
+                    <p>該当する商品が見つかりませんでした。</p>
+                <?php endif; ?>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('searchModal');
+            if (!modal) {
+                return;
+            }
+            const closeButtons = document.querySelectorAll('[data-close="modal"]');
+
+            const hideModal = () => {
+                modal.classList.remove('show');
+                const url = new URL(window.location.href);
+                url.searchParams.delete('search_query');
+                window.history.replaceState({}, '', url.toString());
+            };
+
+            closeButtons.forEach(btn => {
+                btn.addEventListener('click', hideModal);
+            });
+
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    hideModal();
+                }
+            });
+        });
+    </script>
 </body>
 </html>
