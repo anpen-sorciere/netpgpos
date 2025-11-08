@@ -5,6 +5,7 @@ error_reporting(E_ALL);
 require_once(__DIR__ . '/../common/config.php');
 require_once(__DIR__ . '/../common/dbconnect.php');
 require_once(__DIR__ . '/../common/functions.php');
+$pdo = connect();
 session_start();
 
 $utype = 0;
@@ -17,8 +18,29 @@ if (isset($_GET['utype'])) {
 
 $shop_info = get_shop_info($utype);
 $shop_name = $shop_info['name'] ?? '不明な店舗';
+$shop_id = $shop_info['id'] ?? null;
 
 $selected_date = $_POST['target_date'] ?? date('Y-m-d');
+
+$working_casts = [];
+$formatted_date = DateTime::createFromFormat('Y-m-d', $selected_date);
+$target_ymd = $formatted_date ? $formatted_date->format('Ymd') : date('Ymd');
+
+if ($shop_id !== null) {
+    try {
+        $stmt = $pdo->prepare("
+            SELECT DISTINCT tc.cast_id, cm.cast_name
+            FROM timecard_tbl tc
+            LEFT JOIN cast_mst cm ON tc.cast_id = cm.cast_id
+            WHERE tc.eigyo_ymd = ? AND tc.shop_id = ?
+            ORDER BY cm.cast_yomi ASC
+        ");
+        $stmt->execute([$target_ymd, $shop_id]);
+        $working_casts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Error fetching working casts: " . $e->getMessage());
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="ja">
@@ -121,6 +143,32 @@ $selected_date = $_POST['target_date'] ?? date('Y-m-d');
             margin-bottom: 2rem;
             color: #2c3e50;
         }
+        .table-container {
+            margin-top: 2rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95rem;
+        }
+        th, td {
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #3498db;
+            color: #fff;
+            font-weight: bold;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #f8f9fb;
+        }
+        .empty-state {
+            text-align: center;
+            color: #777;
+            padding: 2rem 0;
+        }
     </style>
 </head>
 <body>
@@ -140,6 +188,31 @@ $selected_date = $_POST['target_date'] ?? date('Y-m-d');
                 <button type="submit" class="btn btn-primary">表示</button>
             </div>
         </form>
+
+        <div class="table-container">
+            <?php if (!empty($working_casts)): ?>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>キャスト名</th>
+                            <th>金額</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($working_casts as $cast): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($cast['cast_name'] ?? '不明') ?></td>
+                                <td>0円</td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php else: ?>
+                <div class="empty-state">
+                    対象日に出勤したキャストは見つかりませんでした。
+                </div>
+            <?php endif; ?>
+        </div>
 
         <div class="actions">
             <a href="index.php?utype=<?= htmlspecialchars($utype) ?>" class="btn btn-secondary">メニューへ戻る</a>
