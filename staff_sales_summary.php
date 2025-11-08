@@ -245,6 +245,13 @@ disconnect($pdo);
         tbody tr:nth-child(even) {
             background-color: #f8f9fb;
         }
+        .below-target {
+            background-color: #e74c3c !important;
+            color: #fff;
+        }
+        .below-target td {
+            color: #fff;
+        }
         .empty-state {
             text-align: center;
             color: #777;
@@ -296,9 +303,11 @@ disconnect($pdo);
                                 $pay_amount = $cast_pay[$cast['cast_id']] ?? 0;
                                 $target_amount = ($pay_amount > 0 && $minutes > 0) ? (int)round($pay_amount * 2 * ($minutes / 60), 0) : 0;
                                 $sales_amount = $cast_totals[$cast['cast_id']] ?? 0;
-                                $achievement = ($target_amount > 0) ? round(($sales_amount / $target_amount) * 100, 1) . '%' : '-';
+                                $achievement_value = ($target_amount > 0) ? round(($sales_amount / $target_amount) * 100, 1) : null;
+                                $achievement = ($achievement_value !== null) ? $achievement_value . '%' : '-';
+                                $row_class = ($achievement_value !== null && $achievement_value < 100) ? 'below-target' : '';
                             ?>
-                            <tr>
+                            <tr class="<?= $row_class ?>">
                                 <td><?= htmlspecialchars($cast['cast_name'] ?? '不明') ?></td>
                                 <td><?= $pay_amount > 0 ? number_format($pay_amount) . '円' : '-' ?></td>
                                 <td><?= htmlspecialchars($work_display) ?></td>
