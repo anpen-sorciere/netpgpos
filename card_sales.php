@@ -156,7 +156,10 @@ $post = $_SESSION['join'] ?? [];
                     <tr>
                         <th><label for="data_day">日付</label></th>
                         <td>
-                            <input id="data_day" type="date" name="data_day" value="<?= htmlspecialchars($post['data_day'] ?? '') ?>" required>
+                            <?php
+                                $defaultDate = $post['data_day'] ?? date('Y-m-d');
+                            ?>
+                            <input id="data_day" type="date" name="data_day" value="<?= htmlspecialchars($defaultDate) ?>" required>
                         </td>
                     </tr>
                 </tbody>
