@@ -90,7 +90,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $total_jpy_amount += $jpy_amount;
                         }
                         
-                        $message = "スーパーチャットを{$registered_count}人に分割して登録しました。（日本円換算合計: " . number_format($total_jpy_amount) . "円）";
+                        $splitText = ($registered_count > 1) ? '分割して' : '';
+                        $message = "スーパーチャットを{$registered_count}人に{$splitText}登録しました。（日本円換算合計: " . number_format($total_jpy_amount) . "円）";
                     } catch (PDOException $e) {
                         $error = "登録に失敗しました: " . $e->getMessage();
                     }
