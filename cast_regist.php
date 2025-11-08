@@ -90,6 +90,25 @@ $db = null;
 
 // フォームの入力値を保持
 $post = $_SESSION['join'] ?? [];
+$search_query = trim($_GET['search_query'] ?? '');
+$search_results = [];
+$show_search_modal = false;
+
+if ($search_query !== '') {
+    $db = connect();
+    $search_stmt = $db->prepare("
+        SELECT * FROM cast_mst
+        WHERE cast_name LIKE :keyword
+           OR cast_yomi LIKE :keyword
+           OR real_name LIKE :keyword
+           OR yomigana LIKE :keyword
+        ORDER BY cast_type, cast_yomi
+    ");
+    $search_stmt->execute([':keyword' => '%' . $search_query . '%']);
+    $search_results = $search_stmt->fetchAll(PDO::FETCH_ASSOC);
+    $db = null;
+    $show_search_modal = true;
+}
 ?>
 <!DOCTYPE html>
 <html lang="ja">
@@ -224,11 +243,84 @@ $post = $_SESSION['join'] ?? [];
             font-size: 0.9em;
             margin-left: 5px;
         }
+        .search-form {
+            margin: 0 0 20px 0;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .search-form input[type="text"] {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .search-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            z-index: 1000;
+        }
+        .search-modal.show {
+            display: flex;
+        }
+        .search-modal-content {
+            background: #fff;
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 20px;
+            border-radius: 8px;
+            position: relative;
+        }
+        .search-modal-content h3 {
+            margin-top: 0;
+        }
+        .modal-close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #666;
+        }
+        .search-result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .search-result-table th,
+        .search-result-table td {
+            padding: 10px;
+            border: 1px solid #ccc;
+            text-align: center;
+        }
+        .search-result-table th {
+            background-color: #f1f1f1;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>キャスト登録</h1>
+        <form class="search-form" method="get" action="cast_regist.php">
+            <?php if (isset($_GET['utype'])): ?>
+                <input type="hidden" name="utype" value="<?= htmlspecialchars($_GET['utype']) ?>">
+            <?php endif; ?>
+            <input type="text" name="search_query" placeholder="キャスト名・よみがな・本名で検索" value="<?= htmlspecialchars($search_query, ENT_QUOTES) ?>">
+            <button type="submit" class="btn btn-primary" style="border-radius:6px;">検索</button>
+            <?php if ($search_query !== ''): ?>
+                <a href="cast_regist.php<?= isset($_GET['utype']) ? '?utype=' . htmlspecialchars($_GET['utype']) : '' ?>" class="btn btn-secondary" style="border-radius:6px;">クリア</a>
+            <?php endif; ?>
+        </form>
         <form action="" method="POST">
             <!-- 編集時にはcast_idを送信 -->
             <input type="hidden" name="cast_id" value="<?= htmlspecialchars($post['cast_id'] ?? '') ?>">
@@ -242,7 +334,7 @@ $post = $_SESSION['join'] ?? [];
                                 <p class="error">キャスト名を入力してください</p>
                             <?php endif; ?>
                         </td>
-                        <th><label for="cast_yomi">キャスト名の読み仮名</label></th>
+                        <th><label for="cast_yomi">キャスト名のよみがな</label></th>
                         <td><input id="cast_yomi" type="text" name="cast_yomi" value="<?= htmlspecialchars($post['cast_yomi'] ?? '') ?>" autocomplete="off"></td>
                     </tr>
                     <tr>
@@ -313,7 +405,7 @@ $post = $_SESSION['join'] ?? [];
         <table class="info-table">
             <thead>
                 <tr>
-                    <th>ID</th><th>キャスト名</th><th>キャスト読み</th><th>本名</th><th>よみがな</th><th>生年月日</th><th>住所</th><th>TEL1</th><th>TEL2</th><th>最寄駅</th><th>交通費</th><th>キャストタイプ</th><th>入店日</th><th>退店日</th><th>在籍状況</th><th>操作</th>
+                    <th>ID</th><th>キャスト名</th><th>キャストよみ</th><th>本名</th><th>よみがな</th><th>生年月日</th><th>住所</th><th>TEL1</th><th>TEL2</th><th>最寄駅</th><th>交通費</th><th>キャストタイプ</th><th>入店日</th><th>退店日</th><th>在籍状況</th><th>操作</th>
                 </tr>
             </thead>
             <tbody>
@@ -340,5 +432,78 @@ $post = $_SESSION['join'] ?? [];
             </tbody>
         </table>
     </div>
+
+    <div id="searchModal" class="search-modal<?= $show_search_modal ? ' show' : '' ?>">
+        <div class="search-modal-content">
+            <span class="modal-close-btn" data-close="modal">&times;</span>
+            <h3>検索結果</h3>
+            <?php if ($search_query === ''): ?>
+                <p>検索キーワードを入力してください。</p>
+            <?php else: ?>
+                <p>「<?= htmlspecialchars($search_query, ENT_QUOTES) ?>」の検索結果: <?= count($search_results) ?>件</p>
+                <?php if (!empty($search_results)): ?>
+                    <table class="search-result-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>キャスト名</th>
+                                <th>キャストよみ</th>
+                                <th>本名</th>
+                                <th>よみがな</th>
+                                <th>キャストタイプ</th>
+                                <th>在籍状況</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($search_results as $result): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($result['cast_id']) ?></td>
+                                    <td><?= htmlspecialchars($result['cast_name']) ?></td>
+                                    <td><?= htmlspecialchars($result['cast_yomi']) ?></td>
+                                    <td><?= htmlspecialchars($result['real_name']) ?></td>
+                                    <td><?= htmlspecialchars($result['yomigana']) ?></td>
+                                    <td><?= htmlspecialchars($cast_types[$result['cast_type']] ?? '') ?></td>
+                                    <td><?= ($result['drop_flg'] == 1) ? '退職済' : '在籍' ?></td>
+                                    <td>
+                                        <a href="cast_regist.php?cast_id=<?= htmlspecialchars($result['cast_id']) ?><?= isset($_GET['utype']) ? '&utype=' . htmlspecialchars($_GET['utype']) : '' ?>" class="btn btn-edit" style="padding:6px 10px;border-radius:4px;background-color:#27ae60;color:#fff;">編集</a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php else: ?>
+                    <p>該当するキャストが見つかりませんでした。</p>
+                <?php endif; ?>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const modal = document.getElementById('searchModal');
+            if (!modal) {
+                return;
+            }
+            const closeButtons = document.querySelectorAll('[data-close="modal"]');
+
+            const hideModal = () => {
+                modal.classList.remove('show');
+                const url = new URL(window.location.href);
+                url.searchParams.delete('search_query');
+                window.history.replaceState({}, '', url.toString());
+            };
+
+            closeButtons.forEach(btn => {
+                btn.addEventListener('click', hideModal);
+            });
+
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    hideModal();
+                }
+            });
+        });
+    </script>
 </body>
 </html>
