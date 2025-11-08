@@ -35,6 +35,7 @@ if (!empty($_POST['check'])) {
     $issuer_id = $_SESSION['join']['issuer_id'] ?? null;
     $p_type = $_SESSION['join']['p_type'] ?? null;
     $adjust_price = $_SESSION['join']['adjust_price'] ?? 0;
+    $is_new_customer = isset($_SESSION['join']['is_new_customer']) ? intval($_SESSION['join']['is_new_customer']) : 0;
     
     // sheet_noを整数型に変換（空文字列やnullの場合は0）
     $sheet_no = $_SESSION['join']['sheet_no'] ?? 0;
@@ -54,7 +55,7 @@ if (!empty($_POST['check'])) {
     $out_date = '';
     $out_time = '';
 
-    $stmt_base = $pdo->prepare("INSERT INTO receipt_tbl (receipt_id, shop_id, sheet_no, receipt_day, in_date, in_time, out_date, out_time, customer_name, issuer_id, rep_id, payment_type, adjust_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt_base = $pdo->prepare("INSERT INTO receipt_tbl (receipt_id, shop_id, sheet_no, receipt_day, in_date, in_time, out_date, out_time, customer_name, issuer_id, rep_id, payment_type, adjust_price, is_new_customer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     $stmt_base->execute([
         $receipt_id,
         $shop_mst,
@@ -68,7 +69,8 @@ if (!empty($_POST['check'])) {
         $issuer_id,
         0, // rep_idは現状使っていないので0
         $p_type,
-        $adjust_price
+        $adjust_price,
+        $is_new_customer
     ]);
 
     // 伝票明細登録 (11行登録)
@@ -123,6 +125,7 @@ $customer_name = $_SESSION['join']['customer_name'] ?? '';
 $issuer_id = $_SESSION['join']['issuer_id'] ?? null;
 $p_type = $_SESSION['join']['p_type'] ?? null;
 $adjust_price = intval($_SESSION['join']['adjust_price'] ?? 0); 
+$is_new_customer = isset($_SESSION['join']['is_new_customer']) ? intval($_SESSION['join']['is_new_customer']) : 0;
 
 $p_data = payment_data_get($pdo, $p_type);
 $payment_name = $p_data['payment_name'] ?? '未指定';
@@ -249,6 +252,10 @@ $final_total = $total_with_tax + $adjust_price;
                     <td><span class="check-info"><?= htmlspecialchars($payment_name ?? '', ENT_QUOTES); ?></span></td>
                     <th>調整額</th>
                     <td><span class="check-info"><?= number_format($adjust_price); ?></span></td>
+                </tr>
+                <tr>
+                    <th>新規顧客</th>
+                    <td colspan="3"><span class="check-info"><?= $is_new_customer === 1 ? 'はい' : 'いいえ'; ?></span></td>
                 </tr>
             </tbody>
         </table>

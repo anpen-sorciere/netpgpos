@@ -45,6 +45,7 @@ try {
 // POSTデータがあり、POSTデータにis_backがない場合のみ実行
 // (GETで渡されたis_backは無視される)
 if(!empty($_POST) && !isset($_POST['is_back'])){
+    $_POST['is_new_customer'] = isset($_POST['is_new_customer']) ? 1 : 0;
     $_SESSION['join'] = $_POST;
     $errors = [];
 
@@ -292,6 +293,15 @@ try {
                                     </option>
                                 <?php endforeach; ?>
                             </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>新規顧客</th>
+                        <td colspan="3">
+                            <label>
+                                <input type="checkbox" name="is_new_customer" value="1" <?= (!empty($_SESSION['join']['is_new_customer'])) ? 'checked' : ''; ?>>
+                                新規顧客の場合はチェックしてください
+                            </label>
                         </td>
                     </tr>
                     <tr>
