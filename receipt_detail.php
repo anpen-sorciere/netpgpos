@@ -88,6 +88,7 @@ try {
             $new_adjust_price = isset($_POST['adjust_price']) && $_POST['adjust_price'] !== '' ? (int)$_POST['adjust_price'] : 0;
             $new_customer_name = $_POST['customer_name'];
             $new_is_new_customer = isset($_POST['is_new_customer']) ? 1 : 0;
+            $new_staff_id = isset($_POST['staff_id']) && $_POST['staff_id'] !== '' ? (int)$_POST['staff_id'] : 0;
             
             // YYYY-MM-DD形式からYYYYMMDD形式に変換
             $new_in_date = str_replace('-', '', $new_in_date_raw);
@@ -96,8 +97,8 @@ try {
             $new_out_time = str_replace(':', '', $new_out_time_raw);
             $new_receipt_day = str_replace('-', '', $new_receipt_day_raw);
 
-            $stmt = $pdo->prepare("UPDATE receipt_tbl SET customer_name = ?, sheet_no = ?, in_date = ?, in_time = ?, out_date = ?, out_time = ?, receipt_day = ?, issuer_id = ?, payment_type = ?, adjust_price = ?, is_new_customer = ? WHERE receipt_id = ?");
-            $stmt->execute([$new_customer_name, $new_sheet_no, $new_in_date, $new_in_time, $new_out_date, $new_out_time, $new_receipt_day, $new_issuer_id, $new_payment_type, $new_adjust_price, $new_is_new_customer, $receipt_id]);
+            $stmt = $pdo->prepare("UPDATE receipt_tbl SET customer_name = ?, sheet_no = ?, in_date = ?, in_time = ?, out_date = ?, out_time = ?, receipt_day = ?, issuer_id = ?, staff_id = ?, payment_type = ?, adjust_price = ?, is_new_customer = ? WHERE receipt_id = ?");
+            $stmt->execute([$new_customer_name, $new_sheet_no, $new_in_date, $new_in_time, $new_out_date, $new_out_time, $new_receipt_day, $new_issuer_id, $new_staff_id, $new_payment_type, $new_adjust_price, $new_is_new_customer, $receipt_id]);
 
             // 既存明細の更新または新規明細の追加
             $submitted_details = $_POST['details'];
@@ -386,6 +387,19 @@ $is_new_customer_checked = $is_new_customer_flag === 1 ? 'checked' : '';
                                 </select>
                             </td>
                         </tr>
+                    <tr>
+                        <th>担当キャスト</th>
+                        <td colspan="3">
+                            <select name="staff_id">
+                                <option value="0" <?= ($receipt['staff_id'] == 0 || $receipt['staff_id'] === null) ? 'selected' : '' ?>></option>
+                                <?php foreach ($casts as $cast): ?>
+                                    <option value="<?= htmlspecialchars($cast['cast_id']) ?>" <?= ($cast['cast_id'] == $receipt['staff_id']) ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($cast['cast_name']) ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </td>
+                    </tr>
                         <tr>
                             <th>新規顧客</th>
                             <td colspan="3">

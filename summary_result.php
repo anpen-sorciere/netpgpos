@@ -107,6 +107,7 @@ try {
                 'receipt_id' => $receipt_id,
                 'receipt_day' => $receipt['receipt_day'],
                 'issuer_id' => $receipt['issuer_id'],
+                'staff_id' => $receipt['staff_id'] ?? 0,
                 'customer_name' => $receipt['customer_name'] ?? '不明', // 顧客名を追加
                 'payment_type' => $receipt['payment_type'],
                 'adjust_price' => $receipt['adjust_price'],
@@ -314,6 +315,7 @@ function format_price($price) {
                     <tr>
                         <th>伝票番号</th>
                         <th>顧客名</th>
+                        <th>担当者</th>
                         <th>起票者</th>
                         <th>伝票日付</th>
                         <th>小計(税別)</th>
@@ -328,11 +330,13 @@ function format_price($price) {
                     <?php foreach ($invoices as $invoice): ?>
                         <?php
                             $issuer_name = $cast_list[$invoice['issuer_id']] ?? '不明';
+                            $staff_name = ($invoice['staff_id'] ?? 0) != 0 ? ($cast_list[$invoice['staff_id']] ?? '') : '';
                             $payment_name = $payment_map[$invoice['payment_type']] ?? '不明';
                         ?>
                         <tr>
                             <td><?= htmlspecialchars($invoice['receipt_id']) ?></td>
                             <td><?= htmlspecialchars($invoice['customer_name']) ?></td>
+                            <td><?= htmlspecialchars($staff_name) ?></td>
                             <td><?= htmlspecialchars($issuer_name) ?></td>
                             <td><?= htmlspecialchars(format_ymd($invoice['receipt_day'])) ?></td>
                             <td><?= format_price($invoice['subtotal_without_tax']) ?></td>
