@@ -37,22 +37,26 @@ if (!empty($_POST) && isset($_POST['submit_action']) && $_POST['submit_action'] 
     $pay = isset($_SESSION['join']['pay']) && $_SESSION['join']['pay'] !== '' ? (int)str_replace(',', '', $_SESSION['join']['pay']) : 0;
 
     try {
-        // 同じキャストIDと月が既に存在するか確認
-        $statement = $db->prepare("SELECT COUNT(*) AS cnt FROM pay_tbl WHERE cast_id = ? AND set_month = ?");
-        $statement->execute(array($cast_id, $chk_month));
-        $row = $statement->fetch(PDO::FETCH_ASSOC);
+        // 金額が0より大きい場合のみ処理を実行
+        if ($pay > 0) {
+            // 同じキャストIDと月が既に存在するか確認
+            $statement = $db->prepare("SELECT COUNT(*) AS cnt FROM pay_tbl WHERE cast_id = ? AND set_month = ?");
+            $statement->execute(array($cast_id, $chk_month));
+            $row = $statement->fetch(PDO::FETCH_ASSOC);
 
-        if ($row['cnt'] == 0) {
-            // 存在しない場合は新規挿入
-            $statement = $db->prepare("INSERT INTO pay_tbl (cast_id, set_month, pay) VALUES (?, ?, ?)");
-            $statement->execute(array($cast_id, $chk_month, $pay));
-        } else {
-            // 存在する場合は更新
-            $statement = $db->prepare("UPDATE pay_tbl SET pay = ? WHERE cast_id = ? AND set_month = ?");
-            $statement->execute(array($pay, $cast_id, $chk_month));
+            if ($row['cnt'] == 0) {
+                // 存在しない場合は新規挿入
+                $statement = $db->prepare("INSERT INTO pay_tbl (cast_id, set_month, pay) VALUES (?, ?, ?)");
+                $statement->execute(array($cast_id, $chk_month, $pay));
+            } else {
+                // 存在する場合は更新
+                $statement = $db->prepare("UPDATE pay_tbl SET pay = ? WHERE cast_id = ? AND set_month = ?");
+                $statement->execute(array($pay, $cast_id, $chk_month));
+            }
         }
         
-        // 処理成功後にリダイレクト
+        // 処理成功後にセッションのpayをクリアしてリダイレクト
+        unset($_SESSION['join']['pay']);
         header('Location: paytbl_result.php?utype=' . htmlspecialchars($utype));
         exit();
     } catch (PDOException $e) {
@@ -62,6 +66,11 @@ if (!empty($_POST) && isset($_POST['submit_action']) && $_POST['submit_action'] 
     }
 } else {
     // POSTリクエストがない場合（初回アクセスまたはGETリクエストの場合）
+    // キャストや年月が変更された場合はセッションのpayをクリア
+    if (isset($_GET['cast_id']) || isset($_GET['in_ymd'])) {
+        unset($_SESSION['join']['pay']);
+    }
+    
     // フォームの値がセットされていれば、その値で時給データを取得
     if (isset($_GET['cast_id']) && isset($_GET['in_ymd'])) {
         $selected_cast_id = $_GET['cast_id'];
@@ -78,6 +87,9 @@ if (!empty($_POST) && isset($_POST['submit_action']) && $_POST['submit_action'] 
         $pay_data = $statement->fetch(PDO::FETCH_ASSOC);
         if ($pay_data) {
             $current_pay = $pay_data['pay'];
+        } else {
+            // データベースにデータがない場合は0に設定（セッションの値は使用しない）
+            $current_pay = 0;
         }
     }
 }
