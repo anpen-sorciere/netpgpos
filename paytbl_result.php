@@ -13,6 +13,7 @@ session_start();
 $cast_id = $_SESSION['join']['cast_id'] ?? null;
 $in_ymd = $_SESSION['join']['in_ymd'] ?? null;
 $pay = $_SESSION['join']['pay'] ?? null;
+$pay = ($pay !== null && $pay !== '') ? (int)$pay : 0; // nullの場合は0に設定
 $utype = $_SESSION['utype'] ?? null;
 
 // キャスト名を取得するための処理
