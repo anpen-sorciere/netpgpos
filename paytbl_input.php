@@ -53,10 +53,12 @@ if (!empty($_POST) && isset($_POST['submit_action']) && $_POST['submit_action'] 
                 $statement = $db->prepare("UPDATE pay_tbl SET pay = ? WHERE cast_id = ? AND set_month = ?");
                 $statement->execute(array($pay, $cast_id, $chk_month));
             }
+            
+            // 登録成功後、セッションにpayの値を保存（paytbl_result.phpで表示するため）
+            $_SESSION['join']['pay'] = $pay;
         }
         
-        // 処理成功後にセッションのpayをクリアしてリダイレクト
-        unset($_SESSION['join']['pay']);
+        // 処理成功後にリダイレクト
         header('Location: paytbl_result.php?utype=' . htmlspecialchars($utype));
         exit();
     } catch (PDOException $e) {
