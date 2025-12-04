@@ -21,8 +21,8 @@ if (!$utype) {
 // データベース接続
 $pdo = connect();
 
-// 為替レートサービス初期化
-$exchange_service = new ExchangeRateService();
+// 為替レートサービス初期化（データベース接続を渡す）
+$exchange_service = new ExchangeRateService($pdo);
 
 // 店舗名取得
 $shop_info = get_shop_info($utype);

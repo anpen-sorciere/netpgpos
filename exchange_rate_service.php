@@ -3,8 +3,10 @@
 class ExchangeRateService {
     private $api_key = null;
     private $base_url = 'https://api.exchangerate-api.com/v4/historical/';
+    private $pdo = null;
     
-    public function __construct($api_key = null) {
+    public function __construct($pdo = null, $api_key = null) {
+        $this->pdo = $pdo;
         $this->api_key = $api_key;
     }
     
@@ -25,8 +27,62 @@ class ExchangeRateService {
             // 日付をフォーマット
             $formatted_date = date('Y-m-d', strtotime($date));
             
+            // データベースから取得を試行
+            if ($this->pdo) {
+                $rate = $this->getRateFromDB($formatted_date, $from_currency, $to_currency);
+                if ($rate !== null) {
+                    return $rate;
+                }
+            }
+            
+            // データベースにない場合はAPIから取得
+            $rate = $this->getRateFromAPI($formatted_date, $from_currency, $to_currency);
+            
+            // APIから取得できた場合はデータベースに保存
+            if ($rate !== null && $this->pdo) {
+                $this->saveRateToDB($formatted_date, $from_currency, $to_currency, $rate);
+            }
+            
+            // API失敗時は代替手段を試行
+            if ($rate === null) {
+                $rate = $this->getFallbackRate($date, $from_currency, $to_currency);
+            }
+            
+            return $rate;
+            
+        } catch (Exception $e) {
+            error_log("Exchange rate error: " . $e->getMessage());
+            return $this->getFallbackRate($date, $from_currency, $to_currency);
+        }
+    }
+    
+    /**
+     * データベースから為替レートを取得
+     */
+    private function getRateFromDB($date, $from_currency, $to_currency) {
+        try {
+            $stmt = $this->pdo->prepare("SELECT rate FROM exchange_rate_mst WHERE rate_date = ? AND from_currency = ? AND to_currency = ?");
+            $stmt->execute([$date, $from_currency, $to_currency]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($result) {
+                return (float)$result['rate'];
+            }
+            
+            return null;
+        } catch (PDOException $e) {
+            error_log("Database error in getRateFromDB: " . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * APIから為替レートを取得
+     */
+    private function getRateFromAPI($date, $from_currency, $to_currency) {
+        try {
             // API URL構築
-            $url = $this->base_url . $formatted_date . '?base=' . $from_currency;
+            $url = $this->base_url . $date . '?base=' . $from_currency;
             
             // cURLでAPI呼び出し
             $ch = curl_init();
@@ -47,12 +103,26 @@ class ExchangeRateService {
                 }
             }
             
-            // API失敗時は代替手段を試行
-            return $this->getFallbackRate($date, $from_currency, $to_currency);
-            
+            return null;
         } catch (Exception $e) {
-            error_log("Exchange rate API error: " . $e->getMessage());
-            return $this->getFallbackRate($date, $from_currency, $to_currency);
+            error_log("API error in getRateFromAPI: " . $e->getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * データベースに為替レートを保存
+     */
+    private function saveRateToDB($date, $from_currency, $to_currency, $rate) {
+        try {
+            $stmt = $this->pdo->prepare("
+                INSERT INTO exchange_rate_mst (rate_date, from_currency, to_currency, rate) 
+                VALUES (?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE rate = VALUES(rate), updated_at = CURRENT_TIMESTAMP
+            ");
+            $stmt->execute([$date, $from_currency, $to_currency, $rate]);
+        } catch (PDOException $e) {
+            error_log("Database error in saveRateToDB: " . $e->getMessage());
         }
     }
     
