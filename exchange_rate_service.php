@@ -89,33 +89,43 @@ class ExchangeRateService {
                 $url = $this->base_url . $this->api_key . '/latest/' . $from_currency;
             } else {
                 // 履歴レート: /v6/{API_KEY}/history/{通貨コード}/{YYYY-MM-DD}
-                $url = $this->base_url . $this->api_key . '/history/' . $from_currency . '/' . $date;
+                // 日付形式を YYYYMMDD に変換（APIの仕様に合わせる）
+                $date_formatted = str_replace('-', '', $date);
+                $url = $this->base_url . $this->api_key . '/history/' . $from_currency . '/' . $date_formatted;
             }
             
-            // cURLでAPI呼び出し
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+            // file_get_contentsでAPI呼び出し（公式ドキュメントの方法）
+            $response_json = @file_get_contents($url);
             
-            $response = curl_exec($ch);
-            $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
+            if ($response_json === false) {
+                error_log("API request failed for URL: " . $url);
+                return null;
+            }
             
-            if ($http_code === 200 && $response) {
-                $data = json_decode($response, true);
-                
-                // v6 APIのレスポンス形式を確認
-                // 通常は {'conversion_rates': {JPY: 150.0}} または {'rates': {JPY: 150.0}} の形式
+            // JSONをデコード
+            $data = json_decode($response_json, true);
+            
+            if ($data === null) {
+                error_log("Failed to decode JSON response: " . $response_json);
+                return null;
+            }
+            
+            // 公式ドキュメントに従って result が "success" か確認
+            if (isset($data['result']) && $data['result'] === 'success') {
+                // conversion_rates からレートを取得
                 if (isset($data['conversion_rates'][$to_currency])) {
                     return (float)$data['conversion_rates'][$to_currency];
-                } elseif (isset($data['rates'][$to_currency])) {
-                    return (float)$data['rates'][$to_currency];
+                } else {
+                    error_log("Currency {$to_currency} not found in conversion_rates");
+                    return null;
                 }
+            } else {
+                // エラーレスポンスの場合
+                $error_msg = isset($data['error-type']) ? $data['error-type'] : 'Unknown error';
+                error_log("API returned error: " . $error_msg);
+                return null;
             }
             
-            return null;
         } catch (Exception $e) {
             error_log("API error in getRateFromAPI: " . $e->getMessage());
             return null;
