@@ -592,6 +592,21 @@ if (isset($_POST['received_date'])) {
             <?php if (empty($superchats)): ?>
                 <p>該当月のスーパーチャットはありません。</p>
             <?php else: ?>
+                <?php
+                // 合計を計算
+                $total_jpy = 0;
+                $total_payment = 0;
+                foreach ($superchats as $sc) {
+                    if ($sc['jpy_amount'] !== null) {
+                        $total_jpy += $sc['jpy_amount'];
+                        $total_payment += floor($sc['jpy_amount'] * 0.6); // 60%で小数点以下切り捨て
+                    }
+                }
+                ?>
+                <div style="margin-bottom: 15px; padding: 15px; background: #f8f9fa; border-radius: 4px; font-size: 1.1em; font-weight: bold;">
+                    <span style="margin-right: 30px;">総日本円換算額: <?= number_format($total_jpy, 0) ?>円</span>
+                    <span>総支給額: <?= number_format($total_payment, 0) ?>円</span>
+                </div>
                 <table class="superchat-table">
                     <thead>
                         <tr>
@@ -601,6 +616,7 @@ if (isset($_POST['received_date'])) {
                             <th>金額</th>
                             <th>通貨</th>
                             <th>日本円換算</th>
+                            <th>支給金額</th>
                             <th>為替レート</th>
                             <th>支給済み</th>
                             <th>操作</th>
@@ -619,6 +635,13 @@ if (isset($_POST['received_date'])) {
                                         <?= number_format($sc['jpy_amount'], 0) ?>円
                                     <?php else: ?>
                                         <span style="color: #999;">未換算</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="amount-cell">
+                                    <?php if ($sc['jpy_amount'] !== null): ?>
+                                        <?= number_format(floor($sc['jpy_amount'] * 0.6), 0) ?>円
+                                    <?php else: ?>
+                                        <span style="color: #999;">-</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
