@@ -1,13 +1,13 @@
 <?php
 // 為替レート取得クラス
 class ExchangeRateService {
-    private $api_key = null;
-    private $base_url = 'https://api.exchangerate-api.com/v4/historical/';
+    private $api_key = 'b571d0104ba490fcd9599370'; // デフォルトAPIキー
+    private $base_url = 'https://v6.exchangerate-api.com/v6/';
     private $pdo = null;
     
     public function __construct($pdo = null, $api_key = null) {
         $this->pdo = $pdo;
-        $this->api_key = $api_key;
+        $this->api_key = $api_key ?? $this->api_key;
     }
     
     /**
@@ -81,8 +81,16 @@ class ExchangeRateService {
      */
     private function getRateFromAPI($date, $from_currency, $to_currency) {
         try {
-            // API URL構築
-            $url = $this->base_url . $date . '?base=' . $from_currency;
+            // 今日の日付かどうかでエンドポイントを変更
+            $today = date('Y-m-d');
+            
+            if ($date === $today) {
+                // 最新レート: /v6/{API_KEY}/latest/{通貨コード}
+                $url = $this->base_url . $this->api_key . '/latest/' . $from_currency;
+            } else {
+                // 履歴レート: /v6/{API_KEY}/history/{通貨コード}/{YYYY-MM-DD}
+                $url = $this->base_url . $this->api_key . '/history/' . $from_currency . '/' . $date;
+            }
             
             // cURLでAPI呼び出し
             $ch = curl_init();
@@ -98,7 +106,11 @@ class ExchangeRateService {
             if ($http_code === 200 && $response) {
                 $data = json_decode($response, true);
                 
-                if (isset($data['rates'][$to_currency])) {
+                // v6 APIのレスポンス形式を確認
+                // 通常は {'conversion_rates': {JPY: 150.0}} または {'rates': {JPY: 150.0}} の形式
+                if (isset($data['conversion_rates'][$to_currency])) {
+                    return (float)$data['conversion_rates'][$to_currency];
+                } elseif (isset($data['rates'][$to_currency])) {
                     return (float)$data['rates'][$to_currency];
                 }
             }
