@@ -49,7 +49,10 @@ $currencies = [
 ];
 
 // 処理
-$message = '';
+$message = $_SESSION['superchat_message'] ?? '';
+if (isset($_SESSION['superchat_message'])) {
+    unset($_SESSION['superchat_message']);
+}
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -91,7 +94,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                         
                         $splitText = ($registered_count > 1) ? '分割して' : '';
-                        $message = "スーパーチャットを{$registered_count}人に{$splitText}登録しました。（日本円換算合計: " . number_format($total_jpy_amount) . "円）";
+                        $success_message = "スーパーチャットを{$registered_count}人に{$splitText}登録しました。（日本円換算合計: " . number_format($total_jpy_amount) . "円）";
+                        
+                        // 登録成功後、受領日の年月でリダイレクト
+                        if ($received_date) {
+                            $date_parts = explode('-', $received_date);
+                            $redirect_year = $date_parts[0] ?? date('Y');
+                            $redirect_month = $date_parts[1] ?? date('m');
+                            $_SESSION['superchat_message'] = $success_message;
+                            header('Location: superchat.php?utype=' . htmlspecialchars($utype) . '&year=' . $redirect_year . '&month=' . $redirect_month);
+                            exit();
+                        }
                     } catch (PDOException $e) {
                         $error = "登録に失敗しました: " . $e->getMessage();
                     }
@@ -123,7 +136,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         
                         $stmt = $pdo->prepare("UPDATE superchat_tbl SET cast_id = ?, donor_name = ?, amount = ?, currency = ?, received_date = ?, jpy_amount = ?, exchange_rate = ? WHERE id = ?");
                         $stmt->execute([$cast_id, $donor_name, $amount, $currency, $received_date, $jpy_amount, $exchange_rate, $id]);
-                        $message = "スーパーチャットを更新しました。（日本円換算: " . number_format($jpy_amount) . "円）";
+                        $success_message = "スーパーチャットを更新しました。（日本円換算: " . number_format($jpy_amount) . "円）";
+                        
+                        // 更新成功後、受領日の年月でリダイレクト
+                        if ($received_date) {
+                            $date_parts = explode('-', $received_date);
+                            $redirect_year = $date_parts[0] ?? date('Y');
+                            $redirect_month = $date_parts[1] ?? date('m');
+                            $_SESSION['superchat_message'] = $success_message;
+                            header('Location: superchat.php?utype=' . htmlspecialchars($utype) . '&year=' . $redirect_year . '&month=' . $redirect_month);
+                            exit();
+                        }
                     } catch (PDOException $e) {
                         $error = "更新に失敗しました: " . $e->getMessage();
                     }
@@ -179,7 +202,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     try {
                         $stmt = $pdo->prepare("UPDATE superchat_tbl SET is_paid = ? WHERE id = ?");
                         $stmt->execute([$is_paid, $id]);
-                        $message = $is_paid ? "支給済みに更新しました。" : "未支給に更新しました。";
+                        $success_message = $is_paid ? "支給済みに更新しました。" : "未支給に更新しました。";
+                        
+                        // 現在表示中の年月でリダイレクト
+                        $current_year = $_GET['year'] ?? date('Y');
+                        $current_month = $_GET['month'] ?? date('m');
+                        $_SESSION['superchat_message'] = $success_message;
+                        header('Location: superchat.php?utype=' . htmlspecialchars($utype) . '&year=' . $current_year . '&month=' . $current_month);
+                        exit();
                     } catch (PDOException $e) {
                         $error = "更新に失敗しました: " . $e->getMessage();
                     }
