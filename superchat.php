@@ -169,6 +169,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $error = "為替レート更新に失敗しました: " . $e->getMessage();
                 }
                 break;
+                
+            case 'toggle_paid':
+                // 支給済みフラグのトグル
+                $id = $_POST['id'] ?? '';
+                $is_paid = isset($_POST['is_paid']) ? (int)$_POST['is_paid'] : 0;
+                
+                if ($id) {
+                    try {
+                        $stmt = $pdo->prepare("UPDATE superchat_tbl SET is_paid = ? WHERE id = ?");
+                        $stmt->execute([$is_paid, $id]);
+                        $message = $is_paid ? "支給済みに更新しました。" : "未支給に更新しました。";
+                    } catch (PDOException $e) {
+                        $error = "更新に失敗しました: " . $e->getMessage();
+                    }
+                }
+                break;
         }
     }
 }
@@ -539,6 +555,7 @@ if (isset($_POST['received_date'])) {
                             <th>通貨</th>
                             <th>日本円換算</th>
                             <th>為替レート</th>
+                            <th>支給済み</th>
                             <th>操作</th>
                         </tr>
                     </thead>
@@ -565,6 +582,16 @@ if (isset($_POST['received_date'])) {
                                     <?php else: ?>
                                         <span style="color: #999;">-</span>
                                     <?php endif; ?>
+                                </td>
+                                <td style="text-align: center;">
+                                    <form method="POST" style="display: inline;" onsubmit="return confirm('<?= ($sc['is_paid'] ? '未支給' : '支給済み') ?>に変更しますか？')">
+                                        <input type="hidden" name="action" value="toggle_paid">
+                                        <input type="hidden" name="id" value="<?= htmlspecialchars($sc['id']) ?>">
+                                        <input type="hidden" name="is_paid" value="<?= $sc['is_paid'] ? 0 : 1 ?>">
+                                        <button type="submit" class="btn <?= $sc['is_paid'] ? 'btn-success' : 'btn-warning' ?>" style="padding: 5px 10px; font-size: 0.9em;">
+                                            <?= $sc['is_paid'] ? '✓ 支給済み' : '未支給' ?>
+                                        </button>
+                                    </form>
                                 </td>
                                 <td class="actions">
                                     <a href="superchat.php?utype=<?= htmlspecialchars($utype) ?>&year=<?= htmlspecialchars($display_year) ?>&month=<?= htmlspecialchars($display_month) ?>&edit=<?= htmlspecialchars($sc['id']) ?>" 

@@ -16,6 +16,16 @@ CREATE TABLE IF NOT EXISTS superchat_tbl (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='スーパーチャット管理テーブル';
 
 -- 既存テーブルにカラムを追加（テーブルが既に存在する場合）
+-- MySQL 8.0.19以降では IF NOT EXISTS がサポートされています
+
+-- 日本円換算金額カラムを追加（既に存在する場合はスキップ）
 ALTER TABLE superchat_tbl 
-ADD COLUMN IF NOT EXISTS jpy_amount DECIMAL(10,2) DEFAULT NULL COMMENT '日本円換算金額',
+ADD COLUMN IF NOT EXISTS jpy_amount DECIMAL(10,2) DEFAULT NULL COMMENT '日本円換算金額';
+
+-- 為替レートカラムを追加（既に存在する場合はスキップ）
+ALTER TABLE superchat_tbl 
 ADD COLUMN IF NOT EXISTS exchange_rate DECIMAL(10,4) DEFAULT NULL COMMENT '為替レート';
+
+-- 支給済みフラグカラムを追加（既に存在する場合はスキップ）
+ALTER TABLE superchat_tbl 
+ADD COLUMN IF NOT EXISTS is_paid TINYINT(1) NOT NULL DEFAULT 0 COMMENT '支給済みフラグ';
