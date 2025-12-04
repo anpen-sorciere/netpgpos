@@ -102,6 +102,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $redirect_year = $date_parts[0] ?? date('Y');
                             $redirect_month = $date_parts[1] ?? date('m');
                             $_SESSION['superchat_message'] = $success_message;
+                            $_SESSION['superchat_last_received_date'] = $received_date; // 受領日をセッションに保存
+                            $_SESSION['superchat_from_self'] = true; // この画面内からの遷移であることを記録
                             header('Location: superchat.php?utype=' . htmlspecialchars($utype) . '&year=' . $redirect_year . '&month=' . $redirect_month);
                             exit();
                         }
@@ -144,6 +146,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $redirect_year = $date_parts[0] ?? date('Y');
                             $redirect_month = $date_parts[1] ?? date('m');
                             $_SESSION['superchat_message'] = $success_message;
+                            $_SESSION['superchat_last_received_date'] = $received_date; // 受領日をセッションに保存
+                            $_SESSION['superchat_from_self'] = true; // この画面内からの遷移であることを記録
                             header('Location: superchat.php?utype=' . htmlspecialchars($utype) . '&year=' . $redirect_year . '&month=' . $redirect_month);
                             exit();
                         }
@@ -208,6 +212,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $current_year = $_GET['year'] ?? date('Y');
                         $current_month = $_GET['month'] ?? date('m');
                         $_SESSION['superchat_message'] = $success_message;
+                        $_SESSION['superchat_from_self'] = true; // この画面内からの遷移であることを記録
                         header('Location: superchat.php?utype=' . htmlspecialchars($utype) . '&year=' . $current_year . '&month=' . $current_month);
                         exit();
                     } catch (PDOException $e) {
@@ -250,6 +255,8 @@ if (isset($_GET['edit'])) {
         $stmt = $pdo->prepare("SELECT * FROM superchat_tbl WHERE id = ?");
         $stmt->execute([$edit_id]);
         $edit_data = $stmt->fetch(PDO::FETCH_ASSOC);
+        // 編集モードに入った時はセッションの受領日をクリア
+        unset($_SESSION['superchat_last_received_date']);
     } catch (PDOException $e) {
         $error = "編集データの取得に失敗しました: " . $e->getMessage();
     }
@@ -257,12 +264,22 @@ if (isset($_GET['edit'])) {
 
 // 受領日のデフォルト値を設定
 $default_date = date('Y-m-d'); // 本日
+
+// POSTリクエストがある場合（この画面内での連続入力時）
 if (isset($_POST['received_date'])) {
     // フォーム送信後は同じ日付を引き継ぐ
     $default_date = $_POST['received_date'];
 } elseif ($edit_data) {
     // 編集時は編集データの日付を使用
     $default_date = $edit_data['received_date'];
+} elseif (isset($_SESSION['superchat_last_received_date']) && isset($_SESSION['superchat_from_self'])) {
+    // セッションに保存された受領日を使用（リダイレクト後も保持）
+    // ただし、この画面内からの遷移の場合のみ
+    $default_date = $_SESSION['superchat_last_received_date'];
+} else {
+    // 別画面から戻ってきた場合はセッションの受領日をクリア
+    unset($_SESSION['superchat_last_received_date']);
+    unset($_SESSION['superchat_from_self']);
 }
 ?>
 
