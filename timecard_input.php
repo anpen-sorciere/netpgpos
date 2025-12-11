@@ -146,15 +146,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['timecard'] = $_POST;
             $_SESSION['timecard']['cast_name'] = $cast_name;
 
-            // データの存在チェック
-            $statement = $pdo->prepare("SELECT count(*) as cnt FROM timecard_tbl WHERE cast_id = ? AND shop_id = ? AND eigyo_ymd = ?");
-            $statement->execute(array(
-                intval($cast_id),
-                intval($shop_mst),
-                str_replace('-', '', $eigyo_ymd)
-            ));
-            $count = $statement->fetch(PDO::FETCH_ASSOC)['cnt'];
-
             // 日付と時刻のフォーマットを'YYYYMMDD'と'HHMM'に変換
             $eigyo_ymd_formatted = str_replace('-', '', $eigyo_ymd);
             $in_ymd_formatted = !empty($in_ymd) ? str_replace('-', '', $in_ymd) : '';
@@ -166,24 +157,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $break_end_ymd_formatted = !empty($break_end_ymd) ? str_replace('-', '', $break_end_ymd) : '';
             $break_end_time_formatted = !empty($break_end_time) ? str_replace(':', '', $break_end_time) : '';
             
-            if ($count == 0) {
-                // 新規挿入
-                $statement = $pdo->prepare("INSERT INTO timecard_tbl (cast_id, shop_id, eigyo_ymd, in_ymd, in_time, out_ymd, out_time, break_start_ymd, break_start_time, break_end_ymd, break_end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $statement->execute(array(
-                    intval($cast_id),
-                    intval($shop_mst),
-                    $eigyo_ymd_formatted,
-                    $in_ymd_formatted,
-                    $in_time_formatted,
-                    $out_ymd_formatted,
-                    $out_time_formatted,
-                    $break_start_ymd_formatted,
-                    $break_start_time_formatted,
-                    $break_end_ymd_formatted,
-                    $break_end_time_formatted
-                ));
-            } else {
-                // 更新
+            // eigyo_ymd（営業年月日）を基準に存在チェック
+            // ビジネスロジック：同じ営業日に同じキャストで同じ店舗のタイムカードは1つだけ
+            // （同じ日に複数の店舗で働くことは可能）
+            $statement = $pdo->prepare("SELECT id FROM timecard_tbl WHERE cast_id = ? AND shop_id = ? AND eigyo_ymd = ?");
+            $statement->execute(array(
+                intval($cast_id),
+                intval($shop_mst),
+                $eigyo_ymd_formatted
+            ));
+            $existing_record = $statement->fetch(PDO::FETCH_ASSOC);
+            
+            if ($existing_record) {
+                // 既存レコードがある場合：更新
+                // ユニークキー（cast_id, shop_id, in_ymd, in_time）に違反しないよう、
+                // 新しいin_ymdとin_timeの組み合わせが既に別のレコードで使用されているかチェック
+                if (!empty($in_ymd_formatted) && !empty($in_time_formatted)) {
+                    $statement = $pdo->prepare("SELECT in_ymd, in_time FROM timecard_tbl WHERE id = ?");
+                    $statement->execute(array($existing_record['id']));
+                    $old_values = $statement->fetch(PDO::FETCH_ASSOC);
+                    
+                    // 既存レコードのin_ymdとin_timeが新しい値と異なる場合
+                    if ($old_values['in_ymd'] != $in_ymd_formatted || $old_values['in_time'] != $in_time_formatted) {
+                        // 新しいin_ymdとin_timeの組み合わせが既に存在するかチェック（同じcast_id, shop_idで）
+                        $statement = $pdo->prepare("SELECT id FROM timecard_tbl WHERE cast_id = ? AND shop_id = ? AND in_ymd = ? AND in_time = ? AND id != ?");
+                        $statement->execute(array(
+                            intval($cast_id),
+                            intval($shop_mst),
+                            $in_ymd_formatted,
+                            $in_time_formatted,
+                            $existing_record['id']
+                        ));
+                        $duplicate_record = $statement->fetch(PDO::FETCH_ASSOC);
+                        
+                        if ($duplicate_record) {
+                            // ユニークキー制約に違反するため、重複レコードを削除
+                            // （eigyo_ymdで特定した既存レコードを優先する）
+                            $statement = $pdo->prepare("DELETE FROM timecard_tbl WHERE id = ?");
+                            $statement->execute(array($duplicate_record['id']));
+                        }
+                    }
+                }
+                
+                // 既存レコードを更新（cast_id, shop_id, eigyo_ymdで特定）
                 $statement = $pdo->prepare("UPDATE timecard_tbl SET in_ymd=?, in_time=?, out_ymd=?, out_time=?, break_start_ymd=?, break_start_time=?, break_end_ymd=?, break_end_time=? WHERE cast_id=? AND shop_id=? AND eigyo_ymd=?");
                 $statement->execute(array(
                     $in_ymd_formatted,
@@ -198,6 +214,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     intval($shop_mst),
                     $eigyo_ymd_formatted
                 ));
+            } else {
+                // 既存レコードがない場合：新規挿入
+                // ただし、ユニークキー（cast_id, shop_id, in_ymd, in_time）に違反する可能性があるため、
+                // 同じin_ymdとin_timeの組み合わせが既に存在する場合は、そのレコードを更新
+                if (!empty($in_ymd_formatted) && !empty($in_time_formatted)) {
+                    $statement = $pdo->prepare("SELECT id FROM timecard_tbl WHERE cast_id = ? AND shop_id = ? AND in_ymd = ? AND in_time = ?");
+                    $statement->execute(array(
+                        intval($cast_id),
+                        intval($shop_mst),
+                        $in_ymd_formatted,
+                        $in_time_formatted
+                    ));
+                    $duplicate_record = $statement->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($duplicate_record) {
+                        // ユニークキー制約に違反するため、既存レコードを更新（eigyo_ymdを更新）
+                        $statement = $pdo->prepare("UPDATE timecard_tbl SET eigyo_ymd=?, out_ymd=?, out_time=?, break_start_ymd=?, break_start_time=?, break_end_ymd=?, break_end_time=? WHERE id=?");
+                        $statement->execute(array(
+                            $eigyo_ymd_formatted,
+                            $out_ymd_formatted,
+                            $out_time_formatted,
+                            $break_start_ymd_formatted,
+                            $break_start_time_formatted,
+                            $break_end_ymd_formatted,
+                            $break_end_time_formatted,
+                            $duplicate_record['id']
+                        ));
+                    } else {
+                        // 新規挿入
+                        $statement = $pdo->prepare("INSERT INTO timecard_tbl (cast_id, shop_id, eigyo_ymd, in_ymd, in_time, out_ymd, out_time, break_start_ymd, break_start_time, break_end_ymd, break_end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                        $statement->execute(array(
+                            intval($cast_id),
+                            intval($shop_mst),
+                            $eigyo_ymd_formatted,
+                            $in_ymd_formatted,
+                            $in_time_formatted,
+                            $out_ymd_formatted,
+                            $out_time_formatted,
+                            $break_start_ymd_formatted,
+                            $break_start_time_formatted,
+                            $break_end_ymd_formatted,
+                            $break_end_time_formatted
+                        ));
+                    }
+                } else {
+                    // in_ymdまたはin_timeが空の場合は、そのまま新規挿入
+                    $statement = $pdo->prepare("INSERT INTO timecard_tbl (cast_id, shop_id, eigyo_ymd, in_ymd, in_time, out_ymd, out_time, break_start_ymd, break_start_time, break_end_ymd, break_end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $statement->execute(array(
+                        intval($cast_id),
+                        intval($shop_mst),
+                        $eigyo_ymd_formatted,
+                        $in_ymd_formatted,
+                        $in_time_formatted,
+                        $out_ymd_formatted,
+                        $out_time_formatted,
+                        $break_start_ymd_formatted,
+                        $break_start_time_formatted,
+                        $break_end_ymd_formatted,
+                        $break_end_time_formatted
+                    ));
+                }
             }
             
             disconnect($pdo);

@@ -78,21 +78,13 @@ class ExchangeRateService {
     
     /**
      * APIから為替レートを取得
+     * 無料プランでは履歴データが取得できないため、最新レートのみ取得
      */
     private function getRateFromAPI($date, $from_currency, $to_currency) {
         try {
-            // 今日の日付かどうかでエンドポイントを変更
-            $today = date('Y-m-d');
-            
-            if ($date === $today) {
-                // 最新レート: /v6/{API_KEY}/latest/{通貨コード}
-                $url = $this->base_url . $this->api_key . '/latest/' . $from_currency;
-            } else {
-                // 履歴レート: /v6/{API_KEY}/history/{通貨コード}/{YYYY-MM-DD}
-                // 日付形式を YYYYMMDD に変換（APIの仕様に合わせる）
-                $date_formatted = str_replace('-', '', $date);
-                $url = $this->base_url . $this->api_key . '/history/' . $from_currency . '/' . $date_formatted;
-            }
+            // 無料プランでは履歴データが取得できないため、常に最新レートを取得
+            // 最新レート: /v6/{API_KEY}/latest/{通貨コード}
+            $url = $this->base_url . $this->api_key . '/latest/' . $from_currency;
             
             // file_get_contentsでAPI呼び出し（公式ドキュメントの方法）
             $response_json = @file_get_contents($url);
@@ -106,7 +98,7 @@ class ExchangeRateService {
             $data = json_decode($response_json, true);
             
             if ($data === null) {
-                error_log("Failed to decode JSON response: " . $response_json);
+                error_log("Failed to decode JSON response. Response: " . substr($response_json, 0, 200));
                 return null;
             }
             
@@ -114,15 +106,23 @@ class ExchangeRateService {
             if (isset($data['result']) && $data['result'] === 'success') {
                 // conversion_rates からレートを取得
                 if (isset($data['conversion_rates'][$to_currency])) {
-                    return (float)$data['conversion_rates'][$to_currency];
+                    $rate = (float)$data['conversion_rates'][$to_currency];
+                    
+                    // 履歴データの場合は、最新レートを取得したことをログに記録
+                    $today = date('Y-m-d');
+                    if ($date !== $today) {
+                        error_log("Historical rate requested for {$date}, but using latest rate (free plan limitation). Rate: {$rate}");
+                    }
+                    
+                    return $rate;
                 } else {
-                    error_log("Currency {$to_currency} not found in conversion_rates");
+                    error_log("Currency {$to_currency} not found in conversion_rates. Available currencies: " . implode(', ', array_keys($data['conversion_rates'] ?? [])));
                     return null;
                 }
             } else {
                 // エラーレスポンスの場合
                 $error_msg = isset($data['error-type']) ? $data['error-type'] : 'Unknown error';
-                error_log("API returned error: " . $error_msg);
+                error_log("API returned error: " . $error_msg . " for URL: " . $url);
                 return null;
             }
             
