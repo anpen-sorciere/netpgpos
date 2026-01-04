@@ -14,51 +14,28 @@ echo "データ構造解析開始...\n";
 
 try {
     $manager = new BasePracticalAutoManager();
-    // 最新50件取得
-    $orders = $manager->getDataWithAutoAuth('read_orders', '/orders', ['limit' => 50]);
+    $target_order_id = '630D93D6D9511DE5';
     
-    $found = false;
+    echo "注文ID: {$target_order_id} の詳細を取得中...\n";
     
-    if (isset($orders['orders'])) {
-        foreach ($orders['orders'] as $order) {
-            $json = json_encode($order, JSON_UNESCAPED_UNICODE);
-            if (strpos($json, 'サプライズ') !== false) {
-                echo "★「サプライズ」を含む注文が見つかりました (Order ID: " . $order['unique_key'] . ")\n";
-                
-                // 商品情報のダンプ
-                if (isset($order['order_items'])) {
-                    echo "--- 商品情報構造 ---\n";
-                    print_r($order['order_items']);
-                }
-                
-                $found = true;
-                break; // 1件見つかればOK
-            }
-        }
-    }
+    // 特定の注文詳細を取得
+    $order = $manager->getDataWithAutoAuth('read_orders', '/orders/detail/' . $target_order_id, []);
     
-    if (!$found) {
-        echo "最新50件の中に「サプライズ」という文字を含む注文は見つかりませんでした。\n";
-        echo "検索範囲を広げて再試行します(100件)...\n";
+    if ($order) {
+        echo "取得成功! データ構造:\n";
+        print_r($order);
         
-        // 追加取得
-        $orders2 = $manager->getDataWithAutoAuth('read_orders', '/orders', ['limit' => 50, 'offset' => 50]);
-        if (isset($orders2['orders'])) {
-            foreach ($orders2['orders'] as $order) {
-                $json = json_encode($order, JSON_UNESCAPED_UNICODE);
-                if (strpos($json, 'サプライズ') !== false) {
-                    echo "★「サプライズ」を含む注文が見つかりました (Order ID: " . $order['unique_key'] . ")\n";
-                    echo "--- 商品情報構造 ---\n";
-                    print_r($order['order_items']);
-                    $found = true;
-                    break;
-                }
-            }
+        echo "\n--------------------------------------------------\n";
+        echo "オプション検索テスト:\n";
+        $json = json_encode($order, JSON_UNESCAPED_UNICODE);
+        if (strpos($json, 'サプライズ') !== false) {
+            echo "✔ JSON内に「サプライズ」の文字列が見つかりました。\n";
+        } else {
+            echo "❌ JSON内に「サプライズ」の文字列が見つかりませんでした。\n";
+            echo "文字コードや表記（例: Surprise）が異なる可能性があります。\n";
         }
-    }
-    
-    if (!$found) {
-        echo "合計100件検索しましたが、「サプライズ」は見つかりませんでした。\n";
+    } else {
+        echo "注文が見つかりませんでした。\n";
     }
 
 } catch (Exception $e) {
