@@ -141,7 +141,23 @@ try {
     // ページング処理
     $total_orders = count($all_orders);
     $total_pages = ceil($total_orders / $limit);
+    // 表示する注文データ（ページネーション適用後）
     $orders = array_slice($all_orders, $offset, $limit);
+
+    // ★重要: 各注文の詳細情報を取得（一覧APIには商品オプションが含まれないため）
+    // これを行わないと「サプライズ」などのオプション判定ができない
+    foreach ($orders as &$d_order) {
+        try {
+            $detail = $manager->getDataWithAutoAuth('read_orders', '/orders/detail/' . $d_order['unique_key'], []);
+            if ($detail) {
+                $d_order = $detail; // 詳細データで上書き
+            }
+        } catch (Exception $e) {
+            // 詳細取得失敗時はログに残すか無視して一覧データを使う
+            // error_log("Order Detail Fetch Error: " . $e->getMessage());
+        }
+    }
+    unset($d_order); // リファレンス解除
     
 } catch (Exception $e) {
     echo '<div class="no-orders" style="text-align: center; padding: 20px; color: #dc3545;">データ取得エラー: ' . htmlspecialchars($e->getMessage()) . '</div>';
