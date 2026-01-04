@@ -327,8 +327,15 @@ foreach ($orders as $order) {
                 if (isset($item['options']) && is_array($item['options']) && !empty($item['options'])) {
                     echo '<div class="item-options">';
                     foreach ($item['options'] as $option) {
-                        echo '<div class="option-item">';
-                        echo htmlspecialchars($option['option_name'] ?? 'N/A') . ': ' . htmlspecialchars($option['option_value'] ?? 'N/A');
+                        $opt_name = $option['option_name'] ?? 'N/A';
+                        $opt_value = $option['option_value'] ?? 'N/A';
+                        
+                        $is_surprise_opt = (strpos($opt_name, 'サプライズ') !== false);
+                        $opt_style = $is_surprise_opt ? 'style="background-color: #ffeef0; color: #d63384; font-weight: bold; border: 1px solid #f5c6cb; padding: 2px 5px; border-radius: 4px; display:inline-block;"' : '';
+                        $icon = $is_surprise_opt ? '<i class="fas fa-gift"></i> ' : '';
+                        
+                        echo '<div class="option-item" ' . $opt_style . '>';
+                        echo $icon . htmlspecialchars($opt_name) . ': ' . htmlspecialchars($opt_value);
                         echo '</div>';
                     }
                     echo '</div>';

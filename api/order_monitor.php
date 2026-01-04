@@ -2347,6 +2347,45 @@ function buildPageUrl($page_num) {
                                         // ニックネームとキャスト名を抽出
                                         var nickname = '';
                                         var castName = '';
+                                        var optionHtml = '';
+                                        var isItemSurprise = false;
+                                        
+                                        if (item.options && item.options.length > 0) {
+                                            optionHtml = '<div class="item-options">';
+                                            item.options.forEach(function(opt) {
+                                                // サプライズオプションの判定
+                                                var isSurpriseOpt = (opt.option_name && opt.option_name.indexOf('サプライズ') !== -1);
+                                                if (isSurpriseOpt) isItemSurprise = true;
+                                                
+                                                var optStyle = isSurpriseOpt ? 'style="background-color: #ffeef0; color: #d63384; font-weight: bold; border: 1px solid #f5c6cb; padding: 2px 5px; border-radius: 4px; display:inline-block;"' : '';
+                                                var icon = isSurpriseOpt ? '<i class="fas fa-gift"></i> ' : '';
+                                                
+                                                optionHtml += '<div class="option-item" ' + optStyle + '>' + icon + 
+                                                    (opt.option_name || '') + ': ' + (opt.option_value || '') + 
+                                                    '</div>';
+                                                
+                                                // ニックネームなどの抽出（既存ロジックがあれば維持、なければここで簡易実装）
+                                                if (opt.option_name && opt.option_name.indexOf('ニックネーム') !== -1) {
+                                                    nickname = opt.option_value;
+                                                }
+                                                if (opt.option_name && opt.option_name.indexOf('キャスト') !== -1) {
+                                                    castName = opt.option_value;
+                                                }
+                                            });
+                                            optionHtml += '</div>';
+                                        }
+                                        
+                                        // 行自体の強調（オプションに合わせて）
+                                        if (isItemSurprise) {
+                                            itemDiv.style.backgroundColor = '#fff0f5';
+                                        }
+                                        
+                                        itemDiv.innerHTML = 
+                                            '<div class="item-title">' + (item.title || '商品名なし') + optionHtml + '</div>' +
+                                            '<div class="item-quantity">' + (item.amount || 1) + '</div>' +
+                                            '<div class="item-nickname">' + (nickname || '-') + '</div>' +
+                                            '<div class="item-cast">' + (castName || '-') + '</div>' +
+                                            '<div class="item-status">' + (item.status || '未対応') + '</div>';
                                         
                                         // ステータス日本語化
                                         function mapItemStatus(status) {
