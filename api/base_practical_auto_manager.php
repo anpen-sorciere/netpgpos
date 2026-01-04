@@ -251,7 +251,7 @@ class BasePracticalAutoManager {
         $_SESSION[$lock_key] = time();
         
         try {
-            $url = $this->api_url . '/1/oauth/token';
+            $url = rtrim($this->api_url, '/') . '/oauth/token';
             
             $data = [
                 'grant_type' => 'refresh_token',
