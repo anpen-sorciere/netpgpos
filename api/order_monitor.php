@@ -1341,6 +1341,15 @@ function buildPageUrl($page_num) {
                     </div>
                 </div>
                 
+                <!-- サプライズ確認ボタン (API制限対策) -->
+                <div class="row mb-2">
+                    <div class="col-12 text-end">
+                        <button type="button" class="btn btn-warning" onclick="manualCheckSurprise()">
+                            <i class="fas fa-gift"></i> サプライズ状況を確認する (API通信発生)
+                        </button>
+                    </div>
+                </div>
+                
                 <div class="pagination-info">
             <div class="pagination-stats">
                 全 <?= $total_orders ?> 件中 <?= $offset + 1 ?>-<?= min($offset + $limit, $total_orders) ?> 件を表示 (<?= $page ?>/<?= $total_pages ?> ページ)
@@ -1710,8 +1719,11 @@ function checkVisibleRowsForSurprise() {
 
 // データ更新完了後にサプライズチェックを実行するようにフックが必要
 // 現在の loadOrderData 内で innerHTML = xhr.responseText している箇所の直後で呼び出す必要がある
-// 仕方ないので、定期実行で補完するか、グローバルスコープで呼び出せるようにしておく
-setInterval(checkVisibleRowsForSurprise, 2000); // 2秒ごとに新規行をチェック
+// ★API制限対策: 自動実行を停止し、手動ボタンでのみ実行するように変更
+// setInterval(checkVisibleRowsForSurprise, 2000); 
+
+// 手動実行用関数をグローバルに公開
+window.manualCheckSurprise = checkVisibleRowsForSurprise;
         
         // 自動認証機能
         function autoAuth() {
