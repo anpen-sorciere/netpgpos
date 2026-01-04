@@ -63,6 +63,48 @@ try {
         // 新しい構造: merged_orders自体が注文配列
         $all_orders = $orders_data;
     }
+
+    // ユーザー要望によるフィルター: 3ヶ月以内 かつ [未対応, 対応中, 入金待ち] のみ表示
+    $filtered_orders = [];
+    $three_months_ago = strtotime('-3 months'); // 3ヶ月前のタイムスタンプ
+    
+    // 表示対象のステータス
+    $target_statuses = [
+        'ordered',    // 未対応
+        'shipping',   // 対応中
+        'unpaid'      // 入金待ち
+    ];
+
+    foreach ($all_orders as $order) {
+        $order_time = is_numeric($order['ordered']) ? $order['ordered'] : strtotime($order['ordered']);
+        
+        // 1. 期間チェック (3ヶ月以内)
+        if ($order_time < $three_months_ago) {
+            continue;
+        }
+
+        // 2. ステータスチェック
+        $status = $order['dispatch_status'] ?? '';
+        
+        // dispatch_statusがない場合のフォールバック（cancelledなどは除外）
+        if (empty($status)) {
+            if (isset($order['cancelled'])) continue; // キャンセルは除外
+            if (isset($order['dispatched'])) continue; // 対応済は除外
+            // ここに来るのは未対応か入金待ち
+            if (isset($order['payment']) && $order['payment'] !== 'paid') {
+                $status = 'unpaid';
+            } else {
+                $status = 'ordered';
+            }
+        }
+
+        if (in_array($status, $target_statuses)) {
+            $filtered_orders[] = $order;
+        }
+    }
+    
+    // フィルタリング結果を新しい対象とする
+    $all_orders = $filtered_orders;
     
     // 注文日時で並び替え（新しいものが先頭）
     usort($all_orders, function($a, $b) {
