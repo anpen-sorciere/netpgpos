@@ -14,7 +14,7 @@ debug.log
 
 # デバッグファイル
 debug_*.php
-fix_*.php
+# fix_*.php
 test_*.php
 *_debug.php
 
