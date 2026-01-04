@@ -14,7 +14,7 @@ $base_dir = __DIR__ . '/../../';
 
 // CLI実行時の環境変数エミュレーション
 if (php_sapi_name() === 'cli' && !isset($_SERVER['HTTP_HOST'])) {
-    $_SERVER['HTTP_HOST'] = 'localhost';
+    $_SERVER['HTTP_HOST'] = 'purplelion51.sakura.ne.jp';
 }
 
 require_once __DIR__ . '/../../common/config.php';
