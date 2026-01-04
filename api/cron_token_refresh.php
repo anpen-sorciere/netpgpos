@@ -21,9 +21,12 @@ require_once __DIR__ . '/../../common/config.php';
 require_once __DIR__ . '/../../common/dbconnect.php';
 require_once __DIR__ . '/base_practical_auto_manager.php';
 
-// ログ出力関数
+// ログ出力関数 (ファイルにも記録)
 function console_log($message) {
-    echo "[" . date('Y-m-d H:i:s') . "] " . $message . "\n";
+    $log_msg = "[" . date('Y-m-d H:i:s') . "] " . $message . "\n";
+    echo $log_msg;
+    // ファイル追記（ロック付き）
+    file_put_contents(__DIR__ . '/token_refresh.log', $log_msg, FILE_APPEND | LOCK_EX);
 }
 
 console_log("BASE API トークン自動更新処理を開始します");
