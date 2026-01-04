@@ -7,11 +7,8 @@ require_once __DIR__ . '/base_practical_auto_manager.php';
 // セッション開始
 session_start();
 
-// BASE API認証チェック
-if (!isset($_SESSION['base_access_token'])) {
-    echo json_encode(['error' => 'BASE API認証が必要です。']);
-    exit;
-}
+// BASE API認証チェック (BasePracticalAutoManagerを使用するため、セッションチェックは不要)
+// if (!isset($_SESSION['base_access_token'])) { ... }
 
 // 注文IDを取得
 $order_id = $_GET['order_id'] ?? '';
