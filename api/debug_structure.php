@@ -1,6 +1,12 @@
 <?php
 // APIデータ構造デバッグ用スクリプト
 header('Content-Type: text/html; charset=utf-8');
+
+// 必要な設定とDB接続を読み込む
+require_once __DIR__ . '/../../common/config.php';
+require_once __DIR__ . '/../../common/dbconnect.php';
+require_once __DIR__ . '/../../common/functions.php';
+
 require_once __DIR__ . '/base_practical_auto_manager.php';
 
 echo '<pre>';
