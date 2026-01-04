@@ -8,6 +8,10 @@ if (php_sapi_name() === 'cli' && !isset($_SERVER['HTTP_HOST'])) {
 }
 
 require_once __DIR__ . '/../../common/config.php';
+// CLI(CRON)実行時の接続エラー回避: localhostを127.0.0.1に強制変更
+if (php_sapi_name() === 'cli') {
+    $host = '127.0.0.1';
+}
 require_once __DIR__ . '/../../common/dbconnect.php';
 
 $log_file_ok = __DIR__ . '/cron_db_test_success.log';
