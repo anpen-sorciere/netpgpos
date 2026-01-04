@@ -1676,8 +1676,21 @@ function checkVisibleRowsForSurprise() {
                         row.classList.add('surprise-row');
                         
                         // ヘッダー情報のセルを見つけてバッジを追加 (1つ目のtdの .order-info class内)
-                        var infoCell = row.querySelector('.order-header-info'); // Changed from .order-info to .order-header-info based on PHP output
+                        var infoCell = row.querySelector('.order-header-info');
                         if (infoCell) {
+                            // 要望対応: ステータスの右側（下）に日付を表示
+                            var statusDiv = infoCell.querySelector('.order-status');
+                            if (statusDiv && !infoCell.querySelector('.surprise-date-text')) {
+                                var dateDiv = document.createElement('div');
+                                dateDiv.className = 'surprise-date-text';
+                                dateDiv.style.color = '#d63384';
+                                dateDiv.style.fontWeight = 'bold';
+                                dateDiv.style.marginTop = '2px';
+                                dateDiv.innerHTML = 'サプライズ：' + surpriseDate;
+                                statusDiv.parentNode.insertBefore(dateDiv, statusDiv.nextSibling);
+                            }
+
+                            // バッジも念のため維持
                             var badge = document.createElement('div');
                             badge.className = 'surprise-badge';
                             badge.innerHTML = '<i class="fas fa-gift"></i> サプライズ設定あり (' + surpriseDate + ')';
