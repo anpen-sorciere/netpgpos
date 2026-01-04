@@ -5,24 +5,12 @@ require_once __DIR__ . '/../../common/dbconnect.php';
 require_once __DIR__ . '/../../common/functions.php';
 require_once __DIR__ . '/base_practical_auto_manager.php';
 
-// デバッグ: スクリプト開始を表示
-echo '<div style="background-color: #fff3cd; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
-echo '<strong>DEBUG:</strong> order_data_ajax.php が実行されました | ';
-echo '時刻: ' . date('H:i:s') . ' | ';
-echo 'セッションID: ' . session_id();
-echo '</div>';
 
 // 認証チェック（新しいシステム）
 try {
     $auth_status = (new BasePracticalAutoManager())->getAuthStatus();
     $orders_ok = isset($auth_status['read_orders']['authenticated']) && $auth_status['read_orders']['authenticated'];
     $items_ok = isset($auth_status['read_items']['authenticated']) && $auth_status['read_items']['authenticated'];
-    
-    // デバッグ: 認証状況を表示
-    echo '<div style="background-color: #e7f3ff; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
-    echo '<strong>認証状況:</strong> read_orders: ' . ($orders_ok ? 'OK' : 'NG') . ' | ';
-    echo 'read_items: ' . ($items_ok ? 'OK' : 'NG');
-    echo '</div>';
     
     
     // 認証が必要な場合の表示
@@ -101,11 +89,6 @@ try {
         }
     }
 
-    // デバッグ: スキャン結果を表示
-    echo '<div style="background-color: #d4edda; padding: 5px 10px; margin-bottom: 5px; font-size: 0.8em; color: #155724; border: 1px solid #c3e6cb; border-radius: 4px;">';
-    echo '<i class="fas fa-check-circle"></i> データスキャン完了: ' . $fetch_count . '件の注文を確認しました (表示対象: ' . count($all_orders) . '件)';
-    echo '</div>';
-
     // ユーザー要望によるフィルター: 3ヶ月以内 かつ [未対応, 対応中, 入金待ち] のみ表示
     $filtered_orders = [];
     $three_months_ago = strtotime('-3 months'); // 3ヶ月前のタイムスタンプ
@@ -160,28 +143,6 @@ try {
     $total_pages = ceil($total_orders / $limit);
     $orders = array_slice($all_orders, $offset, $limit);
     
-    // デバッグ: 最初の3件の注文のdispatch_statusを確認
-    if (count($orders) > 0) {
-        echo '<div style="background-color: #f0f8ff; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
-        echo '<strong>AJAX ステータスデバッグ（最初の3件）:</strong><br>';
-        for ($i = 0; $i < min(3, count($orders)); $i++) {
-            $order = $orders[$i];
-            $order_id = $order['unique_key'] ?? 'N/A';
-            $dispatch_status = $order['dispatch_status'] ?? 'N/A';
-            $ordered = $order['ordered'] ?? 'N/A';
-            echo '注文' . ($i + 1) . ': ' . $order_id . ' | dispatch_status: ' . $dispatch_status . ' | ordered: ' . $ordered . '<br>';
-        }
-        echo '</div>';
-    }
-    
-    // デバッグ: データ取得状況を確認
-    echo '<div style="background-color: #e7f3ff; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 0.8em;">';
-    echo '<strong>AJAX デバッグ:</strong> 全注文数: ' . $total_orders . ' | ';
-    echo '現在ページ: ' . $page . '/' . $total_pages . ' | ';
-    echo '表示件数: ' . count($orders) . ' | ';
-    echo 'オフセット: ' . $offset;
-    echo '</div>';
-    
 } catch (Exception $e) {
     echo '<div class="no-orders" style="text-align: center; padding: 20px; color: #dc3545;">データ取得エラー: ' . htmlspecialchars($e->getMessage()) . '</div>';
     exit;
@@ -205,6 +166,20 @@ usort($orders, function($a, $b) {
 if (empty($orders)) {
     echo '<div class="no-orders"><i class="fas fa-inbox"></i><br>注文データがありません</div>';
     exit;
+}
+
+// ページURL生成ヘルパー関数 (JSで処理するためhrefはjavascript:void(0)にしてonclickを使うなどの工夫が必要だが、
+// ここでは order_monitor.php の既存実装に合わせてリンクまたはボタンを生成)
+// ただしAJAX遷移なので、href="?page=X" ではなく onclick="loadPage(X)" 的な挙動が望ましいが、
+// order_monitor.phpのrefreshOrderDataはURLパラメータを見ていないかもしれない。
+// getCurrentPage()は window.location.search を見ている。
+// よって、ページングは href="?page=X" で画面遷移させる形式（order_monitor.phpの仕様）に従う。
+// ※画面遷移なしでやりたいが、既存が ?page=X 前提のコード。
+
+function buildPageUrl($p) {
+    $params = $_GET;
+    $params['page'] = $p;
+    return '?' . http_build_query($params);
 }
 
 // 簡潔なテーブル全体を返す
@@ -362,4 +337,35 @@ foreach ($orders as $order) {
     
     echo '</tbody>';
     echo '</table>';
+
+// ページネーション出力
+echo '<div class="pagination-info">';
+echo '<div class="pagination-stats">';
+echo '条件一致 ' . $total_orders . ' 件中 ' . ($offset + 1) . '-' . min($offset + $limit, $total_orders) . ' 件を表示 (' . $page . '/' . $total_pages . ' ページ)';
+echo '</div>';
+echo '<div class="pagination-nav">';
+
+if ($page > 1) {
+    echo '<a href="' . buildPageUrl(1) . '" class="btn btn-sm btn-outline-primary">最初</a>';
+    echo '<a href="' . buildPageUrl($page - 1) . '" class="btn btn-sm btn-outline-primary">前へ</a>';
+}
+
+$start_page = max(1, $page - 2);
+$end_page = min($total_pages, $page + 2);
+
+for ($i = $start_page; $i <= $end_page; $i++) {
+    if ($i == $page) {
+        echo '<span class="btn btn-sm btn-primary">' . $i . '</span>';
+    } else {
+        echo '<a href="' . buildPageUrl($i) . '" class="btn btn-sm btn-outline-primary">' . $i . '</a>';
+    }
+}
+
+if ($page < $total_pages) {
+    echo '<a href="' . buildPageUrl($page + 1) . '" class="btn btn-sm btn-outline-primary">次へ</a>';
+    echo '<a href="' . buildPageUrl($total_pages) . '" class="btn btn-sm btn-outline-primary">最後</a>';
+}
+
+echo '</div>';
+echo '</div>';
 ?>
