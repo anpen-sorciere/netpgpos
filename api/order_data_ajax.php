@@ -148,7 +148,7 @@ try {
     // これを行わないと「サプライズ」などのオプション判定ができない
     foreach ($orders as &$d_order) {
         try {
-            $detail = $manager->getDataWithAutoAuth('read_orders', '/orders/detail/' . $d_order['unique_key'], []);
+            $detail = $practical_manager->getDataWithAutoAuth('read_orders', '/orders/detail/' . $d_order['unique_key'], []);
             if ($detail) {
                 $d_order = $detail; // 詳細データで上書き
             }
