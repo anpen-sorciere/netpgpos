@@ -149,8 +149,8 @@ try {
     foreach ($orders as &$d_order) {
         try {
             $detail = $practical_manager->getDataWithAutoAuth('read_orders', '/orders/detail/' . $d_order['unique_key'], []);
-            if ($detail) {
-                $d_order = $detail; // 詳細データで上書き
+            if ($detail && isset($detail['order'])) {
+                $d_order = $detail['order']; // 詳細データで上書き（ルートのorderキーを外す）
             }
         } catch (Exception $e) {
             // 詳細取得失敗時はログに残すか無視して一覧データを使う
