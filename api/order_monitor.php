@@ -1634,6 +1634,72 @@ function buildPageUrl($page_num) {
             customer: false
         };
         
+        // 画面上の注文行をスキャンしてサプライズ判定を行う（詳細API非同期呼び出し）
+function checkVisibleRowsForSurprise() {
+    var rows = document.querySelectorAll('tr[data-order-id]');
+    
+    // 一気に投げると負荷が高いので、少しずつ処理するか、Promise.allで投げる
+    // ここではシンプルに順次非同期リクエストを投げる（ブラウザが同時接続数を制御する）
+    rows.forEach(function(row) {
+        if (row.hasAttribute('data-checked-surprise')) return; // 既にチェック済み
+        
+        var orderId = row.getAttribute('data-order-id');
+        if (!orderId || orderId === 'N/A') return;
+        
+        row.setAttribute('data-checked-surprise', 'true');
+        
+        // 詳細データ取得
+        fetch('get_order_items.php?order_id=' + orderId)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.items) {
+                    var isSurprise = false;
+                    var surpriseDate = '';
+                    
+                    // オプションチェック
+                    data.items.forEach(function(item) {
+                        if (item.options) {
+                            item.options.forEach(function(opt) {
+                                var optName = opt.option_name || opt.name || '';
+                                var optValue = opt.option_value || opt.value || '';
+                                
+                                if (optName.indexOf('サプライズ') !== -1) {
+                                    isSurprise = true;
+                                    surpriseDate = optValue;
+                                }
+                            });
+                        }
+                    });
+                    
+                    // ハイライト適用
+                    if (isSurprise) {
+                        row.classList.add('surprise-row');
+                        
+                        // ヘッダー情報のセルを見つけてバッジを追加 (1つ目のtdの .order-info class内)
+                        var infoCell = row.querySelector('.order-header-info'); // Changed from .order-info to .order-header-info based on PHP output
+                        if (infoCell) {
+                            var badge = document.createElement('div');
+                            badge.className = 'surprise-badge';
+                            badge.innerHTML = '<i class="fas fa-gift"></i> サプライズ設定あり (' + surpriseDate + ')';
+                            // Check if a badge already exists to avoid duplicates
+                            if (!infoCell.querySelector('.surprise-badge')) {
+                                infoCell.insertBefore(badge, infoCell.querySelector('.customer-name')); // Insert before customer name
+                            }
+                        }
+                    }
+                }
+            })
+            .catch(error => {
+                console.warn('Surprise check failed for ' + orderId, error);
+            });
+    });
+}
+
+// データ更新完了後にサプライズチェックを実行するようにフックが必要
+// 現在の loadOrderData 内で innerHTML = xhr.responseText している箇所の直後で呼び出す必要がある
+// 仕方ないので、定期実行で補完するか、グローバルスコープで呼び出せるようにしておく
+setInterval(checkVisibleRowsForSurprise, 2000); // 2秒ごとに新規行をチェック
+        
         // 自動認証機能
         function autoAuth() {
             // 認証中インジケーターを表示
