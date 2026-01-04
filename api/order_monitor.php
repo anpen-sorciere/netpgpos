@@ -127,52 +127,101 @@ try {
             }
             $fetched_count = $actual_fetched_count;
         } else {
-            // リアルタイムモード: 当日+前日のため多めに取得（元の実装を維持）
-            $fetch_limit = 200; // リアルタイム用の上限
-            $combined_data = $practical_manager->getCombinedOrderData($fetch_limit, 0, $status_param);
-            $orders_data = $combined_data['merged_orders'];
+            // リアルタイムモード（デフォルト表示）:
+            // ユーザー要望により「過去3ヶ月以内」かつ「未対応・対応中・入金待ち」のみ表示に統一
             
-            // データ構造を確認して適切に注文データを取得
-            if (isset($orders_data['orders'])) {
-                // 従来の構造: merged_orders.orders
-                $all_orders = $orders_data['orders'];
-            } else {
-                // 新しい構造: merged_orders自体が注文配列
-                $all_orders = $orders_data;
+            $all_orders = [];
+            $offset_fetch = 0;
+            $limit_fetch = 100; // APIリクエスト上限
+            $max_fetch_count = 2000; // 安全のため最大2000件までスキャン
+            $three_months_ago = strtotime('-3 months');
+            
+            $fetch_count = 0;
+            
+            // データ取得ループ
+            while ($fetch_count < $max_fetch_count) {
+                // 直接 /orders を叩く（商品結合はしない）
+                $response = $practical_manager->getDataWithAutoAuth(
+                    'read_orders', 
+                    '/orders', 
+                    ['limit' => $limit_fetch, 'offset' => $offset_fetch]
+                );
+                
+                $batch_orders = $response['orders'] ?? [];
+                $batch_count = count($batch_orders);
+                
+                if ($batch_count === 0) {
+                    break;
+                }
+                
+                $date_limit_reached = false;
+                
+                foreach ($batch_orders as $order) {
+                    $order_time = is_numeric($order['ordered']) ? $order['ordered'] : strtotime($order['ordered']);
+                    
+                    if ($order_time < $three_months_ago) {
+                        $date_limit_reached = true;
+                        continue;
+                    }
+                    
+                    $all_orders[] = $order;
+                }
+                
+                $fetch_count += $batch_count;
+                $offset_fetch += $batch_count;
+                
+                if ($date_limit_reached) {
+                    break;
+                }
             }
             
-            $fetched_count = count($all_orders);
+            $fetched_count = $fetch_count;
         }
         
-        // 日付フィルタリング
-        if ($search_mode && $start_date && $end_date) {
+        // 日付・ステータス 共通フィルタリング（リアルタイムモード用）
+        if (!$search_mode) {
+             // ユーザー要望によるフィルター: [未対応, 対応中, 入金待ち] のみ表示
+            $filtered_orders = [];
+            $target_statuses = ['ordered', 'shipping', 'unpaid'];
+            
+            // 既にループ内で日付は弾いているが、念のため再チェックとステータスチェック
+             $three_months_ago = strtotime('-3 months');
+
+            foreach ($all_orders as $order) {
+                $order_time = is_numeric($order['ordered']) ? $order['ordered'] : strtotime($order['ordered']);
+                
+                if ($order_time < $three_months_ago) continue;
+
+                $status = $order['dispatch_status'] ?? '';
+                // フォールバック
+                if (empty($status)) {
+                    if (isset($order['cancelled'])) continue;
+                    if (isset($order['dispatched'])) continue;
+                    if (isset($order['payment']) && $order['payment'] !== 'paid') {
+                        $status = 'unpaid';
+                    } else {
+                        $status = 'ordered';
+                    }
+                }
+
+                if (in_array($status, $target_statuses)) {
+                    $filtered_orders[] = $order;
+                }
+            }
+            $all_orders = $filtered_orders;
+            $all_orders = array_values($all_orders);
+        } elseif ($search_mode && $start_date && $end_date) {
             // 通常検索モード：指定された日付範囲でフィルタリング
-            $start_timestamp = strtotime($start_date . ' 00:00:00');
-            $end_timestamp = strtotime($end_date . ' 23:59:59');
-            
-            $all_orders = array_filter($all_orders, function($order) use ($start_timestamp, $end_timestamp) {
-                $order_timestamp = $order['ordered'] ?? 0;
-                return $order_timestamp >= $start_timestamp && $order_timestamp <= $end_timestamp;
-            });
-            
-            // インデックスを再設定
-            $all_orders = array_values($all_orders);
-        } elseif (!$search_mode) {
-            // リアルタイムモード：当日と前日の0時〜23:59を表示
-            $today_start = strtotime('today 00:00:00');
-            $today_end = strtotime('today 23:59:59');
-            $yesterday_start = strtotime('yesterday 00:00:00');
-            $yesterday_end = strtotime('yesterday 23:59:59');
-            
-            $all_orders = array_filter($all_orders, function($order) use ($today_start, $today_end, $yesterday_start, $yesterday_end) {
-                $order_timestamp = $order['ordered'] ?? 0;
-                // 当日または前日の範囲内かチェック
-                return ($order_timestamp >= $today_start && $order_timestamp <= $today_end) ||
-                       ($order_timestamp >= $yesterday_start && $order_timestamp <= $yesterday_end);
-            });
-            
-            // インデックスを再設定
-            $all_orders = array_values($all_orders);
+             $start_timestamp = strtotime($start_date . ' 00:00:00');
+             $end_timestamp = strtotime($end_date . ' 23:59:59');
+             
+             $all_orders = array_filter($all_orders, function($order) use ($start_timestamp, $end_timestamp) {
+                 $order_timestamp = $order['ordered'] ?? 0;
+                 return $order_timestamp >= $start_timestamp && $order_timestamp <= $end_timestamp;
+             });
+             
+             // インデックスを再設定
+             $all_orders = array_values($all_orders);
         }
         
         // 複数のステータスが選択された場合はクライアント側フィルタリングを適用
