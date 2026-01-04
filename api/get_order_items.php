@@ -66,9 +66,13 @@ try {
             // オプション情報を抽出
             if (isset($item['options']) && is_array($item['options'])) {
                 foreach ($item['options'] as $option) {
+                    $opt_name = $option['option_name'] ?? '';
+                    $opt_value = $option['option_value'] ?? '';
                     $item_info['options'][] = [
-                        'option_name' => $option['option_name'] ?? '',
-                        'option_value' => $option['option_value'] ?? ''
+                        'option_name' => $opt_name,
+                        'option_value' => $opt_value,
+                        'name' => $opt_name,   // 旧仕様互換
+                        'value' => $opt_value  // 旧仕様互換
                     ];
                 }
             }

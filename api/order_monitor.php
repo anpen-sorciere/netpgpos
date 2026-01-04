@@ -2354,22 +2354,27 @@ function buildPageUrl($page_num) {
                                             optionHtml = '<div class="item-options">';
                                             item.options.forEach(function(opt) {
                                                 // サプライズオプションの判定
-                                                var isSurpriseOpt = (opt.option_name && opt.option_name.indexOf('サプライズ') !== -1);
+                                                // ユーザー指定: [option_name] => キャストへサプライズ の場合はサプライズ扱い
+                                                var optName = opt.option_name || opt.name || '';
+                                                var optValue = opt.option_value || opt.value || '';
+                                                
+                                                var isSurpriseOpt = (optName.indexOf('サプライズ') !== -1);
                                                 if (isSurpriseOpt) isItemSurprise = true;
                                                 
                                                 var optStyle = isSurpriseOpt ? 'style="background-color: #ffeef0; color: #d63384; font-weight: bold; border: 1px solid #f5c6cb; padding: 2px 5px; border-radius: 4px; display:inline-block;"' : '';
                                                 var icon = isSurpriseOpt ? '<i class="fas fa-gift"></i> ' : '';
                                                 
                                                 optionHtml += '<div class="option-item" ' + optStyle + '>' + icon + 
-                                                    (opt.option_name || '') + ': ' + (opt.option_value || '') + 
+                                                    (optName) + ': ' + (optValue) + 
                                                     '</div>';
                                                 
-                                                // ニックネームなどの抽出（既存ロジックがあれば維持、なければここで簡易実装）
-                                                if (opt.option_name && opt.option_name.indexOf('ニックネーム') !== -1) {
-                                                    nickname = opt.option_value;
+                                                // ニックネームとキャスト名を抽出
+                                                if (optName.indexOf('ニックネーム') !== -1 || optName.indexOf('お客様名') !== -1) {
+                                                    nickname = optValue;
                                                 }
-                                                if (opt.option_name && opt.option_name.indexOf('キャスト') !== -1) {
-                                                    castName = opt.option_value;
+                                                if (optName.indexOf('キャスト') !== -1 && optName.indexOf('サプライズ') === -1) {
+                                                    // 「キャストへサプライズ」はキャスト名ではない
+                                                    castName = optValue;
                                                 }
                                             });
                                             optionHtml += '</div>';
