@@ -67,8 +67,8 @@ try {
             if (isset($item['options']) && is_array($item['options'])) {
                 foreach ($item['options'] as $option) {
                     $item_info['options'][] = [
-                        'name' => $option['option_name'] ?? '',
-                        'value' => $option['option_value'] ?? ''
+                        'option_name' => $option['option_name'] ?? '',
+                        'option_value' => $option['option_value'] ?? ''
                     ];
                 }
             }

@@ -1478,7 +1478,7 @@ function buildPageUrl($page_num) {
                                     if (isset($item['options']) && is_array($item['options'])) {
                                         foreach ($item['options'] as $option) {
                                             $opt_name = $option['option_name'] ?? '';
-                                            if (strpos($opt_name, 'サプライズ') !== false) {
+                                            if (mb_strpos($opt_name, 'サプライズ') !== false) {
                                                 $is_surprise = true;
                                                 $surprise_date = $option['option_value'] ?? '';
                                                 break 2; // アイテムループも抜ける
