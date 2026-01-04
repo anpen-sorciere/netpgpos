@@ -833,21 +833,27 @@ function buildPageUrl($page_num) {
             font-size: 1.1em;
         }
         
-        /* サプライズ注文のスタイル */
+        /* サプライズ注文のスタイル - 視認性向上のため黄色系に変更 */
         .table tr.surprise-row td {
-            background-color: #fff0f5 !important; /* 薄いピンク色 */
+            background-color: #fff3cd !important; /* 黄色背景 */
+            color: #856404;
+        }
+        
+        .table tr.surprise-row td:first-child {
+            border-left: 5px solid #dc3545 !important; /* 左側に太い赤線 */
         }
         
         .surprise-badge {
             display: inline-block;
-            background-color: #ffeef0;
-            color: #d63384;
-            border: 1px solid #f5c6cb;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.85em;
+            background-color: #ffc107; /* 濃い黄色 */
+            color: #000;
+            border: 2px solid #ed969e;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 1.0em;
             font-weight: bold;
             margin: 5px 0;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
         }
         
         .item-details {
@@ -2361,7 +2367,8 @@ function buildPageUrl($page_num) {
                                                 var isSurpriseOpt = (optName.indexOf('サプライズ') !== -1);
                                                 if (isSurpriseOpt) isItemSurprise = true;
                                                 
-                                                var optStyle = isSurpriseOpt ? 'style="background-color: #ffeef0; color: #d63384; font-weight: bold; border: 1px solid #f5c6cb; padding: 2px 5px; border-radius: 4px; display:inline-block;"' : '';
+                                                // 視認性向上のため黄色系＋枠線に変更
+                                                var optStyle = isSurpriseOpt ? 'style="background-color: #ffc107; color: #000; font-weight: bold; border: 2px solid #dc3545; padding: 4px 8px; border-radius: 4px; display:inline-block; font-size: 1.1em;"' : '';
                                                 var icon = isSurpriseOpt ? '<i class="fas fa-gift"></i> ' : '';
                                                 
                                                 optionHtml += '<div class="option-item" ' + optStyle + '>' + icon + 

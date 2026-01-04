@@ -331,7 +331,8 @@ foreach ($orders as $order) {
                         $opt_value = $option['option_value'] ?? 'N/A';
                         
                         $is_surprise_opt = (mb_strpos($opt_name, 'サプライズ') !== false);
-                        $opt_style = $is_surprise_opt ? 'style="background-color: #ffeef0; color: #d63384; font-weight: bold; border: 1px solid #f5c6cb; padding: 2px 5px; border-radius: 4px; display:inline-block;"' : '';
+                        // 視認性向上のため黄色系＋枠線に変更
+                        $opt_style = $is_surprise_opt ? 'style="background-color: #ffc107; color: #000; font-weight: bold; border: 2px solid #dc3545; padding: 4px 8px; border-radius: 4px; display:inline-block; font-size: 1.1em;"' : '';
                         $icon = $is_surprise_opt ? '<i class="fas fa-gift"></i> ' : '';
                         
                         echo '<div class="option-item" ' . $opt_style . '>';
