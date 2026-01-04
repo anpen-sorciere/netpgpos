@@ -833,6 +833,23 @@ function buildPageUrl($page_num) {
             font-size: 1.1em;
         }
         
+        /* サプライズ注文のスタイル */
+        .table tr.surprise-row td {
+            background-color: #fff0f5 !important; /* 薄いピンク色 */
+        }
+        
+        .surprise-badge {
+            display: inline-block;
+            background-color: #ffeef0;
+            color: #d63384;
+            border: 1px solid #f5c6cb;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        
         .item-details {
             margin-top: 10px;
         }
@@ -1452,16 +1469,41 @@ function buildPageUrl($page_num) {
                             
                             // 合計金額
                             $total_amount = '¥' . number_format($order['total'] ?? 0);
+                            
+                            // サプライズ判定
+                            $is_surprise = false;
+                            $surprise_date = '';
+                            if (isset($order['order_items']) && is_array($order['order_items'])) {
+                                foreach ($order['order_items'] as $item) {
+                                    if (isset($item['options']) && is_array($item['options'])) {
+                                        foreach ($item['options'] as $option) {
+                                            $opt_name = $option['option_name'] ?? '';
+                                            if (strpos($opt_name, 'サプライズ') !== false) {
+                                                $is_surprise = true;
+                                                $surprise_date = $option['option_value'] ?? '';
+                                                break 2; // アイテムループも抜ける
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            $row_class = $is_surprise ? 'surprise-row' : '';
+                            
+                            echo '<tr class="' . $row_class . '">';
+                            echo '<td class="order-header">';
+                            echo '<div class="order-header-info">';
+                            echo '<div class="order-id">#' . $order_id . '</div>';
+                            echo '<div class="order-date">' . htmlspecialchars($date_value) . '</div>';
+                            echo '<div class="order-status ' . $status_class . '">' . htmlspecialchars($status) . '</div>';
+                            
+                            if ($is_surprise) {
+                                echo '<div class="surprise-badge"><i class="fas fa-gift"></i> サプライズ設定あり (' . htmlspecialchars($surprise_date) . ')</div>';
+                            }
+                            
+                            echo '<div class="customer-name">' . $customer_name . '</div>';
+                            echo '<div class="total-amount">' . $total_amount . '</div>';
                             ?>
-                            <tr>
-                                <!-- 注文ヘッダー列 -->
-                                <td class="order-header">
-                                    <div class="order-header-info">
-                                        <div class="order-id">#<?= $order_id ?></div>
-                                        <div class="order-date"><?= htmlspecialchars($date_value) ?></div>
-                                        <div class="order-status <?= $status_class ?>"><?= htmlspecialchars($status) ?></div>
-                                        <div class="customer-name"><?= $customer_name ?></div>
-                                        <div class="total-amount"><?= $total_amount ?></div>
                                         
                                         <!-- 商品ごとの情報（AJAXで動的に追加） -->
                                         <div class="item-details" data-order-id="<?= $order_id ?>">

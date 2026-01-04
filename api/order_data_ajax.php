@@ -247,7 +247,27 @@ foreach ($orders as $order) {
         // 合計金額
         $total_amount = '¥' . number_format($order['total'] ?? 0);
         
-        echo '<tr>';
+        // サプライズ判定
+        $is_surprise = false;
+        $surprise_date = '';
+        if (isset($order['order_items']) && is_array($order['order_items'])) {
+            foreach ($order['order_items'] as $item) {
+                if (isset($item['options']) && is_array($item['options'])) {
+                    foreach ($item['options'] as $option) {
+                        $opt_name = $option['option_name'] ?? '';
+                        if (strpos($opt_name, 'サプライズ') !== false) {
+                            $is_surprise = true;
+                            $surprise_date = $option['option_value'] ?? '';
+                            break 2; // アイテムループも抜ける
+                        }
+                    }
+                }
+            }
+        }
+        
+        $row_class = $is_surprise ? 'surprise-row' : '';
+        
+        echo '<tr class="' . $row_class . '">';
         
         // 注文ヘッダー列
         echo '<td class="order-header">';
@@ -255,6 +275,11 @@ foreach ($orders as $order) {
         echo '<div class="order-id">#' . $order_id . '</div>';
         echo '<div class="order-date">' . htmlspecialchars($date_value) . '</div>';
         echo '<div class="order-status ' . $status_class . '">' . htmlspecialchars($status) . '</div>';
+        
+        if ($is_surprise) {
+            echo '<div class="surprise-badge"><i class="fas fa-gift"></i> サプライズ設定あり (' . htmlspecialchars($surprise_date) . ')</div>';
+        }
+        
         echo '<div class="customer-name">' . $customer_name . '</div>';
         echo '<div class="total-amount">' . $total_amount . '</div>';
         
