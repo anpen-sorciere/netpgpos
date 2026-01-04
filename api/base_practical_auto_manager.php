@@ -511,6 +511,65 @@ class BasePracticalAutoManager {
     }
 
     /**
+     * 認証コードをトークンに交換して保存
+     */
+    public function exchangeCodeForToken($code, $scope_key) {
+        $url = 'https://api.thebase.in/1/oauth/token';
+        
+        $data = [
+            'grant_type' => 'authorization_code',
+            'client_id' => $this->client_id,
+            'client_secret' => $this->client_secret,
+            'redirect_uri' => $this->redirect_uri,
+            'code' => $code
+        ];
+        
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => http_build_query($data),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_SSL_VERIFYPEER => false
+        ]);
+        
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curl_error = curl_error($ch);
+        curl_close($ch);
+        
+        if ($curl_error) {
+            throw new Exception("ネットワークエラー: {$curl_error}");
+        }
+        
+        if ($http_code !== 200) {
+            $error_data = json_decode($response, true);
+            $error_msg = $error_data['error_description'] ?? "HTTP {$http_code}";
+            throw new Exception("APIリクエストエラー: HTTP {$http_code} - {$error_msg}");
+        }
+        
+        $response_data = json_decode($response, true);
+        
+        if (!isset($response_data['access_token'])) {
+            throw new Exception("レスポンスにアクセストークンが含まれていません");
+        }
+        
+        // トークンを保存
+        $this->saveScopeToken(
+            $scope_key,
+            $response_data['access_token'],
+            $response_data['refresh_token'],
+            $response_data['expires_in'] ?? 3600
+        );
+        
+        $this->logSystemEvent("TOKEN_EXCHANGED", "スコープ {$scope_key} の認証コード交換に成功しました");
+        
+        return $response_data;
+    }
+
+    /**
      * 認証状態の確認
      */
     public function getAuthStatus() {
