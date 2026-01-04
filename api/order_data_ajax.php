@@ -53,12 +53,11 @@ try {
     $offset = ($page - 1) * $limit;
     
     // ユーザー要望の「過去3ヶ月以内」の注文を取得するため、ループ処理で取得
-    // getCombinedOrderDataではなく、直接 /orders を叩いて効率化（商品マスタ結合は不要と判断）
     
     $all_orders = [];
     $offset_fetch = 0;
-    $limit_fetch = 100; // API 1回あたりの取得数（BASE APIの上限推奨値）
-    $max_fetch_count = 1000; // 安全のため最大1000件までスキャン
+    $limit_fetch = 100; // APIリクエスト上限
+    $max_fetch_count = 2000; // スキャン上限（安全のため）
     $three_months_ago = strtotime('-3 months');
     
     $fetch_count = 0;
@@ -72,8 +71,9 @@ try {
         );
         
         $batch_orders = $response['orders'] ?? [];
+        $batch_count = count($batch_orders);
         
-        if (empty($batch_orders)) {
+        if ($batch_count === 0) {
             break; // データなし、終了
         }
         
@@ -82,30 +82,29 @@ try {
         foreach ($batch_orders as $order) {
             $order_time = is_numeric($order['ordered']) ? $order['ordered'] : strtotime($order['ordered']);
             
-            // 期間外（3ヶ月以上前）のデータに到達したら、それ以降は不要なのでループ終了フラグ
+            // 期間外（3ヶ月以上前）のデータに到達したらフラグ
             if ($order_time < $three_months_ago) {
                 $date_limit_reached = true;
-                // ここではまだbreakせず、配列に追加しないだけ（念のため、バッチ内の並び順が完全保証されていない場合を考慮）
-                // ただしBASE APIは通常降順なので、ここでbreakしても良いが、安全策でcontinue
+                // ここではcontinue（同じバッチ内に古いのが混ざっている可能性考慮）
                 continue; 
             }
             
             $all_orders[] = $order;
         }
         
-        $fetch_count += count($batch_orders);
-        $offset_fetch += $limit_fetch;
-        
-        // 取得数がリクエスト数未満なら、もうページがない
-        if (count($batch_orders) < $limit_fetch) {
-            break;
-        }
+        $fetch_count += $batch_count;
+        $offset_fetch += $batch_count; // 重要: 実際に取得できた件数分だけオフセットを進める
         
         // 期間外のデータが含まれていたなら、それより古いデータは不要なので終了
         if ($date_limit_reached) {
             break;
         }
     }
+
+    // デバッグ: スキャン結果を表示
+    echo '<div style="background-color: #d4edda; padding: 5px 10px; margin-bottom: 5px; font-size: 0.8em; color: #155724; border: 1px solid #c3e6cb; border-radius: 4px;">';
+    echo '<i class="fas fa-check-circle"></i> データスキャン完了: ' . $fetch_count . '件の注文を確認しました (表示対象: ' . count($all_orders) . '件)';
+    echo '</div>';
 
     // ユーザー要望によるフィルター: 3ヶ月以内 かつ [未対応, 対応中, 入金待ち] のみ表示
     $filtered_orders = [];
