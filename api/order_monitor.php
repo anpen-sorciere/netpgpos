@@ -1723,7 +1723,7 @@ function buildPageUrl($page_num) {
                         }
                     }
         
-                    } else {
+                    else {
                         console.log('No surprise for ' + orderId);
                     }
                 } else {
