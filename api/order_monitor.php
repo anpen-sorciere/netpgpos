@@ -2393,20 +2393,27 @@ function buildPageUrl($page_num) {
                                                     orderHasSurprise = true;
                                                     orderSurpriseDate = optValue;
                                                 }
-                                                
-                                                var optStyle = isSurpriseOpt ? 'style="background-color: #ffc107; color: #000; font-weight: bold; border: 2px solid #dc3545; padding: 4px 8px; border-radius: 4px; display:inline-block; font-size: 1.1em;"' : '';
-                                                var icon = isSurpriseOpt ? '<i class="fas fa-gift"></i> ' : '';
-                                                
-                                                optionHtml += '<div class="option-item" ' + optStyle + '>' + icon + 
-                                                    (optName) + ': ' + (optValue) + 
-                                                    '</div>';
-                                                
-                                                if (optName.indexOf('ニックネーム') !== -1 || optName.indexOf('お客様名') !== -1) {
+
+                                                // ニックネームとキャスト名の判定・抽出
+                                                var isNickname = (optName.indexOf('ニックネーム') !== -1 || optName.indexOf('お客様名') !== -1);
+                                                var isCast = (optName.indexOf('キャスト') !== -1 && optName.indexOf('サプライズ') === -1);
+
+                                                if (isNickname) {
                                                     nickname = optValue;
                                                 }
-                                                // 「キャストへサプライズ」はキャスト名ではないので除外
-                                                if (optName.indexOf('キャスト') !== -1 && optName.indexOf('サプライズ') === -1) {
+                                                if (isCast) {
                                                     castName = optValue;
+                                                }
+
+                                                // オプション表示: ニックネームとキャスト名は専用列があるためここには表示しない
+                                                // ただしサプライズ等の他のオプションは表示する
+                                                if (!isNickname && !isCast) {
+                                                    var optStyle = isSurpriseOpt ? 'style="background-color: #ffc107; color: #000; font-weight: bold; border: 2px solid #dc3545; padding: 4px 8px; border-radius: 4px; display:inline-block; font-size: 1.1em;"' : '';
+                                                    var icon = isSurpriseOpt ? '<i class="fas fa-gift"></i> ' : '';
+                                                    
+                                                    optionHtml += '<div class="option-item" ' + optStyle + '>' + icon + 
+                                                        (optName) + ': ' + (optValue) + 
+                                                        '</div>';
                                                 }
                                             });
                                             optionHtml += '</div>';
