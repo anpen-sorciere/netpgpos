@@ -91,6 +91,17 @@ try {
             echo '<li>' . htmlspecialchars($info) . '</li>';
         }
         echo '</ul>';
+        echo '<h4>APIレスポンス構造:</h4>';
+        echo '<pre>';
+        print_r(array_keys($order_detail_response));
+        echo '</pre>';
+        if (isset($order_detail_response['order'])) {
+             echo '<h4>Items Count (Wrapped): ' . count($order_detail_response['order']['order_items'] ?? []) . '</h4>';
+        } else {
+             echo '<h4>Items Count (Direct): ' . count($order_detail_response['order_items'] ?? []) . '</h4>';
+             echo '<p>Warning: "order" key missing. Dumping root keys:</p>';
+             print_r(array_keys($order_detail_response));
+        }
         echo '<h4>商品数: ' . count($items) . '</h4>';
         echo '<h4>商品一覧:</h4>';
         echo '<ul>';
