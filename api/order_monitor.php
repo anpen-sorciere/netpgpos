@@ -1651,88 +1651,88 @@ function buildPageUrl($page_num) {
             checkVisibleRowsForSurprise();
         };
 
-        function checkVisibleRowsForSurprise() {
-            console.log("Starting checkVisibleRowsForSurprise...");
-            var rows = document.querySelectorAll('tr[data-order-id]');
-            console.log("Found " + rows.length + " rows to check.");
-            
-            rows.forEach(function(row) {
-                if (row.hasAttribute('data-checked-surprise')) {
-                     console.log("Skipping already checked row: " + row.getAttribute('data-order-id'));
-                     return;
-                }
+// 画面上の注文行をスキャンしてサプライズ判定を行う（詳細API非同期呼び出し）
+function checkVisibleRowsForSurprise() {
+    console.log("Starting checkVisibleRowsForSurprise...");
+    var rows = document.querySelectorAll('tr[data-order-id]');
+    console.log("Found " + rows.length + " rows to check.");
+    
+    rows.forEach(function(row) {
+        if (row.hasAttribute('data-checked-surprise')) {
+             console.log("Skipping already checked row: " + row.getAttribute('data-order-id'));
+             return;
+        }
+        
+        var orderId = row.getAttribute('data-order-id');
+        if (!orderId || orderId === 'N/A') return;
+        
+        row.setAttribute('data-checked-surprise', 'true');
+        
+        // 詳細データ取得
+        console.log('Fetching details for ' + orderId);
+        fetch('get_order_items.php?order_id=' + orderId, {
+            credentials: 'include'
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            console.log('Received data for ' + orderId, data);
+            if (data.success && data.items) {
+                var isSurprise = false;
+                var surpriseDate = '';
                 
-                var orderId = row.getAttribute('data-order-id');
-                if (!orderId || orderId === 'N/A') return;
-                
-                row.setAttribute('data-checked-surprise', 'true');
-                
-                // 詳細データ取得
-                console.log('Fetching details for ' + orderId);
-                fetch('get_order_items.php?order_id=' + orderId, {
-                    credentials: 'include'
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Received data for ' + orderId, data);
-                    if (data.success && data.items) {
-                        var isSurprise = false;
-                        var surpriseDate = '';
-                        
-                        data.items.forEach(function(item) {
-                            if (item.options) {
-                                item.options.forEach(function(opt) {
-                                    var optName = opt.option_name || opt.name || '';
-                                    var optValue = opt.option_value || opt.value || '';
-                                    console.log('Option: ' + optName + ' = ' + optValue);
-                                    if (optName.indexOf('サプライズ') !== -1) {
-                                        isSurprise = true;
-                                        surpriseDate = optValue;
-                                    }
-                                });
+                data.items.forEach(function(item) {
+                    if (item.options) {
+                        item.options.forEach(function(opt) {
+                            var optName = opt.option_name || opt.name || '';
+                            var optValue = opt.option_value || opt.value || '';
+                            console.log('Option: ' + optName + ' = ' + optValue);
+                            if (optName.indexOf('サプライズ') !== -1) {
+                                isSurprise = true;
+                                surpriseDate = optValue;
                             }
                         });
-                        
-                        if (isSurprise) {
-                            console.warn('SURPRISE FOUND: ' + orderId); // WARN to make it visible
-                            row.classList.add('surprise-row');
-                            row.style.setProperty('background-color', '#fff3cd', 'important');
-                            row.style.setProperty('border-left', '5px solid #dc3545', 'important');
-                            
-                            var infoCell = row.querySelector('.order-header-info');
-                            if (infoCell) {
-                                var statusDiv = infoCell.querySelector('.order-status');
-                                if (statusDiv) {
-                                    var existingDate = infoCell.querySelector('.surprise-date-text');
-                                    if (existingDate) existingDate.remove();
+                    }
+                });
+                
+                if (isSurprise) {
+                    console.warn('SURPRISE FOUND: ' + orderId);
+                    row.classList.add('surprise-row');
+                    row.style.setProperty('background-color', '#fff3cd', 'important');
+                    row.style.setProperty('border-left', '5px solid #dc3545', 'important');
+                    
+                    var infoCell = row.querySelector('.order-header-info');
+                    if (infoCell) {
+                        var statusDiv = infoCell.querySelector('.order-status');
+                        if (statusDiv) {
+                            var existingDate = infoCell.querySelector('.surprise-date-text');
+                            if (existingDate) existingDate.remove();
 
-                                    var dateDiv = document.createElement('div');
-                                    dateDiv.className = 'surprise-date-text';
-                                    dateDiv.style.color = '#d63384';
-                                    dateDiv.style.fontWeight = 'bold';
-                                    dateDiv.innerHTML = '★サプライズ：' + surpriseDate;
-                                    statusDiv.parentNode.insertBefore(dateDiv, statusDiv.nextSibling);
-                                }
-                                if (!infoCell.querySelector('.surprise-badge')) {
-                                    var badge = document.createElement('div');
-                                    badge.className = 'surprise-badge';
-                                    badge.innerHTML = '<i class="fas fa-gift"></i> サプライズ設定あり (' + surpriseDate + ')';
-                                    infoCell.insertBefore(badge, infoCell.querySelector('.customer-name') || infoCell.firstChild);
-                                }
-                            }
+                            var dateDiv = document.createElement('div');
+                            dateDiv.className = 'surprise-date-text';
+                            dateDiv.style.color = '#d63384';
+                            dateDiv.style.fontWeight = 'bold';
+                            dateDiv.innerHTML = '★サプライズ：' + surpriseDate;
+                            statusDiv.parentNode.insertBefore(dateDiv, statusDiv.nextSibling);
+                        }
+                        if (!infoCell.querySelector('.surprise-badge')) {
+                            var badge = document.createElement('div');
+                            badge.className = 'surprise-badge';
+                            badge.innerHTML = '<i class="fas fa-gift"></i> サプライズ設定あり (' + surpriseDate + ')';
+                            infoCell.insertBefore(badge, infoCell.querySelector('.customer-name') || infoCell.firstChild);
                         }
                     }
-        
-                    else {
-                        console.log('No surprise for ' + orderId);
-                    }
                 } else {
-                    console.error('Data error for ' + orderId, data);
+                     console.log('No surprise for ' + orderId);
                 }
-            })
-            .catch(error => {
-                console.warn('Surprise check failed for ' + orderId, error);
-            });
+            } else {
+                console.error('Data error for ' + orderId, data);
+            }
+        })
+        .catch(function(error) {
+            console.warn('Surprise check failed for ' + orderId, error);
+        });
     });
 }
 
