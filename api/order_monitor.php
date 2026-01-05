@@ -1658,9 +1658,13 @@ function checkVisibleRowsForSurprise() {
         row.setAttribute('data-checked-surprise', 'true');
         
         // 詳細データ取得
-        fetch('get_order_items.php?order_id=' + orderId)
+        console.log('Fetching details for ' + orderId);
+        fetch('get_order_items.php?order_id=' + orderId, {
+            credentials: 'include' // セッション維持のため
+        })
             .then(response => response.json())
             .then(data => {
+                console.log('Received data for ' + orderId, data);
                 if (data.success && data.items) {
                     var isSurprise = false;
                     var surpriseDate = '';
@@ -1672,6 +1676,8 @@ function checkVisibleRowsForSurprise() {
                                 var optName = opt.option_name || opt.name || '';
                                 var optValue = opt.option_value || opt.value || '';
                                 
+                                console.log('Checking option: ' + optName + ' = ' + optValue);
+                                
                                 if (optName.indexOf('サプライズ') !== -1) {
                                     isSurprise = true;
                                     surpriseDate = optValue;
@@ -1682,33 +1688,46 @@ function checkVisibleRowsForSurprise() {
                     
                     // ハイライト適用
                     if (isSurprise) {
+                        console.log('SURPRISE DETECTED for ' + orderId);
+                        // alert('サプライズ検出！ 注文ID: ' + orderId); // デバッグ用アラート
+                        
                         row.classList.add('surprise-row');
+                        row.style.backgroundColor = '#fff3cd'; // 強制適用
+                        row.style.borderLeft = '5px solid #dc3545'; // 強制適用
                         
                         // ヘッダー情報のセルを見つけてバッジを追加 (1つ目のtdの .order-info class内)
                         var infoCell = row.querySelector('.order-header-info');
                         if (infoCell) {
                             // 要望対応: ステータスの右側（下）に日付を表示
                             var statusDiv = infoCell.querySelector('.order-status');
-                            if (statusDiv && !infoCell.querySelector('.surprise-date-text')) {
+                            if (statusDiv) {
+                                // 既存の日付削除（重複防止）
+                                var existingDate = infoCell.querySelector('.surprise-date-text');
+                                if (existingDate) existingDate.remove();
+
                                 var dateDiv = document.createElement('div');
                                 dateDiv.className = 'surprise-date-text';
                                 dateDiv.style.color = '#d63384';
                                 dateDiv.style.fontWeight = 'bold';
                                 dateDiv.style.marginTop = '2px';
-                                dateDiv.innerHTML = 'サプライズ：' + surpriseDate;
+                                dateDiv.innerHTML = '★サプライズ：' + surpriseDate;
                                 statusDiv.parentNode.insertBefore(dateDiv, statusDiv.nextSibling);
                             }
 
                             // バッジも念のため維持
-                            var badge = document.createElement('div');
-                            badge.className = 'surprise-badge';
-                            badge.innerHTML = '<i class="fas fa-gift"></i> サプライズ設定あり (' + surpriseDate + ')';
                             // Check if a badge already exists to avoid duplicates
                             if (!infoCell.querySelector('.surprise-badge')) {
-                                infoCell.insertBefore(badge, infoCell.querySelector('.customer-name')); // Insert before customer name
+                                var badge = document.createElement('div');
+                                badge.className = 'surprise-badge';
+                                badge.innerHTML = '<i class="fas fa-gift"></i> サプライズ設定あり (' + surpriseDate + ')';
+                                infoCell.insertBefore(badge, infoCell.querySelector('.customer-name') || infoCell.firstChild);
                             }
                         }
+                    } else {
+                        console.log('No surprise for ' + orderId);
                     }
+                } else {
+                    console.error('Data error for ' + orderId, data);
                 }
             })
             .catch(error => {
