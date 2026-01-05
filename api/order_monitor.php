@@ -1505,7 +1505,7 @@ function buildPageUrl($page_num) {
                             
                             $row_class = $is_surprise ? 'surprise-row' : '';
                             
-                            echo '<tr class="' . $row_class . '">';
+                            echo '<tr class="' . $row_class . '" data-order-id="' . $order_id . '">';
                             echo '<td class="order-header">';
                             echo '<div class="order-header-info">';
                             echo '<div class="order-id">#' . $order_id . '</div>';
