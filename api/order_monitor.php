@@ -1341,14 +1341,6 @@ function buildPageUrl($page_num) {
                     </div>
                 </div>
                 
-                <!-- サプライズ確認ボタン (API制限対策) -->
-                <div class="row mb-2">
-                    <div class="col-12 text-end">
-                        <button type="button" class="btn btn-warning" onclick="manualCheckSurprise()">
-                            <i class="fas fa-gift"></i> サプライズ状況を確認する (API通信発生)
-                        </button>
-                    </div>
-                </div>
                 
                 <div class="pagination-info">
             <div class="pagination-stats">
@@ -1645,96 +1637,7 @@ function buildPageUrl($page_num) {
             customer: false
         };
 
-        // ★サプライズ判定関数（グローバル定義）
-        window.manualCheckSurprise = function() {
-            console.log("Manual Surprise Check Triggered");
-            checkVisibleRowsForSurprise();
-        };
 
-// 画面上の注文行をスキャンしてサプライズ判定を行う（詳細API非同期呼び出し）
-function checkVisibleRowsForSurprise() {
-    console.log("Starting checkVisibleRowsForSurprise...");
-    var rows = document.querySelectorAll('tr[data-order-id]');
-    console.log("Found " + rows.length + " rows to check.");
-    
-    rows.forEach(function(row) {
-        if (row.hasAttribute('data-checked-surprise')) {
-             console.log("Skipping already checked row: " + row.getAttribute('data-order-id'));
-             return;
-        }
-        
-        var orderId = row.getAttribute('data-order-id');
-        if (!orderId || orderId === 'N/A') return;
-        
-        row.setAttribute('data-checked-surprise', 'true');
-        
-        // 詳細データ取得
-        console.log('Fetching details for ' + orderId);
-        fetch('get_order_items.php?order_id=' + orderId, {
-            credentials: 'include'
-        })
-        .then(function(response) {
-            return response.json();
-        })
-        .then(function(data) {
-            console.log('Received data for ' + orderId, data);
-            if (data.success && data.items) {
-                var isSurprise = false;
-                var surpriseDate = '';
-                
-                data.items.forEach(function(item) {
-                    if (item.options) {
-                        item.options.forEach(function(opt) {
-                            var optName = opt.option_name || opt.name || '';
-                            var optValue = opt.option_value || opt.value || '';
-                            console.log('Option: ' + optName + ' = ' + optValue);
-                            if (optName.indexOf('サプライズ') !== -1) {
-                                isSurprise = true;
-                                surpriseDate = optValue;
-                            }
-                        });
-                    }
-                });
-                
-                if (isSurprise) {
-                    console.warn('SURPRISE FOUND: ' + orderId);
-                    row.classList.add('surprise-row');
-                    row.style.setProperty('background-color', '#fff3cd', 'important');
-                    row.style.setProperty('border-left', '5px solid #dc3545', 'important');
-                    
-                    var infoCell = row.querySelector('.order-header-info');
-                    if (infoCell) {
-                        var statusDiv = infoCell.querySelector('.order-status');
-                        if (statusDiv) {
-                            var existingDate = infoCell.querySelector('.surprise-date-text');
-                            if (existingDate) existingDate.remove();
-
-                            var dateDiv = document.createElement('div');
-                            dateDiv.className = 'surprise-date-text';
-                            dateDiv.style.color = '#d63384';
-                            dateDiv.style.fontWeight = 'bold';
-                            dateDiv.innerHTML = '★サプライズ：' + surpriseDate;
-                            statusDiv.parentNode.insertBefore(dateDiv, statusDiv.nextSibling);
-                        }
-                        if (!infoCell.querySelector('.surprise-badge')) {
-                            var badge = document.createElement('div');
-                            badge.className = 'surprise-badge';
-                            badge.innerHTML = '<i class="fas fa-gift"></i> サプライズ設定あり (' + surpriseDate + ')';
-                            infoCell.insertBefore(badge, infoCell.querySelector('.customer-name') || infoCell.firstChild);
-                        }
-                    }
-                } else {
-                     console.log('No surprise for ' + orderId);
-                }
-            } else {
-                console.error('Data error for ' + orderId, data);
-            }
-        })
-        .catch(function(error) {
-            console.warn('Surprise check failed for ' + orderId, error);
-        });
-    });
-}
 
         
         // 自動認証機能
@@ -2428,8 +2331,10 @@ function checkVisibleRowsForSurprise() {
                     var orderId = container.getAttribute('data-order-id');
                     if (orderId) {
                         fetch('get_order_items.php?order_id=' + encodeURIComponent(orderId))
-                            .then(response => response.json())
-                            .then(data => {
+                            .then(function(response) {
+                                return response.json();
+                            })
+                            .then(function(data) {
                                 if (data.success && data.items) {
                                     // プレースホルダーを削除
                                     var placeholder = container.querySelector('.item-details-placeholder');
@@ -2448,7 +2353,21 @@ function checkVisibleRowsForSurprise() {
                                         '<div class="item-status">ステータス</div>';
                                     container.appendChild(headerDiv);
                                     
+                                    // ヘルパー関数: ステータス日本語化
+                                    function mapItemStatus(status) {
+                                        switch (status) {
+                                            case 'ordered': return '未対応';
+                                            case 'paid': return '入金済';
+                                            case 'cancelled': return 'キャンセル';
+                                            case 'dispatched': return '発送済';
+                                            default: return status || '不明';
+                                        }
+                                    }
+
                                     // 商品ごとの情報を表示
+                                    var orderHasSurprise = false;
+                                    var orderSurpriseDate = '';
+
                                     data.items.forEach(function(item) {
                                         var itemDiv = document.createElement('div');
                                         itemDiv.className = 'item-detail-row';
@@ -2458,19 +2377,23 @@ function checkVisibleRowsForSurprise() {
                                         var castName = '';
                                         var optionHtml = '';
                                         var isItemSurprise = false;
+                                        var itemSurpriseDate = '';
                                         
                                         if (item.options && item.options.length > 0) {
                                             optionHtml = '<div class="item-options">';
                                             item.options.forEach(function(opt) {
                                                 // サプライズオプションの判定
-                                                // ユーザー指定: [option_name] => キャストへサプライズ の場合はサプライズ扱い
                                                 var optName = opt.option_name || opt.name || '';
                                                 var optValue = opt.option_value || opt.value || '';
                                                 
                                                 var isSurpriseOpt = (optName.indexOf('サプライズ') !== -1);
-                                                if (isSurpriseOpt) isItemSurprise = true;
+                                                if (isSurpriseOpt) {
+                                                    isItemSurprise = true;
+                                                    itemSurpriseDate = optValue;
+                                                    orderHasSurprise = true;
+                                                    orderSurpriseDate = optValue;
+                                                }
                                                 
-                                                // 視認性向上のため黄色系＋枠線に変更
                                                 var optStyle = isSurpriseOpt ? 'style="background-color: #ffc107; color: #000; font-weight: bold; border: 2px solid #dc3545; padding: 4px 8px; border-radius: 4px; display:inline-block; font-size: 1.1em;"' : '';
                                                 var icon = isSurpriseOpt ? '<i class="fas fa-gift"></i> ' : '';
                                                 
@@ -2478,66 +2401,79 @@ function checkVisibleRowsForSurprise() {
                                                     (optName) + ': ' + (optValue) + 
                                                     '</div>';
                                                 
-                                                // ニックネームとキャスト名を抽出
                                                 if (optName.indexOf('ニックネーム') !== -1 || optName.indexOf('お客様名') !== -1) {
                                                     nickname = optValue;
                                                 }
+                                                // 「キャストへサプライズ」はキャスト名ではないので除外
                                                 if (optName.indexOf('キャスト') !== -1 && optName.indexOf('サプライズ') === -1) {
-                                                    // 「キャストへサプライズ」はキャスト名ではない
                                                     castName = optValue;
                                                 }
                                             });
                                             optionHtml += '</div>';
                                         }
                                         
-                                        // 行自体の強調（オプションに合わせて）
+                                        // サプライズ時のキャスト名マスク処理
+                                        // 今日 < サプライズ設定日 なら隠す
+                                        if (orderHasSurprise && itemSurpriseDate && castName) {
+                                            var today = new Date();
+                                            today.setHours(0,0,0,0);
+                                            var sDate = new Date(itemSurpriseDate);
+                                            
+                                            if (sDate.toString() !== 'Invalid Date' && today < sDate) {
+                                                castName = '******* (サプライズ)';
+                                            }
+                                        }
+
+                                        // 行自体の強調
                                         if (isItemSurprise) {
                                             itemDiv.style.backgroundColor = '#fff0f5';
                                         }
                                         
+                                        var statusLabel = mapItemStatus(item.status);
+
                                         itemDiv.innerHTML = 
                                             '<div class="item-title">' + (item.title || '商品名なし') + optionHtml + '</div>' +
                                             '<div class="item-quantity">' + (item.amount || 1) + '</div>' +
-                                            '<div class="item-nickname">' + (nickname || '-') + '</div>' +
-                                            '<div class="item-cast">' + (castName || '-') + '</div>' +
-                                            '<div class="item-status">' + (item.status || '未対応') + '</div>';
-                                        
-                                        // ステータス日本語化
-                                        function mapItemStatus(status) {
-                                            switch (status) {
-                                                case 'ordered':
-                                                    return '未対応';
-                                                case 'paid':
-                                                    return '入金済';
-                                                case 'cancelled':
-                                                    return 'キャンセル';
-                                                case 'dispatched':
-                                                    return '発送済';
-                                                default:
-                                                    return status || '不明';
-                                            }
-                                        }
-                                        var statusLabel = mapItemStatus(item.status);
-                                        
-                                        if (item.options && item.options.length > 0) {
-                                            item.options.forEach(function(option) {
-                                                if (option.name === 'お客様名') {
-                                                    nickname = option.value;
-                                                } else if (option.name === 'キャスト名') {
-                                                    castName = option.value;
-                                                }
-                                            });
-                                        }
-                                        
-                                        itemDiv.innerHTML = 
-                                            '<div class="item-title">' + item.title + '</div>' +
-                                            '<div class="item-quantity">' + item.amount + '</div>' +
                                             '<div class="item-nickname">' + (nickname || 'なし') + '</div>' +
                                             '<div class="item-cast">' + (castName || 'なし') + '</div>' +
                                             '<div class="item-status">' + statusLabel + '</div>';
                                         
                                         container.appendChild(itemDiv);
                                     });
+
+                                    // オーダー行全体のハイライト処理
+                                    if (orderHasSurprise) {
+                                        var row = container.closest('tr');
+                                        if (row) {
+                                            // 既にチェック済みならスキップするが、更新の可能性もあるので再適用は安全
+                                            // Styles
+                                            row.classList.add('surprise-row');
+                                            row.style.setProperty('background-color', '#fff3cd', 'important');
+                                            row.style.setProperty('border-left', '5px solid #dc3545', 'important');
+
+                                            var infoCell = row.querySelector('.order-header-info');
+                                            if (infoCell) {
+                                                var statusDiv = infoCell.querySelector('.order-status');
+                                                if (statusDiv) {
+                                                    var existingDate = infoCell.querySelector('.surprise-date-text');
+                                                    if (existingDate) existingDate.remove();
+
+                                                    var dateDiv = document.createElement('div');
+                                                    dateDiv.className = 'surprise-date-text';
+                                                    dateDiv.style.color = '#d63384';
+                                                    dateDiv.style.fontWeight = 'bold';
+                                                    dateDiv.innerHTML = '★サプライズ：' + orderSurpriseDate;
+                                                    statusDiv.parentNode.insertBefore(dateDiv, statusDiv.nextSibling);
+                                                }
+                                                if (!infoCell.querySelector('.surprise-badge')) {
+                                                    var badge = document.createElement('div');
+                                                    badge.className = 'surprise-badge';
+                                                    badge.innerHTML = '<i class="fas fa-gift"></i> サプライズ設定あり (' + orderSurpriseDate + ')';
+                                                    infoCell.insertBefore(badge, infoCell.querySelector('.customer-name') || infoCell.firstChild);
+                                                }
+                                            }
+                                        }
+                                    }
                                 } else {
                                     // エラー時はエラーメッセージを表示
                                     var placeholder = container.querySelector('.item-details-placeholder');
@@ -2551,7 +2487,7 @@ function checkVisibleRowsForSurprise() {
                                     resolve();
                                 }
                             })
-                            .catch(error => {
+                            .catch(function(error) {
                                 console.error('商品情報取得エラー:', error);
                                 var placeholder = container.querySelector('.item-details-placeholder');
                                 if (placeholder) {
