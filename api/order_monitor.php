@@ -1723,86 +1723,6 @@ function buildPageUrl($page_num) {
                         }
                     }
         
-        // 画面上の注文行をスキャンしてサプライズ判定を行う（詳細API非同期呼び出し）
-function checkVisibleRowsForSurprise() {
-    var rows = document.querySelectorAll('tr[data-order-id]');
-    
-    // 一気に投げると負荷が高いので、少しずつ処理するか、Promise.allで投げる
-    // ここではシンプルに順次非同期リクエストを投げる（ブラウザが同時接続数を制御する）
-    rows.forEach(function(row) {
-        if (row.hasAttribute('data-checked-surprise')) return; // 既にチェック済み
-        
-        var orderId = row.getAttribute('data-order-id');
-        if (!orderId || orderId === 'N/A') return;
-        
-        row.setAttribute('data-checked-surprise', 'true');
-        
-        // 詳細データ取得
-        console.log('Fetching details for ' + orderId);
-        fetch('get_order_items.php?order_id=' + orderId, {
-            credentials: 'include' // セッション維持のため
-        })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Received data for ' + orderId, data);
-                if (data.success && data.items) {
-                    var isSurprise = false;
-                    var surpriseDate = '';
-                    
-                    // オプションチェック
-                    data.items.forEach(function(item) {
-                        if (item.options) {
-                            item.options.forEach(function(opt) {
-                                var optName = opt.option_name || opt.name || '';
-                                var optValue = opt.option_value || opt.value || '';
-                                
-                                console.log('Checking option: ' + optName + ' = ' + optValue);
-                                
-                                if (optName.indexOf('サプライズ') !== -1) {
-                                    isSurprise = true;
-                                    surpriseDate = optValue;
-                                }
-                            });
-                        }
-                    });
-                    
-                    // ハイライト適用
-                    if (isSurprise) {
-                        console.log('SURPRISE DETECTED for ' + orderId);
-                        // alert('サプライズ検出！ 注文ID: ' + orderId); // デバッグ用アラート
-                        
-                        row.classList.add('surprise-row');
-                        row.style.backgroundColor = '#fff3cd'; // 強制適用
-                        row.style.borderLeft = '5px solid #dc3545'; // 強制適用
-                        
-                        // ヘッダー情報のセルを見つけてバッジを追加 (1つ目のtdの .order-info class内)
-                        var infoCell = row.querySelector('.order-header-info');
-                        if (infoCell) {
-                            // 要望対応: ステータスの右側（下）に日付を表示
-                            var statusDiv = infoCell.querySelector('.order-status');
-                            if (statusDiv) {
-                                // 既存の日付削除（重複防止）
-                                var existingDate = infoCell.querySelector('.surprise-date-text');
-                                if (existingDate) existingDate.remove();
-
-                                var dateDiv = document.createElement('div');
-                                dateDiv.className = 'surprise-date-text';
-                                dateDiv.style.color = '#d63384';
-                                dateDiv.style.fontWeight = 'bold';
-                                dateDiv.style.marginTop = '2px';
-                                dateDiv.innerHTML = '★サプライズ：' + surpriseDate;
-                                statusDiv.parentNode.insertBefore(dateDiv, statusDiv.nextSibling);
-                            }
-
-                            // バッジも念のため維持
-                            // Check if a badge already exists to avoid duplicates
-                            if (!infoCell.querySelector('.surprise-badge')) {
-                                var badge = document.createElement('div');
-                                badge.className = 'surprise-badge';
-                                badge.innerHTML = '<i class="fas fa-gift"></i> サプライズ設定あり (' + surpriseDate + ')';
-                                infoCell.insertBefore(badge, infoCell.querySelector('.customer-name') || infoCell.firstChild);
-                            }
-                        }
                     } else {
                         console.log('No surprise for ' + orderId);
                     }
@@ -1816,13 +1736,6 @@ function checkVisibleRowsForSurprise() {
     });
 }
 
-// データ更新完了後にサプライズチェックを実行するようにフックが必要
-// 現在の loadOrderData 内で innerHTML = xhr.responseText している箇所の直後で呼び出す必要がある
-// ★API制限対策: 自動実行を停止し、手動ボタンでのみ実行するように変更
-// setInterval(checkVisibleRowsForSurprise, 2000); 
-
-// 手動実行用関数をグローバルに公開
-window.manualCheckSurprise = checkVisibleRowsForSurprise;
         
         // 自動認証機能
         function autoAuth() {
