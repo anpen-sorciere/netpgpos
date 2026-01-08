@@ -1571,20 +1571,10 @@ function buildPageUrl($page_num) {
                                     <?php endif; ?>
                                 </td>
                                 
-                                <!-- 詳細ボタン列 -->
-                                <td>
-                                    <button class="btn btn-sm btn-secondary" id="toggle-<?= $order_id ?>" onclick="toggleOrderDetail('<?= $order_id ?>')">
-                                        <i class="fas fa-chevron-down"></i> 全詳細
-                                    </button>
-                                </td>
+
                             </tr>
                             
-                            <!-- 注文詳細行（全情報表示用） -->
-                            <tr id="detail-<?= $order_id ?>" style="display: none;">
-                                <td colspan="3" style="padding: 0;">
-                                    <!-- 全詳細内容がここに表示されます -->
-                                </td>
-                            </tr>
+
                         <?php endforeach; ?>
                     </tbody>
                 </table>
