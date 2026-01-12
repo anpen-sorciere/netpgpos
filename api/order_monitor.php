@@ -1896,7 +1896,7 @@ function buildPageUrl($page_num) {
             
             // 現在のページ番号を取得
             var currentPage = getCurrentPage();
-            var url = 'order_data_ajax.php';
+            var url = 'ajax/order_data_ajax.php';
             if (currentPage > 1) {
                 url += '?page=' + currentPage;
             }
@@ -2154,7 +2154,7 @@ function buildPageUrl($page_num) {
                 toggleButton.innerHTML = '<i class="fas fa-chevron-up"></i> 全詳細';
                 
                 // AJAXで詳細データを取得
-                fetch('order_detail_ajax.php?order_id=' + encodeURIComponent(orderId))
+                fetch('ajax/order_detail_ajax.php?order_id=' + encodeURIComponent(orderId))
                     .then(response => response.text())
                     .then(data => {
                         detailRow.innerHTML = '<td colspan="3" style="padding: 15px;">' + data + '</td>';
@@ -2205,7 +2205,7 @@ function buildPageUrl($page_num) {
             modal.style.display = 'block';
             
             // AJAXでデータを取得
-            fetch('popup_info_ajax.php?order_id=' + encodeURIComponent(orderId) + '&type=' + encodeURIComponent(type))
+            fetch('ajax/popup_info_ajax.php?order_id=' + encodeURIComponent(orderId) + '&type=' + encodeURIComponent(type))
                 .then(response => response.text())
                 .then(data => {
                     document.getElementById('popup-content-' + orderId + '-' + type).innerHTML = data;
@@ -2245,7 +2245,7 @@ function buildPageUrl($page_num) {
                 video_url: videoUrl || ""
             };
             
-            fetch("update_order_status.php", {
+            fetch("ajax/update_order_status.php", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -2281,7 +2281,7 @@ function buildPageUrl($page_num) {
         function showAuthError() {
             var errorDiv = document.createElement('div');
             errorDiv.className = 'error-message';
-            errorDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i><br>BASE API認証が必要です。<br><button onclick="autoAuth()" style="background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; margin-top: 10px; display: inline-block; cursor: pointer;">自動認証を実行</button><br><a href="test_practical_auto.php" style="color: #6c757d; font-size: 0.9em; margin-top: 5px; display: inline-block;">手動設定</a>';
+            errorDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i><br>BASE API認証が必要です。<br><button onclick="autoAuth()" style="background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; margin-top: 10px; display: inline-block; cursor: pointer;">自動認証を実行</button><br><a href="debug/test_practical_auto.php" style="color: #6c757d; font-size: 0.9em; margin-top: 5px; display: inline-block;">手動設定</a>';
             
             var container = document.getElementById('orders-container');
             if (container) {
@@ -2320,7 +2320,7 @@ function buildPageUrl($page_num) {
                 itemDetailContainers.forEach(function(container) {
                     var orderId = container.getAttribute('data-order-id');
                     if (orderId) {
-                        fetch('get_order_items.php?order_id=' + encodeURIComponent(orderId))
+                        fetch('ajax/get_order_items.php?order_id=' + encodeURIComponent(orderId))
                             .then(function(response) {
                                 return response.json();
                             })
