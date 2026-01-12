@@ -123,7 +123,7 @@ class BaseOneTimeSetup {
         }
         
         try {
-            require_once __DIR__ . '/base_ultimate_scope_manager.php';
+            require_once __DIR__ . '/classes/base_ultimate_scope_manager.php';
             $ultimate_manager = new BaseUltimateScopeManager();
             $result = $ultimate_manager->getCombinedOrderData(5);
             

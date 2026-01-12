@@ -9,7 +9,7 @@ date_default_timezone_set('Asia/Tokyo');
 require_once __DIR__ . '/../../common/config.php';
 require_once __DIR__ . '/../../common/dbconnect.php';
 require_once __DIR__ . '/../../common/functions.php';
-require_once __DIR__ . '/base_practical_auto_manager.php';
+require_once __DIR__ . '/classes/base_practical_auto_manager.php';
 
 session_start();
 

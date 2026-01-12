@@ -17,7 +17,7 @@ echo "base_client_secret: " . substr($base_client_secret, 0, 10) . "...<br>";
 echo "base_redirect_uri: " . $base_redirect_uri . "<br>";
 
 echo "<h2>認証URL生成テスト</h2>";
-require_once __DIR__ . '/base_api_client.php';
+require_once __DIR__ . '/classes/base_api_client.php';
 
 $api_client = new BaseApiClient();
 echo "認証が必要: " . ($api_client->needsAuth() ? 'はい' : 'いいえ') . "<br>";
