@@ -24,6 +24,8 @@ try {
     // 期間指定があれば追加するが、まずは全期間（LIMIT付き）
     // サプライズのLogic: item_surprise_date
     
+    $cast_id = $_SESSION['cast_id']; // セッションからcast_idを取得
+    
     $sql = "
         SELECT 
             oi.*, 
@@ -32,27 +34,28 @@ try {
             o.surprise_date as order_surprise_date
         FROM base_order_items oi
         JOIN base_orders o ON oi.base_order_id = o.base_order_id
-        WHERE oi.cast_name = :cname
+        WHERE oi.cast_id = :cast_id
         ORDER BY o.order_date DESC
         LIMIT 200
     ";
     
     // デバッグ情報
     echo "<!-- デバッグ情報 -->";
+    echo "<!-- キャストID: " . htmlspecialchars($cast_id) . " -->";
     echo "<!-- キャスト名: " . htmlspecialchars($cast_name) . " -->";
     echo "<!-- SQL: " . htmlspecialchars($sql) . " -->";
     
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([':cname' => $cast_name]);
+    $stmt->execute([':cast_id' => $cast_id]);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     echo "<!-- 取得件数: " . count($rows) . " -->";
     
     // デバッグ: base_order_itemsの全データ確認
-    $debug_sql = "SELECT DISTINCT cast_name FROM base_order_items WHERE cast_name IS NOT NULL LIMIT 10";
+    $debug_sql = "SELECT DISTINCT cast_id FROM base_order_items WHERE cast_id IS NOT NULL LIMIT 10";
     $debug_stmt = $pdo->query($debug_sql);
-    $debug_names = $debug_stmt->fetchAll(PDO::FETCH_COLUMN);
-    echo "<!-- DB内のキャスト名一覧: " . htmlspecialchars(implode(', ', $debug_names)) . " -->";
+    $debug_ids = $debug_stmt->fetchAll(PDO::FETCH_COLUMN);
+    echo "<!-- DB内のキャストID一覧: " . htmlspecialchars(implode(', ', $debug_ids)) . " -->";
 
     $today = date('Y-m-d');
 

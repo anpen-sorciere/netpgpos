@@ -429,31 +429,39 @@ echo '</div>';
 function syncOrdersToDb($pdo, $orders) {
     if (empty($orders)) return;
 
-    // orders アップサート文
+    // base_orders アップサート文
     $stmtOrder = $pdo->prepare("
-        INSERT INTO orders (order_id, ordered_at, customer_name, total_price, payment_method, dispatch_status, is_surprise, surprise_date)
-        VALUES (:order_id, :ordered_at, :customer_name, :total_price, :payment_method, :dispatch_status, :is_surprise, :surprise_date)
+        INSERT INTO base_orders (base_order_id, order_date, customer_name, total_amount, status, is_surprise, surprise_date, payment_method, dispatch_status_detail)
+        VALUES (:base_order_id, :order_date, :customer_name, :total_amount, :status, :is_surprise, :surprise_date, :payment_method, :dispatch_status_detail)
         ON DUPLICATE KEY UPDATE
             customer_name = VALUES(customer_name),
-            total_price = VALUES(total_price),
-            payment_method = VALUES(payment_method),
-            dispatch_status = VALUES(dispatch_status),
+            total_amount = VALUES(total_amount),
+            status = VALUES(status),
             is_surprise = VALUES(is_surprise),
             surprise_date = VALUES(surprise_date),
-            last_synced_at = NOW()
+            payment_method = VALUES(payment_method),
+            dispatch_status_detail = VALUES(dispatch_status_detail),
+            updated_at = NOW()
     ");
 
-    // order_items アップサート文
-    // UNIQUE KEY (order_id, base_item_id, cast_name) を利用
+    // base_order_items アップサート文
     $stmtItem = $pdo->prepare("
-        INSERT INTO order_items (base_item_id, order_id, title, price, quantity, customer_name, cast_name, item_surprise_date)
-        VALUES (:base_item_id, :order_id, :title, :price, :quantity, :customer_name, :cast_name, :item_surprise_date)
+        INSERT INTO base_order_items (base_order_id, product_id, product_name, price, quantity, cast_id, customer_name_from_option, item_surprise_date)
+        VALUES (:base_order_id, :product_id, :product_name, :price, :quantity, :cast_id, :customer_name_from_option, :item_surprise_date)
         ON DUPLICATE KEY UPDATE
-            title = VALUES(title),
+            product_name = VALUES(product_name),
             price = VALUES(price),
             quantity = VALUES(quantity),
-            customer_name = VALUES(customer_name),
+            cast_id = VALUES(cast_id),
+            customer_name_from_option = VALUES(customer_name_from_option),
             item_surprise_date = VALUES(item_surprise_date)
+    ");
+    
+    // キャスト名からcast_idを検索するための準備済みステートメント
+    $stmtFindCast = $pdo->prepare("
+        SELECT cast_id FROM cast_mst 
+        WHERE cast_name = :cast_name AND drop_flg = 0
+        LIMIT 1
     ");
 
     foreach ($orders as $order) {
@@ -491,14 +499,15 @@ function syncOrdersToDb($pdo, $orders) {
         // Order実行
         try {
             $stmtOrder->execute([
-                ':order_id' => $order_id,
-                ':ordered_at' => $ordered_at,
+                ':base_order_id' => $order_id,
+                ':order_date' => $ordered_at,
                 ':customer_name' => $customer_name,
-                ':total_price' => $total_price,
-                ':payment_method' => $payment_method,
-                ':dispatch_status' => $dispatch_status,
+                ':total_amount' => $total_price,
+                ':status' => $dispatch_status,
                 ':is_surprise' => $is_surprise,
-                ':surprise_date' => $surprise_date // nullの場合はNULLが入るはず
+                ':surprise_date' => $surprise_date,
+                ':payment_method' => $payment_method,
+                ':dispatch_status_detail' => $dispatch_status
             ]);
         } catch (Exception $e) {
             // エラーログだけ吐いて継続
@@ -508,14 +517,14 @@ function syncOrdersToDb($pdo, $orders) {
         // Items実行
         if (isset($order['order_items']) && is_array($order['order_items'])) {
             foreach ($order['order_items'] as $item) {
-                $base_item_id = $item['item_id'] ?? 'unknown'; // item_idがない場合はunknown
+                $base_item_id = $item['item_id'] ?? 'unknown';
                 $title = $item['title'] ?? '';
                 $price = $item['price'] ?? 0;
                 $quantity = $item['amount'] ?? 1;
 
                 // オプション解析
                 $item_customer = null;
-                $item_cast = null; // nullなら誰のものでもない
+                $item_cast_name = null;
                 $item_surprise_date = null;
 
                 if (isset($item['options'])) {
@@ -527,23 +536,37 @@ function syncOrdersToDb($pdo, $orders) {
                             $item_customer = $val;
                         }
                         if (mb_strpos($nm, 'キャスト名') !== false) {
-                            $item_cast = $val;
+                            $item_cast_name = $val;
                         }
                         if (mb_strpos($nm, 'サプライズ') !== false) {
                             $item_surprise_date = $val;
                         }
                     }
                 }
+                
+                // キャスト名からcast_idを検索
+                $cast_id = null;
+                if ($item_cast_name) {
+                    try {
+                        $stmtFindCast->execute([':cast_name' => $item_cast_name]);
+                        $cast_row = $stmtFindCast->fetch(PDO::FETCH_ASSOC);
+                        if ($cast_row) {
+                            $cast_id = $cast_row['cast_id'];
+                        }
+                    } catch (Exception $e) {
+                        // cast検索エラーは無視してnullのまま保存
+                    }
+                }
 
                 try {
                     $stmtItem->execute([
-                        ':base_item_id' => $base_item_id,
-                        ':order_id' => $order_id,
-                        ':title' => $title,
+                        ':base_order_id' => $order_id,
+                        ':product_id' => $base_item_id,
+                        ':product_name' => $title,
                         ':price' => $price,
                         ':quantity' => $quantity,
-                        ':customer_name' => $item_customer,
-                        ':cast_name' => $item_cast, // 文字列またはnull
+                        ':cast_id' => $cast_id,
+                        ':customer_name_from_option' => $item_customer,
                         ':item_surprise_date' => $item_surprise_date
                     ]);
                 } catch (Exception $e) {
