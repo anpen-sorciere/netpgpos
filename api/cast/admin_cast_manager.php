@@ -1,6 +1,7 @@
 <?php
 /**
  * キャストアカウント管理 (管理者用)
+ * cast_mstテーブルのログイン情報を管理
  */
 session_start();
 require_once __DIR__ . '/../../../common/config.php';
@@ -19,38 +20,43 @@ try {
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
     );
 
-    // 追加処理
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add') {
-        $username = $_POST['username'] ?? '';
+    // 追加/更新処理
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save') {
+        $cast_id = $_POST['cast_id'] ?? 0;
+        $email = $_POST['email'] ?? '';
         $password_raw = $_POST['password'] ?? '';
-        $display_name = $_POST['display_name'] ?? '';
+        $login_enabled = isset($_POST['login_enabled']) ? 1 : 0;
 
-        if ($username && $password_raw && $display_name) {
-            $hash = password_hash($password_raw, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare("INSERT INTO casts (username, password_hash, display_name) VALUES (?, ?, ?)");
-            try {
-                $stmt->execute([$username, $hash, $display_name]);
-                $message = "キャスト「{$display_name}」を追加しました。";
-            } catch (PDOException $e) {
-                $message = "エラー: " . $e->getMessage();
+        if ($cast_id && $email) {
+            // パスワードが入力されている場合のみ更新
+            if ($password_raw) {
+                $hash = password_hash($password_raw, PASSWORD_DEFAULT);
+                $stmt = $pdo->prepare("UPDATE cast_mst SET email = ?, password = ?, login_enabled = ? WHERE cast_id = ?");
+                $stmt->execute([$email, $hash, $login_enabled, $cast_id]);
+                $message = "キャスト ID:{$cast_id} のログイン情報を更新しました。";
+            } else {
+                // パスワードなしの場合はemailとlogin_enabledのみ更新
+                $stmt = $pdo->prepare("UPDATE cast_mst SET email = ?, login_enabled = ? WHERE cast_id = ?");
+                $stmt->execute([$email, $login_enabled, $cast_id]);
+                $message = "キャスト ID:{$cast_id} のログイン情報を更新しました。（パスワードは変更なし）";
             }
         } else {
-            $message = "全項目を入力してください。";
+            $message = "キャストIDとメールアドレスを入力してください。";
         }
     }
 
-    // 削除処理
-    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete') {
-        $id = $_POST['id'] ?? 0;
-        if ($id) {
-            $stmt = $pdo->prepare("DELETE FROM casts WHERE id = ?");
-            $stmt->execute([$id]);
-            $message = "ID {$id} を削除しました。";
+    // ログイン無効化処理
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'disable') {
+        $cast_id = $_POST['cast_id'] ?? 0;
+        if ($cast_id) {
+            $stmt = $pdo->prepare("UPDATE cast_mst SET login_enabled = 0 WHERE cast_id = ?");
+            $stmt->execute([$cast_id]);
+            $message = "ID {$cast_id} のログインを無効化しました。";
         }
     }
 
-    // リスト取得
-    $stmt = $pdo->query("SELECT * FROM casts ORDER BY created_at DESC");
+    // リスト取得（在籍中のキャストのみ表示）
+    $stmt = $pdo->query("SELECT * FROM cast_mst WHERE drop_flg = 0 ORDER BY cast_id");
     $casts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
@@ -66,69 +72,80 @@ try {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { padding: 20px; background-color: #f8f9fa; }
-        .container { max-width: 800px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .container { max-width: 1000px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .table th { background-color: #f8f9fa; }
+        .badge-enabled { background-color: #28a745; }
+        .badge-disabled { background-color: #6c757d; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1 class="mb-4">キャストアカウント管理</h1>
+        <h1 class="mb-4">キャストログイン管理</h1>
         
         <?php if ($message): ?>
             <div class="alert alert-info"><?= htmlspecialchars($message) ?></div>
         <?php endif; ?>
 
         <div class="card mb-4">
-            <div class="card-header">新規登録</div>
+            <div class="card-header">使い方</div>
             <div class="card-body">
-                <form method="post">
-                    <input type="hidden" name="action" value="add">
-                    <div class="mb-3">
-                        <label class="form-label">ログインIID (Username)</label>
-                        <input type="text" name="username" class="form-control" required placeholder="例: cast_hanako">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">パスワード</label>
-                        <input type="text" name="password" class="form-control" required placeholder="初期パスワード">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">表示名 (Display Name)</label>
-                        <input type="text" name="display_name" class="form-control" required placeholder="例: 花子 (BASEのオプション値と一致させる)">
-                        <div class="form-text">これが注文データの「キャスト名」と照合されます。</div>
-                    </div>
-                    <button type="submit" class="btn btn-primary">登録</button>
-                    <a href="../order_monitor.php" class="btn btn-secondary ms-2">モニターに戻る</a>
-                </form>
+                <ul>
+                    <li>既存のキャスト（cast_mst）にログイン機能を追加します。</li>
+                    <li>メールアドレスとパスワードを設定し、「ログイン有効」にチェックを入れて保存してください。</li>
+                    <li>キャストは設定したメールアドレスでログインできるようになります。</li>
+                </ul>
+                <a href="../order_monitor.php" class="btn btn-secondary btn-sm">モニターに戻る</a>
             </div>
         </div>
 
         <h3>登録済みキャスト</h3>
-        <table class="table table-bordered">
+        <table class="table table-bordered table-hover">
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>ログインID</th>
-                    <th>表示名</th>
-                    <th>登録日</th>
+                    <th>源氏名</th>
+                    <th>メールアドレス</th>
+                    <th>ログイン</th>
+                    <th>最終ログイン</th>
                     <th>操作</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($casts as $cast): ?>
                 <tr>
-                    <td><?= $cast['id'] ?></td>
-                    <td><?= htmlspecialchars($cast['username']) ?></td>
+                    <td><?= $cast['cast_id'] ?></td>
+                    <td><?= htmlspecialchars($cast['cast_name']) ?></td>
                     <td>
-                        <?= htmlspecialchars($cast['display_name']) ?>
-                        <a href="cast_dashboard.php?test_cast=<?= urlencode($cast['display_name']) ?>" target="_blank" class="btn btn-xs btn-outline-info ms-2" style="font-size:0.75rem">Dashboard Debug</a>
+                        <form method="post" class="d-inline">
+                            <input type="hidden" name="action" value="save">
+                            <input type="hidden" name="cast_id" value="<?= $cast['cast_id'] ?>">
+                            <input type="email" name="email" class="form-control form-control-sm d-inline" style="width:200px" 
+                                   value="<?= htmlspecialchars($cast['email'] ?? '') ?>" placeholder="メールアドレス" required>
                     </td>
-                    <td><?= $cast['created_at'] ?></td>
                     <td>
-                        <form method="post" style="display:inline" onsubmit="return confirm('本当に削除しますか？');">
-                            <input type="hidden" name="action" value="delete">
-                            <input type="hidden" name="id" value="<?= $cast['id'] ?>">
-                            <button type="submit" class="btn btn-sm btn-danger">削除</button>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="login_enabled" 
+                                   <?= $cast['login_enabled'] ? 'checked' : '' ?>>
+                            <label class="form-check-label">
+                                <span class="badge <?= $cast['login_enabled'] ? 'badge-enabled' : 'badge-disabled' ?>">
+                                    <?= $cast['login_enabled'] ? '有効' : '無効' ?>
+                                </span>
+                            </label>
+                        </div>
+                    </td>
+                    <td><?= $cast['last_login_at'] ? date('Y/m/d H:i', strtotime($cast['last_login_at'])) : '-' ?></td>
+                    <td>
+                        <input type="password" name="password" class="form-control form-control-sm mb-1" 
+                               placeholder="新しいパスワード（変更時のみ）" style="width:150px">
+                        <button type="submit" class="btn btn-sm btn-primary">保存</button>
                         </form>
+                        <?php if ($cast['login_enabled']): ?>
+                        <form method="post" class="d-inline ms-1" onsubmit="return confirm('ログインを無効化しますか？');">
+                            <input type="hidden" name="action" value="disable">
+                            <input type="hidden" name="cast_id" value="<?= $cast['cast_id'] ?>">
+                            <button type="submit" class="btn btn-sm btn-warning">無効化</button>
+                        </form>
+                        <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>

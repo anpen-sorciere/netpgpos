@@ -47,10 +47,10 @@ call_user_func(function() use (&$db_user, &$db_pass, &$db_host, &$db_name) {
 
 // ログイン処理
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'] ?? '';
+    $email = $_POST['username'] ?? ''; // フォームはusernameだがemailとして扱う
     $login_pass = $_POST['password'] ?? '';
 
-    if ($username && $login_pass) {
+    if ($email && $login_pass) {
         try {
             $pdo = new PDO(
                 "mysql:host={$db_host};dbname={$db_name};charset=utf8mb4",
@@ -59,27 +59,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
             );
 
-            $stmt = $pdo->prepare("SELECT * FROM casts WHERE username = ? AND is_active = 1");
-            $stmt->execute([$username]);
+            // cast_mstテーブルからログイン情報を取得
+            $stmt = $pdo->prepare("SELECT * FROM cast_mst WHERE email = ? AND login_enabled = 1 AND drop_flg = 0");
+            $stmt->execute([$email]);
             $cast = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($cast && password_verify($login_pass, $cast['password_hash'])) {
+            if ($cast && password_verify($login_pass, $cast['password'])) {
                 // ログイン成功
-                $_SESSION['cast_id'] = $cast['id'];
-                $_SESSION['cast_name'] = $cast['display_name'];
-                $_SESSION['cast_username'] = $cast['username'];
+                $_SESSION['cast_id'] = $cast['cast_id'];
+                $_SESSION['cast_name'] = $cast['cast_name'];
+                $_SESSION['cast_email'] = $cast['email'];
+                
+                // 最終ログイン日時を更新
+                $update_stmt = $pdo->prepare("UPDATE cast_mst SET last_login_at = NOW() WHERE cast_id = ?");
+                $update_stmt->execute([$cast['cast_id']]);
                 
                 header('Location: cast_dashboard.php');
                 exit;
             } else {
-                $error = 'IDまたはパスワードが間違っています。';
+                $error = 'メールアドレスまたはパスワードが間違っています。';
             }
 
         } catch (PDOException $e) {
             $error = 'システムエラー: DB接続失敗';
         }
     } else {
-        $error = 'IDとパスワードを入力してください。';
+        $error = 'メールアドレスとパスワードを入力してください。';
     }
 }
 ?>
