@@ -577,7 +577,9 @@ function syncOrdersToDb($pdo, $orders) {
                         ':item_surprise_date' => $item_surprise_date
                     ]);
                 } catch (Exception $e) {
-                    // error_log("Item Sync Error ($order_id / $base_item_id): " . $e->getMessage());
+                    error_log("Item Sync Error ($order_id / $base_item_id): " . $e->getMessage());
+                    // デバッグ用にコメント表示
+                    echo "<!-- Item Sync Error: Order=$order_id, Product=$base_item_id, Error=" . htmlspecialchars($e->getMessage()) . " -->";
                 }
             }
         }
