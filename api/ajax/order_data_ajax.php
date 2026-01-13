@@ -84,7 +84,14 @@ try {
         
         // ★ 取得したデータをDBに同期（キャストポータル用）
         if ($sync_pdo) {
-           syncOrdersToDb($sync_pdo, $batch_orders);
+            try {
+                syncOrdersToDb($sync_pdo, $batch_orders);
+                // error_log("Sync successful: " . count($batch_orders) . " orders");
+            } catch (Exception $e) {
+                error_log("Sync Error: " . $e->getMessage());
+                // デバッグ用にコメント表示（本番では削除）
+                echo "<!-- Sync Error: " . htmlspecialchars($e->getMessage()) . " -->";
+            }
         }
         
         $date_limit_reached = false;
