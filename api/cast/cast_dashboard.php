@@ -27,13 +27,13 @@ try {
     $sql = "
         SELECT 
             oi.*, 
-            o.ordered_at, 
+            o.order_date, 
             o.is_surprise as order_surprise, 
             o.surprise_date as order_surprise_date
-        FROM order_items oi
-        JOIN orders o ON oi.order_id = o.order_id
+        FROM base_order_items oi
+        JOIN base_orders o ON oi.base_order_id = o.base_order_id
         WHERE oi.cast_name = :cname
-        ORDER BY o.ordered_at DESC
+        ORDER BY o.order_date DESC
         LIMIT 200
     ";
     
@@ -98,18 +98,18 @@ try {
             <?php foreach ($items as $item): ?>
                 <div class="item-card">
                     <div class="item-date">
-                        <?= date('Y/m/d H:i', strtotime($item['ordered_at'])) ?>
+                        <?= date('Y/m/d H:i', strtotime($item['order_date'])) ?>
                         <?php if ($item['item_surprise_date']): ?>
                             <span class="surprise-badge"><i class="fas fa-gift"></i> サプライズ (<?= $item['item_surprise_date'] ?>)</span>
                         <?php endif; ?>
                     </div>
                     <div class="item-title">
-                        <?= htmlspecialchars($item['title']) ?>
+                        <?= htmlspecialchars($item['product_name'] ?? '') ?>
                         <span class="badge bg-secondary rounded-pill">x<?= $item['quantity'] ?></span>
                     </div>
                     <div class="item-meta">
                         <div>
-                            お名前: <span class="customer-name"><?= htmlspecialchars($item['customer_name'] ?: 'なし') ?></span> 様
+                            お名前: <span class="customer-name"><?= htmlspecialchars($item['customer_name_from_option'] ?? 'なし') ?></span> 様
                         </div>
                     </div>
                 </div>
