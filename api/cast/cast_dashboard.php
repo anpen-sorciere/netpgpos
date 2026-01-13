@@ -37,9 +37,22 @@ try {
         LIMIT 200
     ";
     
+    // デバッグ情報
+    echo "<!-- デバッグ情報 -->";
+    echo "<!-- キャスト名: " . htmlspecialchars($cast_name) . " -->";
+    echo "<!-- SQL: " . htmlspecialchars($sql) . " -->";
+    
     $stmt = $pdo->prepare($sql);
     $stmt->execute([':cname' => $cast_name]);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    echo "<!-- 取得件数: " . count($rows) . " -->";
+    
+    // デバッグ: base_order_itemsの全データ確認
+    $debug_sql = "SELECT DISTINCT cast_name FROM base_order_items WHERE cast_name IS NOT NULL LIMIT 10";
+    $debug_stmt = $pdo->query($debug_sql);
+    $debug_names = $debug_stmt->fetchAll(PDO::FETCH_COLUMN);
+    echo "<!-- DB内のキャスト名一覧: " . htmlspecialchars(implode(', ', $debug_names)) . " -->";
 
     $today = date('Y-m-d');
 
