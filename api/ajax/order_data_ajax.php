@@ -85,7 +85,7 @@ try {
         // ★ 取得したデータをDBに同期（キャストポータル用）
         if ($sync_pdo) {
             try {
-                syncOrdersToDb($sync_pdo, $batch_orders);
+                syncOrdersToDb($sync_pdo, $batch_orders, $practical_manager);
                 // error_log("Sync successful: " . count($batch_orders) . " orders");
             } catch (Exception $e) {
                 error_log("Sync Error: " . $e->getMessage());
@@ -433,7 +433,7 @@ echo '</div>';
 echo '</div>';
 
 // ★ キャストポータル用データ同期関数
-function syncOrdersToDb($pdo, $orders) {
+function syncOrdersToDb($pdo, $orders, $manager = null) {
     if (empty($orders)) return;
 
     // base_orders アップサート文
@@ -474,6 +474,20 @@ function syncOrdersToDb($pdo, $orders) {
     foreach ($orders as $order) {
         $order_id = $order['unique_key'] ?? null;
         if (!$order_id) continue;
+        
+        // order_itemsが含まれていない場合、詳細APIを叩いて取得
+        if ((!isset($order['order_items']) || empty($order['order_items'])) && $manager) {
+            try {
+                $detail = $manager->getDataWithAutoAuth('read_orders', "/orders/{$order_id}");
+                if (isset($detail['order'])) {
+                    $order = array_merge($order, $detail['order']);
+                }
+            } catch (Exception $e) {
+                // 詳細取得失敗した場合はスキップ
+                error_log("Failed to fetch order details for {$order_id}: " . $e->getMessage());
+                continue;
+            }
+        }
 
         // データの整形
         $ordered_at = date('Y-m-d H:i:s', is_numeric($order['ordered']) ? $order['ordered'] : strtotime($order['ordered']));
