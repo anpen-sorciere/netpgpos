@@ -102,8 +102,8 @@ try {
                     $detailed_orders = [];
                     foreach ($new_order_ids as $order_id) {
                         try {
-                            // 詳細API取得（正しいエンドポイント）
-                            $detail_response = $practical_manager->getDataWithAutoAuth('read_orders', "/1/orders/{$order_id}");
+                            // 詳細API取得（正しいエンドポイント: BASE API仕様に準拠）
+                            $detail_response = $practical_manager->getDataWithAutoAuth('read_orders', "/orders/detail/{$order_id}");
                             if (isset($detail_response['order'])) {
                                 $detailed_orders[] = $detail_response['order'];
                             }
