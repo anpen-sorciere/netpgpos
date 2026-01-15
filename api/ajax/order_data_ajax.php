@@ -100,22 +100,74 @@ try {
                 // 4. 未保存注文のみ詳細APIで取得してDB保存
                 if (!empty($new_order_ids)) {
                     $detailed_orders = [];
+                    $failed_orders = [];
+                    $retry_max = 3; // リトライ回数
+                    
                     foreach ($new_order_ids as $order_id) {
-                        try {
-                            // 詳細API取得（正しいエンドポイント: BASE API仕様に準拠）
-                            $detail_response = $practical_manager->getDataWithAutoAuth('read_orders', "/orders/detail/{$order_id}");
-                            if (isset($detail_response['order'])) {
-                                $detailed_orders[] = $detail_response['order'];
+                        $success = false;
+                        $last_error = null;
+                        
+                        // リトライループ
+                        for ($retry = 0; $retry < $retry_max; $retry++) {
+                            try {
+                                // 詳細API取得（正しいエンドポイント: BASE API仕様に準拠）
+                                $detail_response = $practical_manager->getDataWithAutoAuth('read_orders', "/orders/detail/{$order_id}");
+                                
+                                if (isset($detail_response['order'])) {
+                                    $order_data = $detail_response['order'];
+                                    
+                                    // order_itemsの存在確認（重要！）
+                                    if (isset($order_data['order_items']) && count($order_data['order_items']) > 0) {
+                                        $detailed_orders[] = $order_data;
+                                        $success = true;
+                                        break; // 成功したらリトライ終了
+                                    } else {
+                                        // order_itemsが空の場合も記録
+                                        $last_error = "order_items empty or missing";
+                                        error_log("WARNING: Order {$order_id} has no order_items in API response");
+                                    }
+                                } else {
+                                    $last_error = "order key missing in response";
+                                }
+                            } catch (Exception $e) {
+                                $last_error = $e->getMessage();
+                                
+                                // リトライ前に短い待機（API負荷軽減）
+                                if ($retry < $retry_max - 1) {
+                                    usleep(500000); // 0.5秒待機
+                                }
                             }
-                        } catch (Exception $e) {
-                            error_log("Failed to fetch order detail {$order_id}: " . $e->getMessage());
+                        }
+                        
+                        // 最終的に失敗した場合
+                        if (!$success) {
+                            $failed_orders[] = [
+                                'order_id' => $order_id,
+                                'error' => $last_error
+                            ];
+                            error_log("CRITICAL: Failed to sync order {$order_id} after {$retry_max} attempts. Error: {$last_error}");
                         }
                     }
                     
                     // 詳細データをDB保存
                     if (!empty($detailed_orders)) {
-                        syncOrdersToDb($sync_pdo, $detailed_orders, null); // managerは不要（既に詳細取得済み）
-                        echo "<!-- [差分同期] 新規注文 " . count($detailed_orders) . "件をDB保存 (詳細API:" . count($new_order_ids) . "回) -->";
+                        syncOrdersToDb($sync_pdo, $detailed_orders, null);
+                        echo "<!-- [差分同期] 新規注文 " . count($detailed_orders) . "件をDB保存 (試行:" . count($new_order_ids) . "件) -->";
+                    }
+                    
+                    // 失敗した注文を明示的に警告
+                    if (!empty($failed_orders)) {
+                        $failed_ids = array_column($failed_orders, 'order_id');
+                        echo "<!-- [差分同期 警告] " . count($failed_orders) . "件の注文取得失敗: " . implode(', ', $failed_ids) . " -->";
+                        error_log("SYNC WARNING: " . count($failed_orders) . " orders failed: " . json_encode($failed_orders));
+                        
+                        // 失敗した注文IDをファイルに記録（後で手動確認・修復用）
+                        $log_file = __DIR__ . '/../logs/sync_failed_orders.log';
+                        $log_dir = dirname($log_file);
+                        if (!is_dir($log_dir)) {
+                            mkdir($log_dir, 0777, true);
+                        }
+                        file_put_contents($log_file, date('Y-m-d H:i:s') . " - Failed orders: " . json_encode($failed_orders) . "\n", FILE_APPEND);
                     }
                 } else {
                     echo "<!-- [差分同期] このバッチに新規注文なし (全" . count($batch_order_ids) . "件は既存) -->";
