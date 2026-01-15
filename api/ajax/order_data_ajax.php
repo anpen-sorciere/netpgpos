@@ -82,14 +82,47 @@ try {
             break; // データなし、終了
         }
         
-        // ★ 取得したデータをDBに同期（キャストポータル用）
+        // ★ 差分同期: DBに未保存の注文のみ詳細取得してDB保存
         if ($sync_pdo) {
             try {
-                syncOrdersToDb($sync_pdo, $batch_orders, $practical_manager);
-                // error_log("Sync successful: " . count($batch_orders) . " orders");
+                // 1. 現在のバッチの注文IDを抽出
+                $batch_order_ids = array_column($batch_orders, 'unique_key');
+                
+                // 2. DBに既に保存されている注文IDを取得
+                $placeholders = str_repeat('?,', count($batch_order_ids) - 1) . '?';
+                $stmt = $sync_pdo->prepare("SELECT base_order_id FROM base_orders WHERE base_order_id IN ($placeholders)");
+                $stmt->execute($batch_order_ids);
+                $existing_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                
+                // 3. 未保存の注文IDを抽出
+                $new_order_ids = array_diff($batch_order_ids, $existing_ids);
+                
+                // 4. 未保存注文のみ詳細APIで取得してDB保存
+                if (!empty($new_order_ids)) {
+                    $detailed_orders = [];
+                    foreach ($new_order_ids as $order_id) {
+                        try {
+                            // 詳細API取得
+                            $detail_response = $practical_manager->getDataWithAutoAuth('read_orders', "/1/orders/detail/{$order_id}");
+                            if (isset($detail_response['order'])) {
+                                $detailed_orders[] = $detail_response['order'];
+                            }
+                        } catch (Exception $e) {
+                            error_log("Failed to fetch order detail {$order_id}: " . $e->getMessage());
+                        }
+                    }
+                    
+                    // 詳細データをDB保存
+                    if (!empty($detailed_orders)) {
+                        syncOrdersToDb($sync_pdo, $detailed_orders, null); // managerは不要（既に詳細取得済み）
+                        echo "<!-- [差分同期] 新規注文 " . count($detailed_orders) . "件をDB保存 (詳細API:" . count($new_order_ids) . "回) -->";
+                    }
+                } else {
+                    echo "<!-- [差分同期] このバッチに新規注文なし (全" . count($batch_order_ids) . "件は既存) -->";
+                }
+                
             } catch (Exception $e) {
-                error_log("Sync Error: " . $e->getMessage());
-                // デバッグ用にコメント表示（本番では削除）
+                error_log("Differential Sync Error: " . $e->getMessage());
                 echo "<!-- Sync Error: " . htmlspecialchars($e->getMessage()) . " -->";
             }
         }
@@ -475,7 +508,20 @@ function syncOrdersToDb($pdo, $orders, $manager = null) {
         $order_id = $order['unique_key'] ?? null;
         if (!$order_id) continue;
         
-        // order_itemsが含まれていない場合、詳細APIを叩いて取得
+        // order_itemsが含まれていない場合の処理
+        if (!isset($order['order_items']) || empty($order['order_items'])) {
+            // managerがnull（既に詳細取得済み）の場合はスキップ
+            // managerが存在する場合のみ、個別詳細API取得は行わない（API上限対策）
+            continue; // order_itemsがない場合はDB保存できないためスキップ
+        }
+        
+        /* 個別詳細API取得は使用しない（API上限対策）
+        // API上限対策: 個別詳細APIは叩かず、データがない場合はスキップ
+        if (!isset($order['order_items']) || empty($order['order_items'])) {
+            // order_itemsがない注文はスキップ（通常はAPIレスポンスに含まれているはず）
+            continue;
+        }
+        
         if ((!isset($order['order_items']) || empty($order['order_items'])) && $manager) {
             try {
                 $detail = $manager->getDataWithAutoAuth('read_orders', "/orders/{$order_id}");
@@ -488,6 +534,7 @@ function syncOrdersToDb($pdo, $orders, $manager = null) {
                 continue;
             }
         }
+        */
 
         // データの整形
         $ordered_at = date('Y-m-d H:i:s', is_numeric($order['ordered']) ? $order['ordered'] : strtotime($order['ordered']));

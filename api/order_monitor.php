@@ -107,7 +107,8 @@ try {
                     break;
                 }
                 
-                // ★ 取得したデータをDBに同期（キャストポータル用）
+                // ★ DB同期は一時的に無効化（API上限対策）
+                /* DISABLED: API limit issue
                 if ($sync_pdo && !empty($batch_orders)) {
                     try {
                         syncOrdersToDbForMonitor($sync_pdo, $batch_orders, $practical_manager);
@@ -115,6 +116,7 @@ try {
                         error_log("order_monitor.php: Sync Error (search mode): " . $e->getMessage());
                     }
                 }
+                */
                 
                 // 全注文配列に追加
                 $all_orders = array_merge($all_orders, $batch_orders);
@@ -180,16 +182,17 @@ try {
                     break;
                 }
                 
-                // ★ 取得したデータをDBに同期（キャストポータル用）
+                // ★ DB同期は一時的に無効化（API上限対策）
+                // 代わりにorder_data_ajax.phpの自動更新時に同期される
+                /* DISABLED: API limit issue
                 if ($sync_pdo && !empty($batch_orders)) {
                     try {
-                        // order_data_ajax.phpと同じsyncOrdersToDb関数を呼び出す
-                        // ここでは関数が定義されていないため、後で定義する
                         syncOrdersToDbForMonitor($sync_pdo, $batch_orders, $practical_manager);
                     } catch (Exception $e) {
                         error_log("order_monitor.php: Sync Error: " . $e->getMessage());
                     }
                 }
+                */
                 
                 $date_limit_reached = false;
                 
@@ -561,7 +564,14 @@ function syncOrdersToDbForMonitor($pdo, $orders, $manager = null) {
         $order_id = $order['unique_key'] ?? null;
         if (!$order_id) continue;
         
-        // order_itemsが含まれていない場合、詳細APIを叩いて取得
+        // order_itemsが含まれていない場合の処理
+        // API上限対策: 個別詳細APIは叩かず、データがない場合はスキップ
+        if (!isset($order['order_items']) || empty($order['order_items'])) {
+            // order_itemsがない注文はスキップ（通常はAPIレスポンスに含まれているはず）
+            continue;
+        }
+        
+        /* DISABLED: API limit issue - 個別詳細取得は使用しない
         if ((!isset($order['order_items']) || empty($order['order_items'])) && $manager) {
             try {
                 $detail = $manager->getDataWithAutoAuth('read_orders', "/orders/{$order_id}");
@@ -574,6 +584,7 @@ function syncOrdersToDbForMonitor($pdo, $orders, $manager = null) {
                 continue;
             }
         }
+        */
 
         // データの整形
         $ordered_at = date('Y-m-d H:i:s', is_numeric($order['ordered']) ? $order['ordered'] : strtotime($order['ordered']));
