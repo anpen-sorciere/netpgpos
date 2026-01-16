@@ -28,7 +28,7 @@ try {
                     UPDATE cast_mst 
                     SET 
                         email = NULL,
-                        password_hash = NULL,
+                        password = NULL,
                         registration_token = NULL,
                         token_expires_at = NULL,
                         token_used_at = NULL,
