@@ -27,7 +27,7 @@ try {
                 $stmt = $pdo->prepare("
                     UPDATE cast_mst 
                     SET 
-                        login_id = NULL,
+                        email = NULL,
                         password_hash = NULL,
                         registration_token = NULL,
                         token_expires_at = NULL,
