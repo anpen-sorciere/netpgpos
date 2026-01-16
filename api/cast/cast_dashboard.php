@@ -84,7 +84,16 @@ try {
         ];
     }
     
+    
     $orders = array_values($orders_temp);
+    
+    // 定型文一覧取得（キャスト使用可のみ）
+    $stmt = $pdo->query("
+        SELECT * FROM reply_message_templates 
+        WHERE is_active = 1 AND allow_cast_use = 1
+        ORDER BY display_order ASC
+    ");
+    $templates = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
 } catch (PDOException $e) {
     $error = "データ取得エラー: " . $e->getMessage();
@@ -389,9 +398,10 @@ function getPaymentMethod($method) {
                     <table class="items-table">
                         <thead>
                             <tr>
-                                <th style="width: 60%">商品名</th>
-                                <th style="width: 15%; text-align: center">数量</th>
-                                <th style="width: 25%; text-align: right">単価</th>
+                                <th style="width: 50%">商品名</th>
+                                <th style="width: 12%; text-align: center">数量</th>
+                                <th style="width: 20%; text-align: right">単価</th>
+                                <th style="width: 18%; text-align: center">対応</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -408,6 +418,17 @@ function getPaymentMethod($method) {
                                     </td>
                                     <td class="product-price" style="text-align: right">
                                         ¥<?= number_format($item['price']) ?>
+                                    </td>
+                                    <td style="text-align: center">
+                                        <?php if ($order['status'] === 'ordered' || $order['status'] === 'unpaid'): ?>
+                                            <button class="btn btn-sm btn-success" onclick="showCompletionModal('<?= $order['base_order_id'] ?>', '<?= htmlspecialchars($item['product_name'], ENT_QUOTES) ?>')">
+                                                <i class="fas fa-check"></i> 完了
+                                            </button>
+                                        <?php elseif ($order['status'] === 'shipping'): ?>
+                                            <span class="badge bg-success">対応済み</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-secondary"><?= htmlspecialchars($order['status']) ?></span>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -429,11 +450,114 @@ function getPaymentMethod($method) {
                 <p class="text-muted">
                     注文が入ると、こちらに表示されます。<br>
                     <small>※モニター画面が開かれたときにデータが自動同期されます。</small>
-                </p>
-            </div>
         <?php endif; ?>
     </div>
 
+    <!-- 対応完了モーダル -->
+    <div class="modal fade" id="completionModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-check-circle"></i> 対応完了
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="modalOrderId">
+                    <p class="mb-3">
+                        <strong id="modalProductName"></strong> の対応方法を選択してください：
+                    </p>
+                    <div class="d-grid gap-2">
+                        <?php foreach ($templates as $tmpl): ?>
+                            <button class="btn btn-outline-success btn-message-type" onclick="completeOrder(<?= $tmpl['id'] ?>)">
+                                <i class="<?= htmlspecialchars($tmpl['icon_class']) ?>"></i> <?= htmlspecialchars($tmpl['template_name']) ?>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="alert alert-info mt-3 mb-0" style="font-size: 0.9em;">
+                        <i class="fas fa-info-circle"></i> 
+                        選択した内容がお客様へのメッセージとして送信され、BASEのステータスが「発送済み」に更新されます。
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    // 対応完了モーダル表示
+    function showCompletionModal(orderId, productName) {
+        document.getElementById('modalOrderId').value = orderId;
+        document.getElementById('modalProductName').textContent = productName;
+        const modal = new bootstrap.Modal(document.getElementById('completionModal'));
+        modal.show();
+    }
+
+    // 対応完了実行
+    async function completeOrder(templateId) {
+        const orderId = document.getElementById('modalOrderId').value;
+        const productName = document.getElementById('modalProductName').textContent;
+        const button = event.target;
+        
+        // ボタン無効化
+        const allButtons = document.querySelectorAll('#completionModal .btn-message-type');
+        allButtons.forEach(btn => btn.disabled = true);
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>処理中...';
+        
+        try {
+            const response = await fetch('../ajax/cast_complete_order.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    order_id: orderId,
+                    template_id: templateId
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // 成功
+                bootstrap.Modal.getInstance(document.getElementById('completionModal')).hide();
+                
+                // 成功メッセージ表示
+                showAlert('success', '対応完了しました！', result.reply_message);
+                
+                // ページをリロードして最新状態に
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            } else {
+                throw new Error(result.error || '処理に失敗しました');
+            }
+        } catch (error) {
+            showAlert('danger', 'エラー', error.message);
+            // ボタン再有効化
+            allButtons.forEach(btn => btn.disabled = false);
+            button.innerHTML = button.getAttribute('data-original-text');
+        }
+    }
+
+    // アラート表示
+    function showAlert(type, title, message) {
+        const alertHtml = `
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert" style="position: fixed; top: 80px; right: 20px; z-index: 9999; min-width: 300px;">
+                <strong>${title}</strong><br>${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', alertHtml);
+    }
+
+    // ボタンの元テキスト保存
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.btn-message-type').forEach(btn => {
+            btn.setAttribute('data-original-text', btn.innerHTML);
+        });
+    });
+    </script>
 </body>
 </html>
