@@ -123,12 +123,22 @@ try {
     
     echo "登録キャスト数: " . count($cast_map) . "名\n\n";
     
-    foreach ($target_order_ids as $order_id) {
+    foreach ($target_order_ids as $val) {
+        $order_id = trim($val); // 空白除去
         $processed++;
         
         try {
             // 詳細API取得
-            $detail_response = $manager->getDataWithAutoAuth('read_orders', "/1/orders/detail/{$order_id}");
+            try {
+                $detail_response = $manager->getDataWithAutoAuth('read_orders', "/1/orders/detail/{$order_id}");
+            } catch (Exception $e) {
+                if (strpos($e->getMessage(), '404') !== false) {
+                    echo "[{$processed}/{$total_orders}] {$order_id}: ⚠️ BASE上に存在しません (404) - スキップ\n";
+                    $error_count++;
+                    continue;
+                }
+                throw $e; // その他のエラーは再スロー
+            }
             
             if (!isset($detail_response['order']['order_items'])) {
                 echo "[{$processed}/{$total_orders}] {$order_id}: ⚠️ order_items なし - スキップ\n";
