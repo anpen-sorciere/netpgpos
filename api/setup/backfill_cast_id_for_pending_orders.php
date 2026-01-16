@@ -79,7 +79,8 @@ try {
     echo "=== STEP 1: 対象注文の抽出 ===\n";
     echo "条件: status = 'ordered' (未対応) かつ cast_id紐付けなし\n\n";
     
-    $stmt = $pdo->query("
+    
+    $stmt = $pdo->prepare("
         SELECT DISTINCT o.base_order_id
         FROM base_orders o
         WHERE o.status = 'ordered'
