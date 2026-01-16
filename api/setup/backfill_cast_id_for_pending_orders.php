@@ -11,15 +11,18 @@
 set_time_limit(0); // 実行時間制限を解除
 ini_set('memory_limit', '512M'); // メモリ制限を緩和
 
-require_once __DIR__ . '/../../../common/config.php';
+
+require_once __DIR__ . '/../../common/config.php';
 require_once __DIR__ . '/../classes/base_practical_auto_manager.php';
 
 // 実行確認
 $confirm = isset($_GET['confirm']) && $_GET['confirm'] === 'yes';
 $dry_run = !isset($_GET['execute']) || $_GET['execute'] !== 'true';
+$limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50; // デフォルト50件制限
 
 echo '<h2>過去注文のcast_id一括紐付けバッチ</h2>';
 echo '<pre>';
+
 
 if (!$confirm) {
     echo "⚠️ ======================================\n";
@@ -74,7 +77,10 @@ try {
             WHERE cast_id IS NULL
         )
         ORDER BY o.order_date DESC
+        LIMIT :limit
     ");
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
     
     $target_order_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
     $total_orders = count($target_order_ids);
