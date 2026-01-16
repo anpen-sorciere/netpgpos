@@ -110,8 +110,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
         <form method="post">
             <div class="mb-3">
-                <label class="form-label">ログインID</label>
-                <input type="text" name="username" class="form-control" required>
+                <label class="form-label">メールアドレス</label>
+                <input type="email" name="username" class="form-control" placeholder="登録したメールアドレスを入力" required>
+                <div class="form-text text-muted">※ 初期登録で設定したメールアドレスです</div>
             </div>
             <div class="mb-3">
                 <label class="form-label">パスワード</label>

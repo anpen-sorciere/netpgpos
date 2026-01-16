@@ -166,7 +166,7 @@ function generateRegistrationLink($cast_id, $token) {
                 <tr>
                     <th>ID</th>
                     <th>源氏名</th>
-                    <th>ログインID (Email)</th>
+                    <th>メールアドレス</th>
                     <th>ログイン状態</th>
                     <th>最終ログイン</th>
                     <th>セルフ登録 / 管理</th>

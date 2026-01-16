@@ -299,12 +299,17 @@ function getPaymentMethod($method) {
     <div class="header">
         <div class="d-flex justify-content-between align-items-center">
             <div class="welcome">
-                <i class="fas fa-user-circle"></i>
-                <?= htmlspecialchars($cast_name) ?> さん
+                <i class="fas fa-gem"></i>
+                <?= htmlspecialchars($cast_name) ?> <span class="d-none d-sm-inline">さん</span>
             </div>
-            <a href="cast_logout.php" class="btn btn-logout">
-                <i class="fas fa-sign-out-alt"></i> ログアウト
-            </a>
+            <div>
+                <a href="cast_dashboard.php" class="btn btn-primary rounded-pill me-2">
+                    <i class="fas fa-sync-alt"></i> 更新
+                </a>
+                <a href="cast_logout.php" class="btn btn-logout">
+                    <i class="fas fa-sign-out-alt"></i> <span class="d-none d-sm-inline">ログアウト</span>
+                </a>
+            </div>
         </div>
     </div>
 
