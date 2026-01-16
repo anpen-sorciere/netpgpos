@@ -22,31 +22,48 @@ try {
         $cast_id = $_POST['cast_id'] ?? 0;
         
         if ($cast_id) {
-            // ワンタイムトークン生成（64文字のランダム文字列）
-            $token = bin2hex(random_bytes(32));
-            $expires_at = date('Y-m-d H:i:s', strtotime('+7 days')); // 7日間有効
-            
-            $stmt = $pdo->prepare("
-                UPDATE cast_mst 
-                SET registration_token = ?, 
-                    token_expires_at = ?,
-                    token_used_at = NULL
-                WHERE cast_id = ?
-            ");
-            $stmt->execute([$token, $expires_at, $cast_id]);
-            
-            // 生成したリンク
-            $base_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") 
-                      . "://{$_SERVER['HTTP_HOST']}"
-                      . dirname(dirname($_SERVER['SCRIPT_NAME']));
-            $registration_url = $base_url . "/cast/self_register.php?token={$token}";
-            
-            $registration_links[$cast_id] = [
-                'url' => $registration_url,
-                'expires_at' => $expires_at
-            ];
-            
-            $message = "登録リンクを生成しました。";
+            if (isset($_POST['reset_cast'])) {
+                // 登録解除（リセット）
+                $stmt = $pdo->prepare("
+                    UPDATE cast_mst 
+                    SET 
+                        login_id = NULL,
+                        password_hash = NULL,
+                        registration_token = NULL,
+                        token_expires_at = NULL,
+                        token_used_at = NULL,
+                        login_enabled = 0
+                    WHERE cast_id = ?
+                ");
+                $stmt->execute([$cast_id]);
+                $message = "キャストの登録情報をリセットしました。再度登録リンクを発行できます。";
+            } else {
+                // ワンタイムトークン生成（64文字のランダム文字列）
+                $token = bin2hex(random_bytes(32));
+                $expires_at = date('Y-m-d H:i:s', strtotime('+7 days')); // 7日間有効
+                
+                $stmt = $pdo->prepare("
+                    UPDATE cast_mst 
+                    SET registration_token = ?, 
+                        token_expires_at = ?,
+                        token_used_at = NULL
+                    WHERE cast_id = ?
+                ");
+                $stmt->execute([$token, $expires_at, $cast_id]);
+                
+                // 生成したリンク
+                $base_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") 
+                          . "://{$_SERVER['HTTP_HOST']}"
+                          . dirname(dirname($_SERVER['SCRIPT_NAME']));
+                $registration_url = $base_url . "/cast/self_register.php?token={$token}";
+                
+                $registration_links[$cast_id] = [
+                    'url' => $registration_url,
+                    'expires_at' => $expires_at
+                ];
+                
+                $message = "登録リンクを生成しました。";
+            }
         }
     }
     
@@ -56,6 +73,7 @@ try {
             cast_id, 
             cast_name, 
             email, 
+            login_id,
             login_enabled,
             registration_token,
             token_expires_at,
@@ -136,7 +154,10 @@ function generateRegistrationLink($cast_id, $token) {
                     <li><i class="fas fa-clock text-success"></i> 管理者の手間が大幅削減</li>
                     <li><i class="fas fa-user-check text-success"></i> キャストが好きなタイミングで設定可能</li>
                 </ul>
-                <a href="../order_monitor.php" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> モニターに戻る</a>
+                <div class="mt-3">
+                    <a href="../../../index.php" class="btn btn-secondary me-2"><i class="fas fa-home"></i> メインメニューに戻る</a>
+                    <a href="../order_monitor.php" class="btn btn-outline-secondary"><i class="fas fa-desktop"></i> モニターに戻る</a>
+                </div>
             </div>
         </div>
 
@@ -146,10 +167,10 @@ function generateRegistrationLink($cast_id, $token) {
                 <tr>
                     <th>ID</th>
                     <th>源氏名</th>
-                    <th>メールアドレス</th>
+                    <th>ログインID (Email)</th>
                     <th>ログイン状態</th>
                     <th>最終ログイン</th>
-                    <th>セルフ登録</th>
+                    <th>セルフ登録 / 管理</th>
                 </tr>
             </thead>
             <tbody>
@@ -158,7 +179,9 @@ function generateRegistrationLink($cast_id, $token) {
                     <td><?= $cast['cast_id'] ?></td>
                     <td><strong><?= htmlspecialchars($cast['cast_name']) ?></strong></td>
                     <td>
-                        <?php if ($cast['email']): ?>
+                        <?php if ($cast['login_id']): ?>
+                            <i class="fas fa-envelope text-success"></i> <?= htmlspecialchars($cast['login_id']) ?>
+                        <?php elseif ($cast['email']): ?>
                             <i class="fas fa-envelope text-success"></i> <?= htmlspecialchars($cast['email']) ?>
                         <?php else: ?>
                             <span class="text-muted"><i class="fas fa-envelope-open text-secondary"></i> 未設定</span>
@@ -177,7 +200,7 @@ function generateRegistrationLink($cast_id, $token) {
                         <?= $cast['last_login_at'] ? '<i class="fas fa-sign-in-alt text-info"></i> ' . date('Y/m/d H:i', strtotime($cast['last_login_at'])) : '-' ?>
                     </td>
                     <td>
-                        <?php if (!$cast['email'] || !$cast['login_enabled']): ?>
+                        <?php if (!$cast['login_id'] && !$cast['email'] && !$cast['login_enabled']): ?>
                             <!-- 未登録または無効の場合: 登録リンク生成ボタン -->
                             <form method="post" style="display:inline;">
                                 <input type="hidden" name="cast_id" value="<?= $cast['cast_id'] ?>">
@@ -208,8 +231,15 @@ function generateRegistrationLink($cast_id, $token) {
                                 <?php endif; ?>
                             <?php endif; ?>
                         <?php else: ?>
-                            <!-- 既に登録済み -->
+                            <!-- 既に登録済み: リセットボタン -->
                             <span class="text-success"><i class="fas fa-check"></i> 登録完了</span>
+                            <form method="post" style="display:inline; margin-left: 10px;" onsubmit="return confirm('⚠️ 本当にリセットしますか？\n\nキャストのログインIDとパスワード設定が削除され、初期状態に戻ります。\nキャストはログインできなくなります。');">
+                                <input type="hidden" name="cast_id" value="<?= $cast['cast_id'] ?>">
+                                <input type="hidden" name="reset_cast" value="1">
+                                <button type="submit" name="generate_token" class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-undo"></i> 登録解除（リセット）
+                                </button>
+                            </form>
                         <?php endif; ?>
                         
                         <?php if (isset($registration_links[$cast['cast_id']])): ?>
