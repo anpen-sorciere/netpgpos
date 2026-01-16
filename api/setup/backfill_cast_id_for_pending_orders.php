@@ -12,7 +12,19 @@ set_time_limit(0); // 実行時間制限を解除
 ini_set('memory_limit', '512M'); // メモリ制限を緩和
 
 
-require_once __DIR__ . '/../../common/config.php';
+
+// パス解決の試行
+$config_path = __DIR__ . '/../../../common/config.php';
+if (!file_exists($config_path)) {
+    // 別のパスも試す（ローカル環境など）
+    $config_path = __DIR__ . '/../../common/config.php';
+}
+
+if (!file_exists($config_path)) {
+    die("❌ Error: config.php not found. Searched at: " . realpath(__DIR__ . '/../../../common/') . " and " . realpath(__DIR__ . '/../../common/'));
+}
+
+require_once $config_path;
 require_once __DIR__ . '/../classes/base_practical_auto_manager.php';
 
 // 実行確認
