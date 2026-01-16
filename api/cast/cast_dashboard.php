@@ -20,7 +20,7 @@ try {
 
     $cast_id = $_SESSION['cast_id'];
     
-    // 注文単位でグループ化して取得
+    // 注文とその商品を取得（商品ごとに行を分ける）
     $sql = "
         SELECT 
             o.base_order_id,
@@ -31,23 +31,17 @@ try {
             o.payment_method,
             o.is_surprise,
             o.surprise_date,
-            COUNT(oi.id) as item_count,
-            GROUP_CONCAT(
-                CONCAT(oi.product_name, ' x', oi.quantity) 
-                ORDER BY oi.id 
-                SEPARATOR '、'
-            ) as items_summary,
-            MIN(oi.item_surprise_date) as earliest_surprise_date,
-            GROUP_CONCAT(
-                DISTINCT oi.customer_name_from_option
-                SEPARATOR '、'
-            ) as customer_names_from_items
+            oi.id as item_id,
+            oi.product_name,
+            oi.quantity,
+            oi.price,
+            oi.customer_name_from_option,
+            oi.item_surprise_date
         FROM base_orders o
         INNER JOIN base_order_items oi ON o.base_order_id = oi.base_order_id
         WHERE oi.cast_id = :cast_id
-        GROUP BY o.base_order_id
-        ORDER BY o.order_date DESC
-        LIMIT 100
+        ORDER BY o.order_date DESC, oi.id ASC
+        LIMIT 500
     ";
     
     $stmt = $pdo->prepare($sql);
@@ -56,15 +50,41 @@ try {
     
     $today = date('Y-m-d');
     
+    // 注文ごとにグループ化
+    $orders_temp = [];
     foreach ($rows as $row) {
-        // サプライズ日付フィルター（最も早い商品のサプライズ日を基準）
-        $sDate = $row['earliest_surprise_date'];
+        // サプライズ日付フィルター
+        $sDate = $row['item_surprise_date'];
         if ($sDate && $sDate > $today) {
             continue; // 未来のサプライズは非表示
         }
         
-        $orders[] = $row;
+        $order_id = $row['base_order_id'];
+        
+        if (!isset($orders_temp[$order_id])) {
+            $orders_temp[$order_id] = [
+                'base_order_id' => $row['base_order_id'],
+                'order_date' => $row['order_date'],
+                'customer_name' => $row['customer_name'],
+                'total_amount' => $row['total_amount'],
+                'status' => $row['status'],
+                'payment_method' => $row['payment_method'],
+                'is_surprise' => $row['is_surprise'],
+                'surprise_date' => $row['surprise_date'],
+                'items' => []
+            ];
+        }
+        
+        $orders_temp[$order_id]['items'][] = [
+            'product_name' => $row['product_name'],
+            'quantity' => $row['quantity'],
+            'price' => $row['price'],
+            'customer_name_from_option' => $row['customer_name_from_option'],
+            'item_surprise_date' => $row['item_surprise_date']
+        ];
     }
+    
+    $orders = array_values($orders_temp);
     
 } catch (PDOException $e) {
     $error = "データ取得エラー: " . $e->getMessage();
@@ -181,18 +201,36 @@ function getPaymentMethod($method) {
             font-weight: bold;
             color: #e91e63;
         }
-        .items-list {
+        .items-table {
+            width: 100%;
+            margin: 15px 0;
+        }
+        .items-table th {
             background: #f8f9fa;
-            padding: 12px;
-            border-radius: 8px;
-            margin: 10px 0;
+            padding: 10px;
+            text-align: left;
+            font-size: 0.9em;
+            color: #666;
+            border-bottom: 2px solid #e0e0e0;
         }
-        .item { 
-            padding: 8px 0;
-            border-bottom: 1px solid #e0e0e0;
+        .items-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #f0f0f0;
+            vertical-align: middle;
         }
-        .item:last-child {
+        .items-table tr:last-child td {
             border-bottom: none;
+        }
+        .items-table tr:hover {
+            background: #fafafa;
+        }
+        .product-name {
+            font-weight: 500;
+            color: #333;
+        }
+        .product-price {
+            color: #e91e63;
+            font-weight: 600;
         }
         .customer-info {
             display: flex;
@@ -266,7 +304,10 @@ function getPaymentMethod($method) {
             <?php
                 $total_amount = array_sum(array_column($orders, 'total_amount'));
                 $total_orders = count($orders);
-                $total_items = array_sum(array_column($orders, 'item_count'));
+                $total_items = 0;
+                foreach ($orders as $order) {
+                    $total_items += count($order['items']);
+                }
             ?>
             <div class="stats-bar">
                 <div class="stat-item">
@@ -310,28 +351,68 @@ function getPaymentMethod($method) {
                     </div>
 
                     <!-- お客様情報 -->
+                    <?php
+                        // 商品から顧客名を取得（最初の非NULL値）
+                        $customer_display = $order['customer_name'];
+                        foreach ($order['items'] as $item) {
+                            if (!empty($item['customer_name_from_option'])) {
+                                $customer_display = $item['customer_name_from_option'];
+                                break;
+                            }
+                        }
+                        
+                        // サプライズ確認
+                        $has_surprise = false;
+                        $surprise_date = null;
+                        foreach ($order['items'] as $item) {
+                            if ($item['item_surprise_date'] && $item['item_surprise_date'] <= $today) {
+                                $has_surprise = true;
+                                $surprise_date = $item['item_surprise_date'];
+                                break;
+                            }
+                        }
+                    ?>
                     <div class="customer-info">
                         <i class="fas fa-user text-primary"></i>
                         <span class="customer-name">
-                            <?= htmlspecialchars($order['customer_names_from_items'] ?: $order['customer_name'] ?: '名前なし') ?>
+                            <?= htmlspecialchars($customer_display ?: '名前なし') ?>
                         </span>
                         様
-                        <?php if ($order['earliest_surprise_date'] && $order['earliest_surprise_date'] <= $today): ?>
+                        <?php if ($has_surprise): ?>
                             <span class="surprise-badge ms-2">
-                                <i class="fas fa-gift"></i> サプライズ (<?= $order['earliest_surprise_date'] ?>)
+                                <i class="fas fa-gift"></i> サプライズ (<?= $surprise_date ?>)
                             </span>
                         <?php endif; ?>
                     </div>
 
-                    <!-- 商品リスト -->
-                    <div class="items-list">
-                        <div class="mb-2 text-secondary" style="font-size: 0.9em;">
-                            <i class="fas fa-shopping-bag"></i> 購入商品 (<?= $order['item_count'] ?>点)
-                        </div>
-                        <div class="item">
-                            <?= nl2br(htmlspecialchars($order['items_summary'])) ?>
-                        </div>
-                    </div>
+                    <!-- 商品テーブル（1行1商品） -->
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 60%">商品名</th>
+                                <th style="width: 15%; text-align: center">数量</th>
+                                <th style="width: 25%; text-align: right">単価</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($order['items'] as $item): ?>
+                                <tr>
+                                    <td class="product-name">
+                                        <?= htmlspecialchars($item['product_name']) ?>
+                                        <?php if ($item['item_surprise_date'] && $item['item_surprise_date'] <= $today): ?>
+                                            <i class="fas fa-gift text-warning ms-1" title="サプライズ商品"></i>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td style="text-align: center">
+                                        <span class="badge bg-secondary rounded-pill">×<?= $item['quantity'] ?></span>
+                                    </td>
+                                    <td class="product-price" style="text-align: right">
+                                        ¥<?= number_format($item['price']) ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
 
                     <!-- 支払い情報 -->
                     <div class="payment-info">
