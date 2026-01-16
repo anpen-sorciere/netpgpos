@@ -500,13 +500,21 @@ function getPaymentMethod($method) {
         const productName = document.getElementById('modalProductName').textContent;
         const button = event.target;
         
+        // テストモード判定
+        const urlParams = new URLSearchParams(window.location.search);
+        const testMode = urlParams.get('test_mode') === '1';
+        
         // ボタン無効化
         const allButtons = document.querySelectorAll('#completionModal .btn-message-type');
         allButtons.forEach(btn => btn.disabled = true);
-        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>処理中...';
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>' + (testMode ? 'テスト中...' : '処理中...');
         
         try {
-            const response = await fetch('../ajax/cast_complete_order.php', {
+            const apiUrl = testMode 
+                ? '../ajax/cast_complete_order.php?test=1' 
+                : '../ajax/cast_complete_order.php';
+            
+            const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -523,13 +531,23 @@ function getPaymentMethod($method) {
                 // 成功
                 bootstrap.Modal.getInstance(document.getElementById('completionModal')).hide();
                 
-                // 成功メッセージ表示
-                showAlert('success', '対応完了しました！', result.reply_message);
+                // テストモード時は詳細表示
+                if (result.test_mode) {
+                    const details = `
+                        <strong>テストモード実行完了</strong><br>
+                        <small>BASE APIは実行されていません</small><br><br>
+                        <strong>送信予定の内容:</strong><br>
+                        ${result.reply_message}
+                    `;
+                    showAlert('info', 'テスト成功', details);
+                } else {
+                    showAlert('success', '対応完了しました！', result.reply_message);
+                }
                 
-                // ページをリロードして最新状態に
+                // ページをリロード
                 setTimeout(() => {
                     location.reload();
-                }, 2000);
+                }, testMode ? 3000 : 2000);
             } else {
                 throw new Error(result.error || '処理に失敗しました');
             }

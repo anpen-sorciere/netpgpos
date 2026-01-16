@@ -1,26 +1,26 @@
 <?php
 /**
- * キャスト対応完了API
- * キャストが注文を「対応済み」にしてBASEステータスを更新
+ * キャスト対応完了 - テストモード
+ * 
+ * ?test=1 パラメータでドライラン実行
+ * BASE APIには送信せず、動作確認のみ
  */
 session_start();
 require_once __DIR__ . '/../../../common/config.php';
-require_once __DIR__ . '/../classes/base_practical_auto_manager.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
+$test_mode = isset($_GET['test']) && $_GET['test'] === '1';
+
 try {
-    // キャストログイン確認
     if (!isset($_SESSION['cast_id'])) {
         throw new Exception('ログインが必要です');
     }
     
-    // POSTメソッド確認
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         throw new Exception('POSTメソッドのみサポート');
     }
     
-    // リクエストデータ取得
     $input = json_decode(file_get_contents('php://input'), true);
     if (!$input) {
         throw new Exception('リクエストデータが無効');
@@ -53,7 +53,7 @@ try {
         throw new Exception('指定された定型文が見つからないか、使用できません');
     }
     
-    // 注文情報取得（変数置換用）
+    // 注文情報取得
     $stmt = $pdo->prepare("
         SELECT o.*, oi.product_name, oi.customer_name_from_option
         FROM base_orders o
@@ -75,44 +75,42 @@ try {
     $message = str_replace('{order_id}', $order_id, $message);
     $message = str_replace('{cast_name}', $_SESSION['cast_name'], $message);
     
-    // DB接続
-    $pdo = new PDO(
-        "mysql:host={$host};dbname={$dbname};charset=utf8mb4",
-        $user,
-        $password,
-        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-    );
-    
-    // 注文がこのキャストのものか確認
-    $stmt = $pdo->prepare("
-        SELECT COUNT(*) 
-        FROM base_order_items 
-        WHERE base_order_id = ? AND cast_id = ?
-    ");
-    $stmt->execute([$order_id, $_SESSION['cast_id']]);
-    if ($stmt->fetchColumn() == 0) {
-        throw new Exception('この注文への権限がありません');
+    if ($test_mode) {
+        // テストモード: BASE APIを叩かない
+        echo json_encode([
+            'success' => true,
+            'test_mode' => true,
+            'message' => '✅ テストモード: BASE APIは実行されません',
+            'order_id' => $order_id,
+            'template_name' => $template['template_name'],
+            'reply_message' => $message,
+            'would_send_to_base' => [
+                'unique_key' => $order_id,
+                'dispatch_status' => 'dispatched',
+                'message' => $message
+            ]
+        ]);
+        exit;
     }
     
-    // BASE API Manager初期化
+    // 本番モード: BASE API実行
+    require_once __DIR__ . '/../classes/base_practical_auto_manager.php';
     $manager = new BasePracticalAutoManager();
     
-    // 認証確認
     $auth_status = $manager->getAuthStatus();
     if (!isset($auth_status['write_orders']['authenticated']) || !$auth_status['write_orders']['authenticated']) {
         throw new Exception('BASE API認証が必要です');
     }
     
-    // BASE APIでステータス更新
     $update_data = [
         'unique_key' => $order_id,
-        'dispatch_status' => 'dispatched', // 発送済み
+        'dispatch_status' => 'dispatched',
         'message' => $message
     ];
     
     $response = $manager->makeApiRequest('write_orders', '/1/orders/edit_status', $update_data, 'POST');
     
-    // 対応履歴を記録
+    // 履歴記録
     $stmt = $pdo->prepare("
         INSERT INTO cast_order_completions 
         (base_order_id, cast_id, completed_at, template_id, template_name, reply_message, base_status_after, success)
@@ -121,12 +119,12 @@ try {
     $stmt->execute([
         $order_id,
         $_SESSION['cast_id'],
-        $template_id, // template_idを記録
+        $template_id,
         $template['template_name'],
         $message
     ]);
     
-    // ローカルDBのステータスも更新
+    // ローカルDB更新
     $stmt = $pdo->prepare("
         UPDATE base_orders 
         SET status = 'shipping', updated_at = NOW() 
@@ -136,6 +134,7 @@ try {
     
     echo json_encode([
         'success' => true,
+        'test_mode' => false,
         'message' => '対応完了しました',
         'order_id' => $order_id,
         'template_name' => $template['template_name'],
@@ -146,27 +145,8 @@ try {
     http_response_code(400);
     echo json_encode([
         'success' => false,
+        'test_mode' => $test_mode,
         'error' => $e->getMessage()
     ]);
-    
-    // エラーログ記録
-    if (isset($pdo) && isset($order_id) && isset($_SESSION['cast_id'])) {
-        try {
-            $stmt = $pdo->prepare("
-                INSERT INTO cast_order_completions 
-                (base_order_id, cast_id, completed_at, message_type, reply_message, success, error_message)
-                VALUES (?, ?, NOW(), ?, ?, FALSE, ?)
-            ");
-            $stmt->execute([
-                $order_id,
-                $_SESSION['cast_id'],
-                $message_type ?? null,
-                $message ?? null,
-                $e->getMessage()
-            ]);
-        } catch (Exception $log_error) {
-            // ログ記録失敗は無視
-        }
-    }
 }
 ?>
