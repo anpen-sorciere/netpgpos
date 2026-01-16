@@ -20,7 +20,7 @@ try {
 
     $cast_id = $_SESSION['cast_id'];
     
-    // 注文とその商品を取得（商品ごとに行を分ける）
+    // 対応が必要な注文のみ取得（ordered, unpaid のみ。dispatchedは非表示）
     $sql = "
         SELECT 
             o.base_order_id,
@@ -40,6 +40,7 @@ try {
         FROM base_orders o
         INNER JOIN base_order_items oi ON o.base_order_id = oi.base_order_id
         WHERE oi.cast_id = :cast_id
+        AND o.status IN ('ordered', 'unpaid')
         ORDER BY o.order_date DESC, oi.id ASC
         LIMIT 500
     ";
@@ -401,7 +402,7 @@ function getPaymentMethod($method) {
                                 <th style="width: 50%">商品名</th>
                                 <th style="width: 12%; text-align: center">数量</th>
                                 <th style="width: 20%; text-align: right">単価</th>
-                                <th style="width: 18%; text-align: center">対応</th>
+                                <th style="width: 18%; text-align: center">あなたの対応</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -420,15 +421,9 @@ function getPaymentMethod($method) {
                                         ¥<?= number_format($item['price']) ?>
                                     </td>
                                     <td style="text-align: center">
-                                        <?php if ($order['status'] === 'ordered' || $order['status'] === 'unpaid'): ?>
-                                            <button class="btn btn-sm btn-success" onclick="showCompletionModal('<?= $order['base_order_id'] ?>', '<?= htmlspecialchars($item['product_name'], ENT_QUOTES) ?>')">
-                                                <i class="fas fa-check"></i> 完了
-                                            </button>
-                                        <?php elseif ($order['status'] === 'shipping'): ?>
-                                            <span class="badge bg-success">対応済み</span>
-                                        <?php else: ?>
-                                            <span class="badge bg-secondary"><?= htmlspecialchars($order['status']) ?></span>
-                                        <?php endif; ?>
+                                        <button class="btn btn-sm btn-primary" onclick="showCompletionModal('<?= $order['base_order_id'] ?>', '<?= htmlspecialchars($item['product_name'], ENT_QUOTES) ?>')">
+                                            <i class="fas fa-play-circle"></i> 対応する
+                                        </button>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -445,11 +440,11 @@ function getPaymentMethod($method) {
 
         <?php else: ?>
             <div class="empty-state">
-                <i class="fas fa-inbox"></i>
-                <h4>まだ注文履歴がありません</h4>
+                <i class="fas fa-check-circle"></i>
+                <h4>対応すべき注文はありません</h4>
                 <p class="text-muted">
-                    注文が入ると、こちらに表示されます。<br>
-                    <small>※モニター画面が開かれたときにデータが自動同期されます。</small>
+                    新しい注文が入ると、こちらに表示されます。<br>
+                    <small>※対応済みの注文は自動的に非表示になります</small>
         <?php endif; ?>
     </div>
 
