@@ -73,7 +73,6 @@ try {
             cast_id, 
             cast_name, 
             email, 
-            login_id,
             login_enabled,
             registration_token,
             token_expires_at,
@@ -179,9 +178,7 @@ function generateRegistrationLink($cast_id, $token) {
                     <td><?= $cast['cast_id'] ?></td>
                     <td><strong><?= htmlspecialchars($cast['cast_name']) ?></strong></td>
                     <td>
-                        <?php if ($cast['login_id']): ?>
-                            <i class="fas fa-envelope text-success"></i> <?= htmlspecialchars($cast['login_id']) ?>
-                        <?php elseif ($cast['email']): ?>
+                        <?php if ($cast['email']): ?>
                             <i class="fas fa-envelope text-success"></i> <?= htmlspecialchars($cast['email']) ?>
                         <?php else: ?>
                             <span class="text-muted"><i class="fas fa-envelope-open text-secondary"></i> 未設定</span>
@@ -200,7 +197,7 @@ function generateRegistrationLink($cast_id, $token) {
                         <?= $cast['last_login_at'] ? '<i class="fas fa-sign-in-alt text-info"></i> ' . date('Y/m/d H:i', strtotime($cast['last_login_at'])) : '-' ?>
                     </td>
                     <td>
-                        <?php if (!$cast['login_id'] && !$cast['email'] && !$cast['login_enabled']): ?>
+                        <?php if (!$cast['email'] && !$cast['login_enabled']): ?>
                             <!-- 未登録または無効の場合: 登録リンク生成ボタン -->
                             <form method="post" style="display:inline;">
                                 <input type="hidden" name="cast_id" value="<?= $cast['cast_id'] ?>">
