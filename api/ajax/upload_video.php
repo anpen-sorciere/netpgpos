@@ -15,8 +15,8 @@ require_once __DIR__ . '/../../../common/dbconnect.php';
 header('Content-Type: application/json; charset=utf-8');
 
 try {
-    // 認証チェック (簡易)
-    if (!isset($_SESSION['utype'])) {
+    // 認証チェック (管理者またはキャスト)
+    if (!isset($_SESSION['utype']) && !isset($_SESSION['cast_id'])) {
         throw new Exception('認証が必要です');
     }
 
