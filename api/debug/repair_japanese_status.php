@@ -2,8 +2,8 @@
 // 日本語ステータス修復ツール
 // 誤って保存された「対応中」「対応済」などの日本語ステータスを、正しいBASE APIコードに変換します。
 
-require_once __DIR__ . '/../../common/config.php';
-require_once __DIR__ . '/../../common/dbconnect.php';
+require_once __DIR__ . '/../../../common/config.php';
+require_once __DIR__ . '/../../../common/dbconnect.php';
 
 echo "<h1>Repair Japanese Status Tool</h1>";
 

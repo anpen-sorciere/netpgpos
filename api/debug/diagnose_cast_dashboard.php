@@ -2,8 +2,8 @@
 // キャストダッシュボード表示診断ツール
 // なぜ「何も表示されない」のか、その理由（ステータス除外、サプライズ除外など）を内訳表示します。
 
-require_once __DIR__ . '/../../common/config.php';
-require_once __DIR__ . '/../../common/dbconnect.php';
+require_once __DIR__ . '/../../../common/config.php';
+require_once __DIR__ . '/../../../common/dbconnect.php';
 
 session_start();
 
