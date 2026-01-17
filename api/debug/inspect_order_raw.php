@@ -1,7 +1,7 @@
 <?php
 // 特定注文の生データ確認用スクリプト
-require_once __DIR__ . '/../../common/config.php';
-require_once __DIR__ . '/../../common/dbconnect.php';
+require_once __DIR__ . '/../../../common/config.php';
+require_once __DIR__ . '/../../../common/dbconnect.php';
 require_once __DIR__ . '/../classes/base_practical_auto_manager.php';
 
 session_start();
