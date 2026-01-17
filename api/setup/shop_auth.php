@@ -203,9 +203,10 @@ $shops = $pdo->query("SELECT * FROM shop_mst ORDER BY shop_id")->fetchAll(PDO::F
             <thead class="table-light">
                 <tr>
                     <th>ID</th>
-                    <th>店舗名</th>
+                    <th>店舗名 (DB)</th>
                     <th>連携設定</th>
                     <th>トークン状態</th>
+                    <th>BASE連携先 (API確認)</th>
                     <th>アクション</th>
                 </tr>
             </thead>
@@ -221,6 +222,8 @@ $shops = $pdo->query("SELECT * FROM shop_mst ORDER BY shop_id")->fetchAll(PDO::F
                         $token = $token_stmt->fetch(PDO::FETCH_ASSOC);
                         
                         $token_status = '<span class="status-none">未取得</span>';
+                        $connected_shop_info = '<span class="text-muted">-</span>';
+                        
                         if ($token) {
                             if ($token['refresh_expires'] < time()) {
                                 $token_status = '<span class="status-ng">期限切れ</span>';
@@ -228,6 +231,22 @@ $shops = $pdo->query("SELECT * FROM shop_mst ORDER BY shop_id")->fetchAll(PDO::F
                                 $token_status = '<span class="text-warning">要更新(自動)</span>';
                             } else {
                                 $token_status = '<span class="status-ok">連携中</span>';
+                                
+                                // APIを叩いて実際の連携先を確認
+                                try {
+                                    $check_manager = new BasePracticalAutoManager($shop['shop_id']);
+                                    // 実際のAPIコールは重くなるので、トークンがある場合のみ実行
+                                    // また、read_users権限が必要
+                                    $user_data = $check_manager->getDataWithAutoAuth('read_users', '/users/me');
+                                    if (isset($user_data['shop'])) {
+                                        $base_shop_id = htmlspecialchars($user_data['shop']['shop_id']);
+                                        $base_shop_name = htmlspecialchars($user_data['shop']['shop_name']);
+                                        $base_shop_url = htmlspecialchars($user_data['shop']['shop_url']);
+                                        $connected_shop_info = "<strong>{$base_shop_name}</strong><br><span style='font-size:0.8em'>ID: {$base_shop_id}</span>";
+                                    }
+                                } catch (Exception $e) {
+                                    $connected_shop_info = '<span class="text-danger" title="'.$e->getMessage().'">取得エラー</span>';
+                                }
                             }
                         }
                     ?>
@@ -247,6 +266,7 @@ $shops = $pdo->query("SELECT * FROM shop_mst ORDER BY shop_id")->fetchAll(PDO::F
                             <?php endif; ?>
                         </td>
                         <td><?= $token_status ?></td>
+                        <td><?= $connected_shop_info ?></td>
                         <td>
                             <div class="d-flex gap-2">
                                 <button type="button" class="btn btn-outline-secondary btn-sm" 
