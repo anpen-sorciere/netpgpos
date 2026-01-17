@@ -71,9 +71,7 @@ if(isset($_GET['utype'])) {
             <li class="menu-item"><a href="staff_timecard/staff_timecard.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">スタッフタイムカード入力</a></li>
             
             <!-- 新機能 -->
-            <li class="menu-item"><a href="api/cast/admin_cast_manager_v2.php" class="menu-button" style="background-color: #e91e63; color: white;">キャストポータル運用管理</a></li>
-            <li class="menu-item"><a href="api/cast/admin_cast_progress.php" class="menu-button" style="background-color: #fd7e14; color: white;">キャスト進捗モニター</a></li>
-            <li class="menu-item"><a href="api/admin/message_template_manager.php" class="menu-button" style="background-color: #00bcd4; color: white;">定型文管理</a></li>
+            <li class="menu-item"><a href="api/admin_tools.php" class="menu-button" style="background-color: #6f42c1; color: white;">BASE関連ツール・管理メニュー</a></li>
         </ul>
     </div>
 </body>
