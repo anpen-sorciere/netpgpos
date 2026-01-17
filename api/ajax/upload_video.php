@@ -42,12 +42,19 @@ try {
     if (!isset($_FILES['video_file']) || $_FILES['video_file']['error'] !== UPLOAD_ERR_OK) {
         $msg = 'ファイルアップロードエラー';
         if (isset($_FILES['video_file'])) {
-            switch ($_FILES['video_file']['error']) {
-                case UPLOAD_ERR_INI_SIZE: $msg .= ': ファイルサイズが大きすぎます(php.ini)'; break;
-                case UPLOAD_ERR_FORM_SIZE: $msg .= ': ファイルサイズが大きすぎます(HTML)'; break;
+            $err = $_FILES['video_file']['error'];
+            switch ($err) {
+                case UPLOAD_ERR_INI_SIZE: $msg .= ': ファイルサイズが大きすぎます(サーバー制限)'; break;
+                case UPLOAD_ERR_FORM_SIZE: $msg .= ': ファイルサイズが大きすぎます(フォーム制限)'; break;
                 case UPLOAD_ERR_PARTIAL: $msg .= ': アップロードが中断されました'; break;
                 case UPLOAD_ERR_NO_FILE: $msg .= ': ファイルが選択されていません'; break;
+                case UPLOAD_ERR_NO_TMP_DIR: $msg .= ': サーバーの一時フォルダがありません'; break;
+                case UPLOAD_ERR_CANT_WRITE: $msg .= ': サーバーへの書き込みに失敗しました'; break;
+                case UPLOAD_ERR_EXTENSION: $msg .= ': サーバー拡張機能によりブロックされました'; break;
+                default: $msg .= " (コード: $err)"; break;
             }
+        } else {
+            $msg .= ': ファイルが送信されていません';
         }
         throw new Exception($msg);
     }
