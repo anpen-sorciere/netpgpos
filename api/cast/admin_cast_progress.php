@@ -112,6 +112,10 @@ try {
         return $b['unfinished_count'] <=> $a['unfinished_count'];
     });
 
+    // 定型文一覧取得
+    $stmt_templates = $pdo->query("SELECT * FROM reply_message_templates ORDER BY display_order ASC");
+    $templates = $stmt_templates->fetchAll(PDO::FETCH_ASSOC);
+
 } catch (PDOException $e) {
     $error = "DB Error: " . $e->getMessage();
 }
@@ -302,6 +306,21 @@ try {
                         <i class="fas fa-exclamation-circle"></i> 以下の内容でお客様へメールが送信され、BASEのステータスが「発送済み」になります。<br>
                         問題なければ「送信確定」を押してください。
                     </p>
+
+                    <!-- テンプレート選択 -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">使用する定型文:</label>
+                        <select class="form-select" id="templateSelect">
+                            <option value="">(選択なし - キャスト選択を維持)</option>
+                            <?php foreach ($templates as $tmpl): ?>
+                                <option value="<?= $tmpl['id'] ?>">
+                                    <?= htmlspecialchars($tmpl['template_name']) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <div class="form-text text-muted small">変更するとメッセージが再構築されます。</div>
+                    </div>
+
                     <div class="mb-3">
                         <label class="form-label fw-bold">送信メッセージ（編集可能）:</label>
                         <textarea class="form-control" id="previewMessage" rows="10" style="background-color: #fff; font-family: monospace;"></textarea>
@@ -328,7 +347,44 @@ try {
             const confirmModalEl = document.getElementById('approveConfirmModal');
             const confirmModal = new bootstrap.Modal(confirmModalEl);
             const btnConfirmSend = document.getElementById('btnConfirmSend');
+            const templateSelect = document.getElementById('templateSelect');
+            const previewMessage = document.getElementById('previewMessage');
             let currentApproveConfig = null; // 送信データ保持用
+
+            // テンプレート変更時の処理
+            templateSelect.addEventListener('change', async function() {
+                if (!currentApproveConfig) return;
+                
+                const newTemplateId = this.value;
+                if (!newTemplateId) return; // 空なら何もしない（あるいは初期値に戻すロジックが必要だが、複雑化回避）
+
+                // プレビュー再取得
+                previewMessage.disabled = true;
+                previewMessage.value = "再読み込み中...";
+                
+                try {
+                    const response = await fetch('../../api/ajax/admin_approve_order.php', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ 
+                            order_id: currentApproveConfig.orderId, 
+                            cast_id: currentApproveConfig.castId, 
+                            template_id: newTemplateId, // ★変更されたテンプレートID
+                            preview: true 
+                        })
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        previewMessage.value = result.message;
+                    } else {
+                        previewMessage.value = "エラー: " + result.error;
+                    }
+                } catch (e) {
+                    previewMessage.value = "通信エラー";
+                } finally {
+                    previewMessage.disabled = false;
+                }
+            });
 
             // イベントデリゲーション：動的に生成される「承認」ボタンのクリックを監視
             document.body.addEventListener('click', async function(e) {
@@ -342,8 +398,11 @@ try {
                     btn.disabled = true;
                     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 処理中';
 
+                    // テンプレート選択リセット
+                    templateSelect.value = "";
+
                     try {
-                        // Step 1: プレビュー取得
+                        // Step 1: プレビュー取得 (初期状態)
                         const response = await fetch('../../api/ajax/admin_approve_order.php', {
                             method: 'POST',
                             headers: {'Content-Type': 'application/json'},
@@ -358,6 +417,8 @@ try {
                             
                             // 本送信用データを一時保存
                             currentApproveConfig = { orderId, castId };
+                            
+                            // もしレスポンスに現在のtemplate_idが含まれていればセットしたいが、今回は空でOK
                             
                             confirmModal.show();
                             
@@ -388,9 +449,12 @@ try {
                         body: JSON.stringify({ 
                             order_id: currentApproveConfig.orderId, 
                             cast_id: currentApproveConfig.castId,
-                            custom_message: document.getElementById('previewMessage').value // 編集されたメッセージを送信
-                        }) // previewなし = 本送信
+                            template_id: templateSelect.value, // ★選択されたテンプレートIDも送信
+                            custom_message: document.getElementById('previewMessage').value 
+                        }) 
                     });
+                    // 以下略
+
                     
                     const sendResult = await sendResponse.json();
                     

@@ -77,10 +77,13 @@ try {
     $processed_items = [];
 
     foreach ($items as $item) {
-        if (!$item['cast_handled_template_id']) continue;
+        // リクエストでテンプレート指定があればそれを使用、なければキャストが選んだものを使用
+        $use_template_id = $input['template_id'] ?? $item['cast_handled_template_id'];
+
+        if (!$use_template_id) continue;
 
         $stmt = $pdo->prepare("SELECT * FROM reply_message_templates WHERE id = ?");
-        $stmt->execute([$item['cast_handled_template_id']]);
+        $stmt->execute([$use_template_id]);
         $tmpl = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($tmpl) {
@@ -95,6 +98,29 @@ try {
             $stmt_cast->execute([$item['cast_id']]);
             $cast_name = $stmt_cast->fetchColumn();
             $msg = str_replace('{cast_name}', $cast_name, $msg);
+
+            // 動画添付チェック
+            // order_item_id = $item['id'] (base_order_items.id)
+            // video_uploads.order_item_id は VARCHAR(50) なのでキャスト不要でOK
+            $stmt_video = $pdo->prepare("
+                SELECT video_uuid FROM video_uploads 
+                WHERE order_item_id = ? 
+                AND expires_at > NOW() 
+                ORDER BY created_at DESC LIMIT 1
+            ");
+            $stmt_video->execute([$item['id']]);
+            $video_uuid = $stmt_video->fetchColumn();
+
+            if ($video_uuid) {
+                 // URL生成 (config.phpのbase_redirect_uriからドメイン抽出またはSERVER変数利用)
+                 // ここではシンプルに現在のホストを使用
+                 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+                 $host_name = $_SERVER['HTTP_HOST'];
+                 $video_url = "{$protocol}://{$host_name}/thanks.php?id={$video_uuid}";
+                 
+                 $video_msg = "\n\n【お礼動画】\n以下のURLより動画をご覧いただけます(視聴期限:7日間)\n" . $video_url;
+                 $msg .= $video_msg;
+            }
 
             $messages[] = $msg;
             $processed_items[] = $item['product_name'];

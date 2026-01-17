@@ -529,6 +529,14 @@ function getPaymentMethod($method) {
                     <p class="mb-3">
                         <strong id="modalProductName"></strong> の対応方法を選択してください：
                     </p>
+                    
+                    <!-- 動画アップロード (追加) -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">お礼の動画 (任意):</label>
+                        <input type="file" class="form-control" id="modalVideoFile" accept="video/mp4,video/quicktime,video/x-m4v">
+                        <div class="form-text">MP4/MOV形式。アップロードするとURLが自動挿入されます。</div>
+                    </div>
+
                     <div class="d-grid gap-2">
                         <?php foreach ($templates as $tmpl): ?>
                             <button class="btn btn-outline-success btn-message-type" onclick="completeOrder(<?= $tmpl['id'] ?>)">
@@ -557,6 +565,8 @@ function getPaymentMethod($method) {
         document.getElementById('modalOrderId').value = orderId;
         document.getElementById('modalItemId').value = itemId;
         document.getElementById('modalProductName').textContent = productName;
+        document.getElementById('modalVideoFile').value = ''; // ファイル選択リセット
+        
         const modal = new bootstrap.Modal(document.getElementById('completionModal'));
         modal.show();
     }
@@ -566,6 +576,7 @@ function getPaymentMethod($method) {
         const orderId = document.getElementById('modalOrderId').value;
         const itemId = document.getElementById('modalItemId').value;
         const productName = document.getElementById('modalProductName').textContent;
+        const videoFileParams = document.getElementById('modalVideoFile');
         const button = event.target;
         
         if (!itemId) {
@@ -581,9 +592,40 @@ function getPaymentMethod($method) {
         // ボタン無効化
         const allButtons = document.querySelectorAll('#completionModal .btn-message-type');
         allButtons.forEach(btn => btn.disabled = true);
-        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>' + (testMode ? 'テスト中...' : '処理中...');
+        
+        // 元のテキスト保存
+        const originalBtnText = button.innerHTML;
         
         try {
+            let videoUrl = null;
+            let videoResult = null;
+
+            // 1. 動画があれば先にアップロード
+            if (videoFileParams.files.length > 0) {
+                button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> 動画送信中...';
+                
+                const formData = new FormData();
+                formData.append('video_file', videoFileParams.files[0]);
+                formData.append('cast_id', <?= json_encode($cast_id) ?>);
+                formData.append('order_item_id', itemId);
+
+                const uploadResp = await fetch('../ajax/upload_video.php', {
+                    method: 'POST',
+                    body: formData
+                });
+                const uploadResult = await uploadResp.json();
+                
+                if (!uploadResult.success) {
+                    throw new Error('動画アップロード失敗: ' + (uploadResult.error || '不明なエラー'));
+                }
+                
+                videoUrl = uploadResult.video_url;
+                videoResult = uploadResult;
+            }
+
+            // 2. 対応完了処理 (video_urlを渡す)
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>' + (testMode ? 'テスト中...' : '完了処理中...');
+
             const apiUrl = testMode 
                 ? '../ajax/cast_complete_order.php?test=1' 
                 : '../ajax/cast_complete_order.php';
@@ -597,7 +639,8 @@ function getPaymentMethod($method) {
                     order_id: orderId,
                     item_id: itemId,
                     template_id: templateId,
-                    product_name: productName
+                    product_name: productName,
+                    video_url: videoUrl // URLを追加
                 })
             });
             
@@ -607,6 +650,12 @@ function getPaymentMethod($method) {
                 // 成功
                 bootstrap.Modal.getInstance(document.getElementById('completionModal')).hide();
                 
+                // メッセージ
+                let successMsg = result.reply_message;
+                if (videoResult) {
+                   successMsg += '<br><br><strong>※動画を添付しました</strong>';
+                }
+
                 // テストモード時は詳細表示
                 if (result.test_mode) {
                     const details = `
@@ -617,7 +666,7 @@ function getPaymentMethod($method) {
                     `;
                     showAlert('info', 'テスト成功', details);
                 } else {
-                    showAlert('success', '対応完了しました！', result.reply_message);
+                    showAlert('success', '対応完了しました！', successMsg);
                 }
                 
                 // ページをリロード
@@ -639,7 +688,7 @@ function getPaymentMethod($method) {
             }
             // ボタン再有効化
             allButtons.forEach(btn => btn.disabled = false);
-            button.innerHTML = button.getAttribute('data-original-text');
+            button.innerHTML = originalBtnText; // 元に戻す
         }
     }
 
