@@ -78,7 +78,10 @@ class OrderSync {
             }
 
             // データの整形
-            $ordered_at = date('Y-m-d H:i:s', is_numeric($order['ordered']) ? $order['ordered'] : strtotime($order['ordered']));
+            // orderedが数値(Unixタイムスタンプ)の場合はそのまま、文字列の場合はstrtotime
+            $ordered_ts = is_numeric($order['ordered']) ? (int)$order['ordered'] : strtotime($order['ordered']);
+            $ordered_at = date('Y-m-d H:i:s', $ordered_ts);
+
             $last_name = $order['last_name'] ?? '';
             $first_name = $order['first_name'] ?? '';
             $customer_name = trim($last_name . ' ' . $first_name);
@@ -105,11 +108,18 @@ class OrderSync {
                 }
             }
             
-            // 更新日時 (APIから来ていれば使う、なければNOW)
-            // strtotimeが失敗(false)や、1970年、または異常な未来(2100年以降など)になる場合は現在時刻を使用
+            // 更新日時 (APIレスポンスの 'modified' または 'updated' を優先使用)
             $api_updated_at = null;
-            if (!empty($order['updated'])) {
-                $timestamp = strtotime($order['updated']);
+            $raw_updated = $order['modified'] ?? $order['updated'] ?? null;
+
+            if (!empty($raw_updated)) {
+                $timestamp = false;
+                if (is_numeric($raw_updated)) {
+                    $timestamp = (int)$raw_updated;
+                } else {
+                    $timestamp = strtotime($raw_updated);
+                }
+
                 if ($timestamp !== false && $timestamp > 0) {
                      $year = (int)date('Y', $timestamp);
                      // 妥当な範囲(2000年〜2099年)のみ許可
@@ -120,6 +130,7 @@ class OrderSync {
             }
             
             if (!$api_updated_at) {
+                // 取得できない、または範囲外の場合は現在時刻
                 $api_updated_at = date('Y-m-d H:i:s');
             }
 
