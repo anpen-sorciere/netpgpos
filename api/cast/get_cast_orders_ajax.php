@@ -52,6 +52,7 @@ try {
             o.is_surprise,
             o.surprise_date,
             oi.product_name,
+            oi.customer_name_from_option,
             oi.item_surprise_date,
             oi.price,
             oi.cast_handled,
@@ -62,7 +63,7 @@ try {
         INNER JOIN base_order_items oi ON o.base_order_id = oi.base_order_id
         LEFT JOIN reply_message_templates t ON oi.cast_handled_template_id = t.id
         WHERE oi.cast_id = :cast_id
-        AND o.status IN ('ordered', 'unpaid')
+        AND o.status IN ('ordered', 'unpaid', '対応中')
         ORDER BY oi.cast_handled ASC, o.order_date ASC
     ";
     
@@ -94,6 +95,7 @@ try {
                     <th>状態</th>
                     <th>注文日時</th>
                     <th>注文ID</th>
+                    <th>お客様名</th>
                     <th>商品</th>
                     <th>アクション</th>
                 </tr>
@@ -121,6 +123,12 @@ try {
                             <?= date('Y/m/d H:i', strtotime($order['order_date'])) ?>
                         </td>
                         <td><?= $order['base_order_id'] ?></td>
+                        <td>
+                            <strong><?= htmlspecialchars($order['customer_name'] ?: '未設定') ?></strong>
+                            <?php if (!empty($order['customer_name_from_option'])): ?>
+                                <br><small class="text-muted">備考: <?= htmlspecialchars($order['customer_name_from_option']) ?></small>
+                            <?php endif; ?>
+                        </td>
                         <td>
                             <?= htmlspecialchars($order['product_name']) ?>
                             <?php if ($order['item_surprise_date']): ?>
