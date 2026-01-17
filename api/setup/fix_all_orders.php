@@ -268,6 +268,27 @@ try {
                     $has_changes = true;
                 }
                 
+                // 4. 仕上げクリーニング (ゴミ削除)
+                if (count($new_items_for_insert) === 0) {
+                    // 新規追加がない＝全てのアイテムがDBに正しく存在しているはず
+                    // この状態でまだ base_order_item_id が NULL のレコードが残っていたら、それは不要なゴミなので削除する
+                    // (ユーザー報告の「4件あるはずが5件あり、1件はNULL」というケースに対応)
+                    
+                    try {
+                        $stmtCleanGarbage = $pdo->prepare("
+                            DELETE FROM base_order_items 
+                            WHERE base_order_id = :oid 
+                              AND base_order_item_id IS NULL
+                        ");
+                        $stmtCleanGarbage->execute([':oid' => $order_id]);
+                        $deleted_count = $stmtCleanGarbage->rowCount();
+                        
+                        if ($deleted_count > 0) {
+                            echo " - <span class='info'>[掃除]</span> 余分なゴミデータ(IDなし)を {$deleted_count} 件削除しました。<br>";
+                        }
+                    } catch (Exception $e) { /* ignore */ }
+                }
+
                 if (!$has_changes) {
                     $sync_stats['skipped']++;
                 }
