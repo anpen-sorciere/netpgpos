@@ -107,7 +107,8 @@ class OrderSync {
                     ':dispatch_status_detail' => $dispatch_status
                 ]);
             } catch (Exception $e) {
-                // error_log("Order Sync Error ($order_id): " . $e->getMessage());
+                // エラーを呼び出し元に伝播させてログに残す
+                throw $e;
             }
 
             // Items実行
@@ -167,7 +168,8 @@ class OrderSync {
                             ':item_surprise_date' => $item_surprise_date
                         ]);
                     } catch (Exception $e) {
-                         error_log("Item Sync Error ($order_id / $base_item_id / $base_order_item_id): " . $e->getMessage());
+                         // 詳細なエラー情報を付加してスロー
+                         throw new Exception("Item Sync Error ($order_id / $base_item_id): " . $e->getMessage());
                     }
                 }
             }
