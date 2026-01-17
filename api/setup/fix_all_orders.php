@@ -173,11 +173,15 @@ try {
         throw new Exception("BASE API認証が必要です。");
     }
 
-    // パラメータ設定
-    $total_limit = 400; // ユーザー要望
+    // パラメータ設定 (URL引数で変更可能に)
+    $max_items = isset($_GET['limit']) ? intval($_GET['limit']) : 400; // 処理する件数
+    $current_offset = isset($_GET['offset']) ? intval($_GET['offset']) : 0; // 開始位置
     $batch_size = 50;  // 1回のリクエスト件数
-    $offset = 0;
     
+    $target_end_offset = $current_offset + $max_items;
+    
+    echo "<div>設定: <b>Offset {$current_offset}</b> から <b>{$max_items} 件</b> (〜Offset {$target_end_offset}) を処理範囲とします。</div><br>";
+
     $sync_stats = [
         'checked' => 0,
         'new_added' => 0,
@@ -185,7 +189,7 @@ try {
         'skipped' => 0
     ];
 
-    // DB確認用ステートメント
+    // DB確認用ステートメント (省略なし)
     $stmtCheckItem = $pdo->prepare("SELECT COUNT(*) FROM base_order_items WHERE base_order_item_id = :id");
     // IDなしの既存レコードを探す（フェーズ1で直らなかった残存用）
     $stmtCheckExistingNull = $pdo->prepare("
@@ -197,15 +201,15 @@ try {
     ");
     $stmtUpdateItemId = $pdo->prepare("UPDATE base_order_items SET base_order_item_id = :item_id WHERE id = :id");
 
-    while ($offset < $total_limit) {
-        $current_limit = min($batch_size, $total_limit - $offset);
-        echo "<br><b>API取得中... (Offset: {$offset}, Limit: {$current_limit})</b><br>";
+    while ($current_offset < $target_end_offset) {
+        $next_batch = min($batch_size, $target_end_offset - $current_offset);
+        echo "<br><b>API取得中... (Offset: {$current_offset}, Limit: {$next_batch})</b><br>";
         flush_log();
         
         $response = $manager->getDataWithAutoAuth(
             'read_orders', 
             '/orders', 
-            ['limit' => $current_limit, 'offset' => $offset]
+            ['limit' => $next_batch, 'offset' => $current_offset]
         );
         
         $orders = $response['orders'] ?? [];
@@ -304,7 +308,7 @@ try {
             }
         }
         
-        $offset += count($orders);
+        $current_offset += count($orders);
         flush_log();
     }
 
