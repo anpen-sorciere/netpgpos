@@ -593,6 +593,31 @@ function getPaymentMethod($method) {
             }
         }
 
+        // 来店受け取り確認: テンプレート名に「来店受け取り」が含まれている場合
+        if (templateName && templateName.includes('来店受け取り')) {
+            if (!confirm('来店受け取り商品の準備は完了しましたか？\n\n「OK」→ 承認待ちへ進む\n「キャンセル」→ 処理を中止')) {
+                return;
+            }
+        }
+        // 来店予約確認: テンプレート名に「来店予約」が含まれている場合
+        else if (templateName && templateName.includes('来店予約')) {
+            if (!confirm('お客様と来店日時は合意しましたか？\n\n「OK」→ 承認待ちへ進む\n「キャンセル」→ 処理を中止')) {
+                return;
+            }
+        }
+        // DMで動画送付確認
+        else if (templateName && templateName.includes('DMで動画')) {
+            if (!confirm('DMにてお客様にお礼動画送付済みですか？\n\n「OK」→ 承認待ちへ進む\n「キャンセル」→ 処理を中止')) {
+                return;
+            }
+        }
+        // ライブ配信対応確認
+        else if (templateName && templateName.includes('ライブ配信')) {
+            if (!confirm('お客様は動画不要でライブ配信で対応することに合意してますか？\n\n「OK」→ 承認待ちへ進む\n「キャンセル」→ 処理を中止')) {
+                return;
+            }
+        }
+
         // テストモード判定
         const urlParams = new URLSearchParams(window.location.search);
         const testMode = urlParams.get('test_mode') === '1';
