@@ -3,7 +3,7 @@
  * DBスキーマ変更スクリプト
  * reply_message_templates テーブルに略称カラムを追加
  */
-require_once __DIR__ . '/../../common/config.php';
+require_once __DIR__ . '/../../../common/config.php';
 
 try {
     $pdo = new PDO(
