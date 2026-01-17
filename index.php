@@ -72,6 +72,7 @@ if(isset($_GET['utype'])) {
             
             <!-- 新機能 -->
             <li class="menu-item"><a href="api/cast/admin_cast_manager_v2.php" class="menu-button" style="background-color: #e91e63; color: white;">キャストポータル運用管理</a></li>
+            <li class="menu-item"><a href="api/cast/admin_cast_progress.php" class="menu-button" style="background-color: #fd7e14; color: white;">キャスト進捗モニター</a></li>
             <li class="menu-item"><a href="api/admin/message_template_manager.php" class="menu-button" style="background-color: #00bcd4; color: white;">定型文管理</a></li>
         </ul>
     </div>
