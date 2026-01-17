@@ -39,12 +39,17 @@ try {
     }
 
     // 3. ファイルパス特定
-    // storage/videos は netpgpos/storage/videos にある
-    $file_path = $base_dir . '/netpgpos/storage/videos/' . $video['file_path'];
+    // thanks.php は netpgpos/ 内にあるので、__DIR__ = netpgpos
+    // $base_dir = dirname(__DIR__) = htdocs
+    // storage は netpgpos/storage/videos にある
+    $file_path = __DIR__ . '/storage/videos/' . $video['file_path'];
+
+    // デバッグ用（問題解決後削除）
+    // die("DEBUG: file_path = $file_path, exists = " . (file_exists($file_path) ? 'YES' : 'NO'));
 
     if (!file_exists($file_path)) {
         http_response_code(404);
-        die('Video file missing.');
+        die('Video file missing. Path: ' . $file_path);
     }
 
     // 4. 動画配信 (Range対応)
