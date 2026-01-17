@@ -585,8 +585,8 @@ function getPaymentMethod($method) {
             return;
         }
         
-        // 動画必須チェック: テンプレート名に「動画」が含まれている場合
-        if (templateName && templateName.includes('動画')) {
+        // 動画必須チェック: テンプレート名に「動画URL」が含まれている場合のみ
+        if (templateName && templateName.includes('動画URL')) {
             if (videoFileParams.files.length === 0) {
                 alert('このテンプレートには動画の添付が必要です。\n「お礼の動画」から動画ファイルを選択してください。');
                 return;
