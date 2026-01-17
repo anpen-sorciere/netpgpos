@@ -122,10 +122,10 @@ try {
                 try {
                     $pdo->beginTransaction();
                     
-                    // 1. 古いレコードにIDを移植
-                    $stmtUpdateOld->execute([':new_id' => $real_item_id, ':old_id' => $old_pk]);
-                    // 2. 新しいレコードを削除
+                    // 1. 先に新しいレコードを削除してIDを解放する（ユニーク制約回避）
                     $stmtDeleteNew->execute([':del_id' => $new_pk]);
+                    // 2. 解放されたIDを古いレコードにセットする
+                    $stmtUpdateOld->execute([':new_id' => $real_item_id, ':old_id' => $old_pk]);
                     
                     $pdo->commit();
                     $dupe_stats['fixed']++;
