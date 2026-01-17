@@ -1,6 +1,7 @@
 <?php
 ini_set('display_errors', 1);
-require_once 'c:/xampp/htdocs/common/config.php';
+require_once __DIR__ . '/../../../common/config.php';
+require_once __DIR__ . '/../../../common/dbconnect.php';
 
 echo "<pre>\n";
 echo "Starting schema update for base_order_items...\n";
