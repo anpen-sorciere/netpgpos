@@ -371,6 +371,73 @@ class BasePracticalAutoManager {
     }
 
     /**
+     * 汎用APIリクエスト（自動認証・更新対応）
+     */
+    public function makeApiRequest($scope_key, $endpoint, $data = [], $method = 'GET') {
+        // トークンの有効性チェック
+        if (!$this->isTokenValid($scope_key)) {
+            $this->logSystemEvent("AUTH_REQUIRED", "スコープ {$scope_key} で再認証が必要です");
+            throw new Exception("スコープ {$scope_key} で再認証が必要です");
+        }
+        
+        $token_data = $this->getScopeToken($scope_key);
+        $access_token = $token_data['access_token'];
+        
+        $url = rtrim($this->api_url, '/') . '/' . ltrim($endpoint, '/');
+        
+        $ch = curl_init();
+        
+        $headers = [
+            'Authorization: Bearer ' . $access_token
+        ];
+        
+        if ($method === 'GET') {
+            if (!empty($data)) {
+                $url .= '?' . http_build_query($data);
+            }
+        } elseif ($method === 'POST') {
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+            $headers[] = 'Content-Type: application/x-www-form-urlencoded';
+        }
+        
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_HTTPHEADER => $headers
+        ]);
+        
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curl_error = curl_error($ch);
+        curl_close($ch);
+        
+        if ($curl_error) {
+            throw new Exception("ネットワークエラー: {$curl_error}");
+        }
+        
+        if ($http_code === 401) {
+            // アクセストークンが無効 - リフレッシュを試行
+            try {
+                $this->refreshScopeToken($scope_key);
+                return $this->makeApiRequest($scope_key, $endpoint, $data, $method); // 再帰呼び出し
+            } catch (Exception $e) {
+                throw new Exception("認証エラー: リフレッシュトークンも無効です");
+            }
+        }
+        
+        if ($http_code !== 200) {
+            $error_data = json_decode($response, true);
+            $error_msg = $error_data['error_description'] ?? "HTTP {$http_code}";
+            throw new Exception("APIリクエストエラー: HTTP {$http_code} - {$error_msg}");
+        }
+        
+        return json_decode($response, true);
+    }
+
+    /**
      * 注文データと商品データの組み合わせ取得
      */
     public function getCombinedOrderData($limit = 50, $offset = 0, $status = null) {
