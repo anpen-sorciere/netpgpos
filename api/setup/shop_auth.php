@@ -58,7 +58,8 @@ if (isset($_GET['code']) && isset($_GET['state'])) {
                 'read_users', 
                 'read_users_mail', 
                 'write_items', 
-                'write_orders'
+                'write_orders',
+                'read_savings' // 追加
             ];
             
             $count = 1;
@@ -101,7 +102,8 @@ if (isset($_POST['start_auth']) && isset($_POST['shop_id'])) {
             'read_users',
             'read_users_mail',
             'write_items',
-            'write_orders' // キャンセル処理などで必要になる可能性あり
+            'write_orders', // キャンセル処理などで必要になる可能性あり
+            'read_savings'  // 追加
         ];
         $scope_string = implode(' ', $scopes); // BASEはスペース区切り推奨 (または +)
         
