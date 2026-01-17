@@ -8,8 +8,30 @@
 ini_set('memory_limit', '512M');
 set_time_limit(300); // 5分
 
-require_once __DIR__ . '/../../../common/config.php';
-require_once __DIR__ . '/../../../common/dbconnect.php';
+// 共通ファイルの読み込み (パス解決ロジック)
+$search_paths_config = [
+    __DIR__ . '/../../../common/config.php',
+    __DIR__ . '/../../common/config.php',
+    __DIR__ . '/../../config.php'
+];
+foreach ($search_paths_config as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        break;
+    }
+}
+
+$search_paths_db = [
+    __DIR__ . '/../../../common/dbconnect.php',
+    __DIR__ . '/../../common/dbconnect.php',
+    __DIR__ . '/../../dbconnect.php'
+];
+foreach ($search_paths_db as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        break;
+    }
+}
 require_once __DIR__ . '/../classes/OrderSync.php';
 require_once __DIR__ . '/../classes/base_practical_auto_manager.php';
 
