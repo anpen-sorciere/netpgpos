@@ -20,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if ($action === 'save') {
         $id = $_POST['id'] ?? null;
+        $template_abbreviation = $_POST['template_abbreviation'] ?? '';
         $template_name = $_POST['template_name'] ?? '';
         $template_body = $_POST['template_body'] ?? '';
         $icon_class = $_POST['icon_class'] ?? 'fas fa-envelope';
@@ -31,19 +32,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // 更新
             $stmt = $pdo->prepare("
                 UPDATE reply_message_templates 
-                SET template_name = ?, template_body = ?, icon_class = ?, 
+                SET template_name = ?, template_abbreviation = ?, template_body = ?, icon_class = ?, 
                     display_order = ?, is_active = ?, allow_cast_use = ?
                 WHERE id = ?
             ");
-            $stmt->execute([$template_name, $template_body, $icon_class, $display_order, $is_active, $allow_cast_use, $id]);
+            $stmt->execute([$template_name, $template_abbreviation, $template_body, $icon_class, $display_order, $is_active, $allow_cast_use, $id]);
         } else {
             // 新規
             $stmt = $pdo->prepare("
                 INSERT INTO reply_message_templates 
-                (template_name, template_body, icon_class, display_order, is_active, allow_cast_use)
-                VALUES (?, ?, ?, ?, ?, ?)
+                (template_name, template_abbreviation, template_body, icon_class, display_order, is_active, allow_cast_use)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ");
-            $stmt->execute([$template_name, $template_body, $icon_class, $display_order, $is_active, $allow_cast_use]);
+            $stmt->execute([$template_name, $template_abbreviation, $template_body, $icon_class, $display_order, $is_active, $allow_cast_use]);
         }
         
         header('Location: message_template_manager.php?saved=1');
@@ -96,7 +97,8 @@ $templates = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <tr>
                     <th style="width: 5%">順序</th>
                     <th style="width: 20%">タイトル</th>
-                    <th style="width: 45%">本文</th>
+                    <th style="width: 10%">略称</th>
+                    <th style="width: 35%">本文</th>
                     <th style="width: 10%">キャスト</th>
                     <th style="width: 10%">状態</th>
                     <th style="width: 10%">操作</th>
@@ -110,6 +112,7 @@ $templates = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <i class="<?= htmlspecialchars($tmpl['icon_class']) ?>"></i>
                             <?= htmlspecialchars($tmpl['template_name']) ?>
                         </td>
+                        <td><span class="badge bg-info text-dark"><?= htmlspecialchars($tmpl['template_abbreviation'] ?? '-') ?></span></td>
                         <td style="font-size: 0.9em; white-space: pre-wrap;"><?= htmlspecialchars(mb_substr($tmpl['template_body'], 0, 100)) ?><?= mb_strlen($tmpl['template_body']) > 100 ? '...' : '' ?></td>
                         <td><?= $tmpl['allow_cast_use'] ? '<span class="badge bg-success">可</span>' : '<span class="badge bg-secondary">不可</span>' ?></td>
                         <td><?= $tmpl['is_active'] ? '<span class="badge bg-primary">有効</span>' : '<span class="badge bg-secondary">無効</span>' ?></td>
@@ -138,6 +141,11 @@ $templates = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <div class="mb-3">
                             <label class="form-label">タイトル（キャスト選択時の表示名）</label>
                             <input type="text" class="form-control" name="template_name" id="tmpl_name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">略称（管理者識別用）</label>
+                            <input type="text" class="form-control" name="template_abbreviation" id="tmpl_abbr" placeholder="例: 発送, A, 特急" required>
+                            <small class="text-muted">承認画面で表示されます</small>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">本文（BASE送信用）</label>
@@ -179,6 +187,7 @@ $templates = $stmt->fetchAll(PDO::FETCH_ASSOC);
             document.getElementById('modalTitle').textContent = '定型文編集';
             document.getElementById('tmpl_id').value = data.id;
             document.getElementById('tmpl_name').value = data.template_name;
+            document.getElementById('tmpl_abbr').value = data.template_abbreviation;
             document.getElementById('tmpl_body').value = data.template_body;
             document.getElementById('tmpl_icon').value = data.icon_class;
             document.getElementById('tmpl_order').value = data.display_order;
@@ -188,6 +197,7 @@ $templates = $stmt->fetchAll(PDO::FETCH_ASSOC);
             document.getElementById('modalTitle').textContent = '新規定型文';
             document.getElementById('tmpl_id').value = '';
             document.getElementById('tmpl_name').value = '';
+            document.getElementById('tmpl_abbr').value = '';
             document.getElementById('tmpl_body').value = '';
             document.getElementById('tmpl_icon').value = 'fas fa-envelope';
             document.getElementById('tmpl_order').value = '0';

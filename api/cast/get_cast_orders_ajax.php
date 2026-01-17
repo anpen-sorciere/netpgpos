@@ -42,6 +42,30 @@ try {
         ORDER BY oi.cast_handled ASC, o.order_date ASC -- 未対応を上に
     ";
     
+    // 略称取得のためにJOINを追加したSQLに書き換え
+    $sql = "
+        SELECT 
+            o.base_order_id,
+            o.order_date,
+            o.customer_name,
+            o.status,
+            o.is_surprise,
+            o.surprise_date,
+            oi.product_name,
+            oi.item_surprise_date,
+            oi.price,
+            oi.cast_handled,
+            oi.cast_handled_at,
+            t.template_abbreviation,
+            t.template_name
+        FROM base_orders o
+        INNER JOIN base_order_items oi ON o.base_order_id = oi.base_order_id
+        LEFT JOIN reply_message_templates t ON oi.cast_handled_template_id = t.id
+        WHERE oi.cast_id = :cast_id
+        AND o.status IN ('ordered', 'unpaid')
+        ORDER BY oi.cast_handled ASC, o.order_date ASC
+    ";
+    
     $stmt = $pdo->prepare($sql);
     $stmt->execute([':cast_id' => $cast_id]);
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -86,6 +110,9 @@ try {
                             <?php if ($is_handled): ?>
                                 <span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> 承認待ち</span>
                                 <br><small><?= date('m/d H:i', strtotime($order['cast_handled_at'])) ?></small>
+                                <?php if (!empty($order['template_abbreviation'])): ?>
+                                    <br><span class="badge bg-info text-dark mt-1"><?= htmlspecialchars($order['template_abbreviation']) ?></span>
+                                <?php endif; ?>
                             <?php else: ?>
                                 <span class="badge bg-danger">キャスト未対応</span>
                             <?php endif; ?>
