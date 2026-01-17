@@ -21,8 +21,8 @@ class OrderSync {
 
         // base_orders アップサート文
         $stmtOrder = $pdo->prepare("
-            INSERT INTO base_orders (base_order_id, shop_id, order_date, customer_name, total_amount, status, is_surprise, surprise_date, payment_method, dispatch_status_detail)
-            VALUES (:base_order_id, :shop_id, :order_date, :customer_name, :total_amount, :status, :is_surprise, :surprise_date, :payment_method, :dispatch_status_detail)
+            INSERT INTO base_orders (base_order_id, shop_id, order_date, customer_name, total_amount, status, is_surprise, surprise_date, payment_method, dispatch_status_detail, updated_at)
+            VALUES (:base_order_id, :shop_id, :order_date, :customer_name, :total_amount, :status, :is_surprise, :surprise_date, :payment_method, :dispatch_status_detail, :updated_at)
             ON DUPLICATE KEY UPDATE
                 shop_id = VALUES(shop_id),
                 customer_name = VALUES(customer_name),
@@ -32,7 +32,7 @@ class OrderSync {
                 surprise_date = VALUES(surprise_date),
                 payment_method = VALUES(payment_method),
                 dispatch_status_detail = VALUES(dispatch_status_detail),
-                updated_at = NOW()
+                updated_at = VALUES(updated_at)
         ");
 
         // base_order_items アップサート文
@@ -105,6 +105,14 @@ class OrderSync {
                 }
             }
             
+            // 更新日時 (APIから来ていれば使う、なければNOW)
+            $api_updated_at = null;
+            if (!empty($order['updated'])) {
+                $api_updated_at = date('Y-m-d H:i:s', strtotime($order['updated']));
+            } else {
+                $api_updated_at = date('Y-m-d H:i:s');
+            }
+
             // Order実行
             try {
                 $stmtOrder->execute([
@@ -117,7 +125,8 @@ class OrderSync {
                     ':is_surprise' => $is_surprise,
                     ':surprise_date' => $surprise_date,
                     ':payment_method' => $payment_method,
-                    ':dispatch_status_detail' => $dispatch_status
+                    ':dispatch_status_detail' => $dispatch_status,
+                    ':updated_at' => $api_updated_at
                 ]);
                 $debug_log("Saved Order: {$order_id} (Shop: {$shop_id})");
             } catch (Exception $e) {

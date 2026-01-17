@@ -79,15 +79,61 @@ try {
             }
 
             // 未対応の注文のみを取得するため、直近のデータを取得
-            // 一覧APIでは商品詳細が取れない場合があるため、getCombinedOrderDataを使用
-            $result_data = $manager->getCombinedOrderData(50, 0, null); // limit=50, offset=0
-            $orders = $result_data['merged_orders'] ?? []; // 商品情報マージ済みのデータを使用
+            // 1. まず注文一覧（IDリスト）を取得
+            $list_response = $manager->getDataWithAutoAuth('read_orders', '/orders', [
+                'limit' => 50,
+                'order' => 'desc',
+                'sort' => 'order_date'
+            ]);
+            
+            $simple_orders = $list_response['orders'] ?? [];
+            sync_log("[{$shop_name}] List fetched: " . count($simple_orders) . " orders. Fetching details...");
 
-            sync_log("[{$shop_name}] Fetched " . count($orders) . " orders (Combined Data) from BASE.");
+            $detailed_orders = [];
+            foreach ($simple_orders as $idx => $simple_order) {
+                $unique_key = $simple_order['unique_key'] ?? null;
+                if (!$unique_key) continue;
 
-            if (!empty($orders)) {
+                // APIの更新日時を取得 (BASE APIは 'updated' または 'ordered' を返す)
+                $api_updated = $simple_order['updated'] ?? $simple_order['ordered'] ?? null;
+
+                // DBの更新日時をチェック
+                $stmtCheck = $pdo->prepare("SELECT updated_at FROM base_orders WHERE base_order_id = ? AND shop_id = ? LIMIT 1");
+                $stmtCheck->execute([$unique_key, $shop_id]);
+                $db_row = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+
+                // もしDBにあり、かつAPIの更新日時がDB以下なら、詳細取得をスキップ
+                // (注意: BASEのupdatedは文字列なのでstrtotimeで比較)
+                if ($db_row && $api_updated && strtotime($api_updated) <= strtotime($db_row['updated_at'])) {
+                    // sync_log("Skipping {$unique_key}: Not updated. (DB: {$db_row['updated_at']} / API: {$api_updated})");
+                    continue;
+                }
+
+                try {
+                    // 2. 各注文の詳細データを取得 (ここに order_items が確実に入っている)
+                    $detail_response = $manager->getDataWithAutoAuth('read_orders', '/orders/detail/' . $unique_key);
+                    
+                    if (!empty($detail_response['order'])) {
+                        // 詳細データには updated が含まれていない場合があるので、一覧から補完しておく
+                        if (empty($detail_response['order']['updated']) && $api_updated) {
+                            $detail_response['order']['updated'] = $api_updated;
+                        }
+                        $detailed_orders[] = $detail_response['order'];
+                    }
+
+                    // APIレート制限への配慮 (0.2秒待機 => 1秒間に5回程度)
+                    usleep(200000); 
+
+                } catch (Exception $e) {
+                     sync_log("!! Failed to fetch detail for {$unique_key}: " . $e->getMessage());
+                }
+            }
+
+            sync_log("[{$shop_name}] Details fetched. Total: " . count($detailed_orders));
+
+            if (!empty($detailed_orders)) {
                 // OrderSync::syncOrdersToDbを利用して保存（shop_idを渡す）
-                OrderSync::syncOrdersToDb($pdo, $orders, $manager, $shop_id);
+                OrderSync::syncOrdersToDb($pdo, $detailed_orders, $manager, $shop_id);
                 sync_log("[{$shop_name}] Sync completed.");
             }
         } catch (Exception $e) {
