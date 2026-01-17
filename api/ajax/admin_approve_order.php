@@ -125,9 +125,9 @@ try {
 
     // BASE API実行 (ステータス更新 & メッセージ送信)
     $update_data = [
-        'unique_key' => $order_id,
-        'dispatch_status' => 'dispatched',
-        'message' => $final_message
+        'order_id' => $order_id,
+        'status' => 'dispatched',
+        'add_comment' => $final_message
     ];
     
     $manager->makeApiRequest('write_orders', '/orders/edit_status', $update_data, 'POST');
