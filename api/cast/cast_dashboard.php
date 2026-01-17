@@ -546,7 +546,7 @@ function getPaymentMethod($method) {
                     </div>
                     <div class="alert alert-info mt-3 mb-0" style="font-size: 0.9em;">
                         <i class="fas fa-info-circle"></i> 
-                        選択した内容がお客様へのメッセージとして送信され、BASEのステータスが「発送済み」に更新されます。
+                        選択した内容は「承認待ち」として管理者に送られます。管理者が確認後にお客様へ送信されます。
                     </div>
                 </div>
             </div>
