@@ -46,7 +46,8 @@ try {
         $sql = "
             SELECT 
                 o.order_date,
-                oi.item_surprise_date
+                oi.item_surprise_date,
+                oi.cast_handled
             FROM base_orders o
             INNER JOIN base_order_items oi ON o.base_order_id = oi.base_order_id
             WHERE oi.cast_id = :cast_id
@@ -57,25 +58,36 @@ try {
         $orders = $stmt_orders->fetchAll(PDO::FETCH_ASSOC);
 
         $unfinished_count = 0;
+        $approval_pending_count = 0; // 承認待ち件数
         $oldest_unfinished_date = null;
 
         foreach ($orders as $order) {
-            // サプライズ日付フィルター (未来のものはカウントしない＝キャストには見えていない仕事だから)
-            // もし「管理者には見えているがキャストには見えていない」場合、それを放置とみなすのは酷なので除外。
             $sDate = $order['item_surprise_date'];
             if ($sDate && $sDate > $today) {
                 continue;
             }
 
-            $unfinished_count++;
+            // 承認待ちかどうか
+            if (!empty($order['cast_handled'])) {
+                $approval_pending_count++;
+            } else {
+                // キャスト未対応のものだけを「未対応件数」としてカウントするか、
+                // あるいは「全担当分」とするか？
+                // ユーザー要望は「承認待ちがある人を優先」なので、
+                // unfinished_count はあくまで「タスク残」として、承認待ちは別カウントとするのが分かりやすい。
+                $unfinished_count++;
+            }
             
-            // 最古の日付更新
-            if ($oldest_unfinished_date === null || $order['order_date'] < $oldest_unfinished_date) {
-                $oldest_unfinished_date = $order['order_date'];
+            // 最古の日付更新 (承認待ちのものは日付チェックから外す？ -> いや、未対応のものだけチェックすべき)
+            if (empty($order['cast_handled'])) {
+                if ($oldest_unfinished_date === null || $order['order_date'] < $oldest_unfinished_date) {
+                    $oldest_unfinished_date = $order['order_date'];
+                }
             }
         }
 
         $cast['unfinished_count'] = $unfinished_count;
+        $cast['approval_pending_count'] = $approval_pending_count;
         $cast['oldest_unfinished_date'] = $oldest_unfinished_date;
         
         // 放置日数計算
@@ -86,12 +98,18 @@ try {
     }
     unset($cast); // 参照解除
 
-    // 並び替え: 放置日数が長い順（要注意順）
+    // 並び替え: 承認待ちが多い順 > 放置日数が長い順
     usort($casts, function($a, $b) {
-        if ($a['elapsed_days'] == $b['elapsed_days']) {
-            return $b['unfinished_count'] <=> $a['unfinished_count'];
+        // まず承認待ちがある人を最優先
+        if ($a['approval_pending_count'] != $b['approval_pending_count']) {
+            return $b['approval_pending_count'] <=> $a['approval_pending_count'];
         }
-        return $b['elapsed_days'] <=> $a['elapsed_days'];
+        // 次に放置日数
+        if ($a['elapsed_days'] != $b['elapsed_days']) {
+            return $b['elapsed_days'] <=> $a['elapsed_days'];
+        }
+        // 最後に未対応件数
+        return $b['unfinished_count'] <=> $a['unfinished_count'];
     });
 
 } catch (PDOException $e) {
@@ -126,7 +144,7 @@ try {
         }
         .warning-row { background-color: #fff3cd; }
         .danger-row { background-color: #f8d7da; }
-        .safe-row { background-color: #d4edda; }
+        .approval-row { background-color: #d1e7dd; } /* 承認待ちがある行 */
         .table th { vertical-align: middle; background-color: #e9ecef; }
         .table td { vertical-align: middle; }
         
@@ -155,8 +173,9 @@ try {
                     <thead>
                         <tr>
                             <th>キャスト名</th>
-                            <th class="text-center">未対応件数</th>
-                            <th class="text-center">最も古い注文</th>
+                            <th class="text-center">承認待ち</th>
+                            <th class="text-center">キャスト対応待ち</th>
+                            <th class="text-center">最も古い未対応</th>
                             <th class="text-center">放置日数</th>
                             <th class="text-center">最終ログイン</th>
                             <th class="text-center">アクション</th>
@@ -167,7 +186,9 @@ try {
                             <?php 
                                 // 行の色分け
                                 $rowClass = '';
-                                if ($cast['elapsed_days'] >= 5) {
+                                if ($cast['approval_pending_count'] > 0) {
+                                    $rowClass = 'approval-row'; // 承認待ち最優先
+                                } elseif ($cast['elapsed_days'] >= 5) {
                                     $rowClass = 'danger-row';
                                 } elseif ($cast['elapsed_days'] >= 3) {
                                     $rowClass = 'warning-row';
@@ -189,9 +210,26 @@ try {
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-center">
-                                    <span class="badge <?= $badgeClass ?> badge-count">
-                                        <?= $cast['unfinished_count'] ?> 件
-                                    </span>
+                                    <?php if ($cast['approval_pending_count'] > 0): ?>
+                                        <button class="btn btn-success btn-sm position-relative">
+                                            承認待ち
+                                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                                <?= $cast['approval_pending_count'] ?>
+                                                <span class="visually-hidden">unread messages</span>
+                                            </span>
+                                        </button>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-center">
+                                    <?php if ($cast['unfinished_count'] > 0): ?>
+                                        <span class="badge <?= $badgeClass ?> badge-count">
+                                            <?= $cast['unfinished_count'] ?> 件
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td class="text-center">
                                     <?php if ($cast['oldest_unfinished_date']): ?>
