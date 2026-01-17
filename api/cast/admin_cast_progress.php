@@ -289,12 +289,125 @@ try {
         </div>
     </div>
 
+    <!-- 承認確認モーダル -->
+    <div class="modal fade" id="approveConfirmModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title"><i class="fas fa-check-circle"></i> 承認・送信内容の確認</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="alert alert-warning">
+                        <i class="fas fa-exclamation-circle"></i> 以下の内容でお客様へメールが送信され、BASEのステータスが「発送済み」になります。<br>
+                        問題なければ「送信確定」を押してください。
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">送信メッセージプレビュー:</label>
+                        <textarea class="form-control" id="previewMessage" rows="10" readonly style="background-color: #f8f9fa; font-family: monospace;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
+                    <button type="button" class="btn btn-success" id="btnConfirmSend">
+                        <i class="fas fa-paper-plane"></i> 送信確定
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const detailModal = new bootstrap.Modal(document.getElementById('detailModal'));
             const modalTitle = document.getElementById('detailModalLabel');
             const modalBody = document.getElementById('modalBody');
+            
+            // 確認モーダル
+            const confirmModalEl = document.getElementById('approveConfirmModal');
+            const confirmModal = new bootstrap.Modal(confirmModalEl);
+            const btnConfirmSend = document.getElementById('btnConfirmSend');
+            let currentApproveConfig = null; // 送信データ保持用
+
+            // イベントデリゲーション：動的に生成される「承認」ボタンのクリックを監視
+            document.body.addEventListener('click', async function(e) {
+                if (e.target && (e.target.classList.contains('btn-approve') || e.target.closest('.btn-approve'))) {
+                    const btn = e.target.classList.contains('btn-approve') ? e.target : e.target.closest('.btn-approve');
+                    
+                    const orderId = btn.dataset.orderId;
+                    const castId = btn.dataset.castId;
+                    const originalText = btn.innerHTML;
+                    
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 処理中';
+
+                    try {
+                        // Step 1: プレビュー取得
+                        const response = await fetch('../../api/ajax/admin_approve_order.php', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ order_id: orderId, cast_id: castId, preview: true })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success && result.preview) {
+                            // プレビュー成功、モーダル表示
+                            document.getElementById('previewMessage').value = result.message;
+                            
+                            // 本送信用データを一時保存
+                            currentApproveConfig = { orderId, castId };
+                            
+                            confirmModal.show();
+                            
+                        } else {
+                            throw new Error(result.error || 'プレビュー取得エラー');
+                        }
+                    } catch (error) {
+                        alert('エラー: ' + error.message);
+                    } finally {
+                        // ボタン状態を戻す
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    }
+                }
+            });
+
+            // 送信確定ボタンクリック時
+            btnConfirmSend.addEventListener('click', async function() {
+                if (!currentApproveConfig) return;
+                
+                this.disabled = true;
+                this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 送信中...';
+                
+                try {
+                    const sendResponse = await fetch('../../api/ajax/admin_approve_order.php', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ 
+                            order_id: currentApproveConfig.orderId, 
+                            cast_id: currentApproveConfig.castId 
+                        }) // previewなし = 本送信
+                    });
+                    
+                    const sendResult = await sendResponse.json();
+                    
+                    if (sendResult.success) {
+                        alert('承認・送信完了しました！');
+                        confirmModal.hide();
+                        // 親画面をリロードしてリストを更新
+                        location.reload();
+                    } else {
+                        throw new Error(sendResult.error || '送信エラー');
+                    }
+                } catch (sendError) {
+                    alert('送信エラー: ' + sendError.message);
+                } finally {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-paper-plane"></i> 送信確定';
+                }
+            });
 
             document.querySelectorAll('.view-details').forEach(button => {
                 button.addEventListener('click', function() {
