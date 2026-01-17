@@ -106,12 +106,16 @@ class OrderSync {
             }
             
             // 更新日時 (APIから来ていれば使う、なければNOW)
-            // strtotimeが失敗(false)や、1970-01-01になる場合は現在時刻を使用
+            // strtotimeが失敗(false)や、1970年、または異常な未来(2100年以降など)になる場合は現在時刻を使用
             $api_updated_at = null;
             if (!empty($order['updated'])) {
                 $timestamp = strtotime($order['updated']);
                 if ($timestamp !== false && $timestamp > 0) {
-                     $api_updated_at = date('Y-m-d H:i:s', $timestamp);
+                     $year = (int)date('Y', $timestamp);
+                     // 妥当な範囲(2000年〜2099年)のみ許可
+                     if ($year >= 2000 && $year <= 2099) {
+                        $api_updated_at = date('Y-m-d H:i:s', $timestamp);
+                     }
                 }
             }
             
