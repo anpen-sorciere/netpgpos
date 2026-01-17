@@ -79,7 +79,7 @@ $templates = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <body>
     <div class="container my-5">
         <h2><i class="fas fa-envelope"></i> 返信メール定型文管理</h2>
-        <p class="text-muted">キャストが選択する定型文を管理します。変数: {customer_name}, {product_name}, {order_id}, {cast_name}</p>
+        <p class="text-muted">キャストが選択する定型文を管理します。変数: {customer_name}, {product_name}, {order_id}, {cast_name}, {video_url}</p>
         
         <?php if (isset($_GET['saved'])): ?>
             <div class="alert alert-success">保存しました</div>
@@ -150,7 +150,7 @@ $templates = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <div class="mb-3">
                             <label class="form-label">本文（BASE送信用）</label>
                             <textarea class="form-control" name="template_body" id="tmpl_body" rows="8" required></textarea>
-                            <small class="text-muted">変数: {customer_name}, {product_name}, {order_id}, {cast_name}</small>
+                            <small class="text-muted">変数: {customer_name}, {product_name}, {order_id}, {cast_name}, {video_url}</small>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">

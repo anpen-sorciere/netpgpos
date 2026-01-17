@@ -101,7 +101,6 @@ try {
 
             // 動画添付チェック
             // order_item_id = $item['id'] (base_order_items.id)
-            // video_uploads.order_item_id は VARCHAR(50) なのでキャスト不要でOK
             $stmt_video = $pdo->prepare("
                 SELECT video_uuid FROM video_uploads 
                 WHERE order_item_id = ? 
@@ -112,14 +111,21 @@ try {
             $video_uuid = $stmt_video->fetchColumn();
 
             if ($video_uuid) {
-                 // URL生成 (config.phpのbase_redirect_uriからドメイン抽出またはSERVER変数利用)
-                 // ここではシンプルに現在のホストを使用
                  $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
                  $host_name = $_SERVER['HTTP_HOST'];
                  $video_url = "{$protocol}://{$host_name}/thanks.php?id={$video_uuid}";
                  
-                 $video_msg = "\n\n【お礼動画】\n以下のURLより動画をご覧いただけます(視聴期限:7日間)\n" . $video_url;
-                 $msg .= $video_msg;
+                 // {video_url} 変数がテンプレートにあれば置換
+                 if (strpos($msg, '{video_url}') !== false) {
+                     $msg = str_replace('{video_url}', $video_url, $msg);
+                 } else {
+                     // 変数がなければ従来どおり末尾に追記
+                     $video_msg = "\n\n【お礼動画】\n以下のURLより動画をご覧いただけます(視聴期限:7日間)\n" . $video_url;
+                     $msg .= $video_msg;
+                 }
+            } else {
+                 // 動画がない場合は{video_url}変数を空文字に置換
+                 $msg = str_replace('{video_url}', '', $msg);
             }
 
             $messages[] = $msg;
