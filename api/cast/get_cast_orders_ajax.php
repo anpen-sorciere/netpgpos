@@ -1,6 +1,7 @@
 <?php
 /**
  * 特定のキャストの未対応注文リストを返すAjax (admin_cast_progress.php用)
+ * 承認フロー対応版：cast_handled=1 も表示し、承認ボタンを出す
  */
 require_once __DIR__ . '/../../../common/config.php';
 require_once __DIR__ . '/../../../common/dbconnect.php';
@@ -19,7 +20,7 @@ try {
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
     );
 
-    // キャストダッシュボードと同じSQLロジック
+    // 未対応または未承認のアイテムを取得
     $sql = "
         SELECT 
             o.base_order_id,
@@ -30,12 +31,15 @@ try {
             o.surprise_date,
             oi.product_name,
             oi.item_surprise_date,
-            oi.price
+            oi.price,
+            oi.cast_handled,
+            oi.cast_handled_at
         FROM base_orders o
         INNER JOIN base_order_items oi ON o.base_order_id = oi.base_order_id
         WHERE oi.cast_id = :cast_id
         AND o.status IN ('ordered', 'unpaid')
-        ORDER BY o.order_date ASC
+        -- AND (oi.cast_handled = 0 OR oi.cast_handled = 1) -- 明示的に書くならこうだが、現状全てorderedなのでOK
+        ORDER BY oi.cast_handled ASC, o.order_date ASC -- 未対応を上に
     ";
     
     $stmt = $pdo->prepare($sql);
@@ -46,7 +50,6 @@ try {
     $today = date('Y-m-d');
 
     foreach ($rows as $row) {
-        // 未来のサプライズは非表示（キャストダッシュボードと同じ条件）
         $sDate = $row['item_surprise_date'];
         if ($sDate && $sDate > $today) {
             continue; 
@@ -55,50 +58,57 @@ try {
     }
 
     if (empty($orders)) {
-        echo '<div class="alert alert-success"><i class="fas fa-check-circle"></i> 現在、未対応の注文はありません。</div>';
+        echo '<div class="alert alert-success"><i class="fas fa-check-circle"></i> 現在、対応が必要な注文はありません。</div>';
         exit;
     }
 
-    // テーブル表示
     ?>
     <div class="table-responsive">
-        <table class="table table-bordered table-striped">
+        <table class="table table-bordered table-striped align-middle">
             <thead class="table-light">
                 <tr>
+                    <th>状態</th>
                     <th>注文日時</th>
                     <th>注文ID</th>
-                    <th>お客様名</th>
                     <th>商品</th>
-                    <th>ステータス</th>
+                    <th>アクション</th>
                 </tr>
             </thead>
             <tbody>
                 <?php foreach ($orders as $order): ?>
                     <?php 
-                        // 遅延の警告色
                         $is_delayed = (strtotime($order['order_date']) < strtotime('-3 days'));
                         $date_class = $is_delayed ? 'text-danger fw-bold' : '';
+                        $is_handled = !empty($order['cast_handled']);
                     ?>
-                    <tr>
-                        <td class="<?= $date_class ?>">
-                            <?= date('Y/m/d H:i', strtotime($order['order_date'])) ?>
-                            <?php if ($is_delayed): ?>
-                                <br><small><i class="fas fa-exclamation-triangle"></i> 遅延</small>
+                    <tr class="<?= $is_handled ? 'table-warning' : '' ?>">
+                        <td class="text-center">
+                            <?php if ($is_handled): ?>
+                                <span class="badge bg-warning text-dark"><i class="fas fa-clock"></i> 承認待ち</span>
+                                <br><small><?= date('m/d H:i', strtotime($order['cast_handled_at'])) ?></small>
+                            <?php else: ?>
+                                <span class="badge bg-danger">キャスト未対応</span>
                             <?php endif; ?>
                         </td>
+                        <td class="<?= $date_class ?>">
+                            <?= date('Y/m/d H:i', strtotime($order['order_date'])) ?>
+                        </td>
                         <td><?= $order['base_order_id'] ?></td>
-                        <td><?= htmlspecialchars($order['customer_name']) ?></td>
                         <td>
                             <?= htmlspecialchars($order['product_name']) ?>
                             <?php if ($order['item_surprise_date']): ?>
                                 <br><span class="badge bg-warning text-dark">サプライズ: <?= $order['item_surprise_date'] ?></span>
                             <?php endif; ?>
                         </td>
-                        <td>
-                            <?php if ($order['status'] == 'unpaid'): ?>
-                                <span class="badge bg-warning text-dark">入金待ち</span>
+                        <td class="text-center">
+                            <?php if ($is_handled): ?>
+                                <button class="btn btn-primary btn-sm btn-approve" 
+                                        data-order-id="<?= $order['base_order_id'] ?>"
+                                        data-cast-id="<?= $cast_id ?>">
+                                    <i class="fas fa-check"></i> 承認・反映
+                                </button>
                             <?php else: ?>
-                                <span class="badge bg-primary">未対応</span>
+                                <span class="text-muted small">対応待ち</span>
                             <?php endif; ?>
                         </td>
                     </tr>
@@ -106,6 +116,43 @@ try {
             </tbody>
         </table>
     </div>
+
+    <script>
+    // 承認ボタンイベント（動的生成されるためここでバインド）
+    document.querySelectorAll('.btn-approve').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            if (!confirm('このキャスト対応を承認し、BASEへ反映しますか？\n（お客様へ発送メールが送信されます）')) return;
+
+            const orderId = this.dataset.orderId;
+            const castId = this.dataset.castId;
+            const originalText = this.innerHTML;
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 処理中';
+
+            try {
+                const response = await fetch('../../api/ajax/admin_approve_order.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ order_id: orderId, cast_id: castId })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('承認完了しました！');
+                    // モーダルリロード（親画面の更新ボタンを押す処理を模倣してもいいが、一旦リロード）
+                    location.reload(); 
+                } else {
+                    throw new Error(result.error || '承認エラー');
+                }
+            } catch (e) {
+                alert('エラー: ' + e.message);
+                this.innerHTML = originalText;
+                this.disabled = false;
+            }
+        });
+    });
+    </script>
     <?php
 
 } catch (PDOException $e) {

@@ -41,6 +41,7 @@ try {
         INNER JOIN base_order_items oi ON o.base_order_id = oi.base_order_id
         WHERE oi.cast_id = :cast_id
         AND o.status IN ('ordered', 'unpaid')
+        AND (oi.cast_handled = 0 OR oi.cast_handled IS NULL)
         ORDER BY o.order_date DESC, oi.id ASC
         LIMIT 500
     ";
@@ -521,7 +522,8 @@ function getPaymentMethod($method) {
                 },
                 body: JSON.stringify({
                     order_id: orderId,
-                    template_id: templateId
+                    template_id: templateId,
+                    product_name: productName
                 })
             });
             

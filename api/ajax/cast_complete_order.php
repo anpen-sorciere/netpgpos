@@ -1,15 +1,14 @@
 <?php
 /**
- * キャスト対応完了 - テストモード
- * 
- * ?test=1 パラメータでドライラン実行
- * BASE APIには送信せず、動作確認のみ
+ * キャスト対応報告API (承認フロー対応版)
+ * BASE APIは叩かず、DB上のフラグ更新のみ行う
  */
 session_start();
 require_once __DIR__ . '/../../../common/config.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
+// テストモードフラグ（互換性のために残すが、挙動は同じになる想定）
 $test_mode = isset($_GET['test']) && $_GET['test'] === '1';
 
 try {
@@ -22,15 +21,17 @@ try {
     }
     
     $input = json_decode(file_get_contents('php://input'), true);
-    if (!$input) {
-        throw new Exception('リクエストデータが無効');
-    }
-    
     $order_id = $input['order_id'] ?? null;
     $template_id = $input['template_id'] ?? null;
-    
+    // 商品特定のためにproduct_nameも必要だが、現状のcast_dashboard.jsからは送られていない恐れ。
+    // cast_dashboard.php側でproduct_nameも送るように修正が必要。
+    // 一旦、order_idとcast_idで特定できる範囲（そのキャストの担当分すべて）を更新するか、
+    // あるいは最初の1つを更新するか。
+    // 厳密には product_name も送るべき。
+    $product_name = $input['product_name'] ?? null;
+
     if (!$order_id || !$template_id) {
-        throw new Exception('order_idとtemplate_idは必須');
+        throw new Exception('order_idとtemplate_idは必須です');
     }
     
     // DB接続
@@ -40,112 +41,55 @@ try {
         $password,
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
     );
-    
-    // 定型文取得
-    $stmt = $pdo->prepare("
-        SELECT * FROM reply_message_templates 
-        WHERE id = ? AND is_active = 1 AND allow_cast_use = 1
-    ");
-    $stmt->execute([$template_id]);
-    $template = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    if (!$template) {
-        throw new Exception('指定された定型文が見つからないか、使用できません');
+
+    // 対応済みフラグ更新
+    // product_nameがある場合は特定の商品のみ、なければそのキャストのすべての担当詳細を更新（安全策）
+    $sql = "
+        UPDATE base_order_items 
+        SET 
+            cast_handled = 1, 
+            cast_handled_at = NOW(),
+            cast_handled_template_id = ?
+        WHERE base_order_id = ? 
+        AND cast_id = ?
+    ";
+    $params = [$template_id, $order_id, $_SESSION['cast_id']];
+
+    if ($product_name) {
+        $sql .= " AND product_name = ?";
+        $params[] = $product_name;
+    } else {
+        // product_nameがない場合、未対応のものだけを更新するように制限
+        $sql .= " AND cast_handled = 0";
     }
-    
-    // 注文情報取得
-    $stmt = $pdo->prepare("
-        SELECT o.*, oi.product_name, oi.customer_name_from_option
-        FROM base_orders o
-        INNER JOIN base_order_items oi ON o.base_order_id = oi.base_order_id
-        WHERE o.base_order_id = ? AND oi.cast_id = ?
-        LIMIT 1
-    ");
-    $stmt->execute([$order_id, $_SESSION['cast_id']]);
-    $order_info = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    if (!$order_info) {
-        throw new Exception('この注文への権限がありません');
-    }
-    
-    // 変数置換
-    $message = $template['template_body'];
-    $message = str_replace('{customer_name}', $order_info['customer_name_from_option'] ?: $order_info['customer_name'], $message);
-    $message = str_replace('{product_name}', $order_info['product_name'], $message);
-    $message = str_replace('{order_id}', $order_id, $message);
-    $message = str_replace('{cast_name}', $_SESSION['cast_name'], $message);
-    
-    if ($test_mode) {
-        // テストモード: BASE APIを叩かない
+
+    $stmt = $pdo->prepare($sql);
+    $result = $stmt->execute($params);
+
+    if ($stmt->rowCount() === 0) {
+        // 更新対象がなかった（既に対応済み、または割り当てがない）
+        // エラーにはせず、メッセージで通知
         echo json_encode([
             'success' => true,
-            'test_mode' => true,
-            'message' => '✅ テストモード: BASE APIは実行されません',
-            'order_id' => $order_id,
-            'template_name' => $template['template_name'],
-            'reply_message' => $message,
-            'would_send_to_base' => [
-                'unique_key' => $order_id,
-                'dispatch_status' => 'dispatched',
-                'message' => $message
-            ]
+            'message' => '既に対応済みか、対象の商品が見つかりませんでした。',
         ]);
         exit;
     }
-    
-    // 本番モード: BASE API実行
-    require_once __DIR__ . '/../classes/base_practical_auto_manager.php';
-    $manager = new BasePracticalAutoManager();
-    
-    $auth_status = $manager->getAuthStatus();
-    if (!isset($auth_status['write_orders']['authenticated']) || !$auth_status['write_orders']['authenticated']) {
-        throw new Exception('BASE API認証が必要です');
-    }
-    
-    $update_data = [
-        'unique_key' => $order_id,
-        'dispatch_status' => 'dispatched',
-        'message' => $message
-    ];
-    
-    $response = $manager->makeApiRequest('write_orders', '/1/orders/edit_status', $update_data, 'POST');
-    
-    // 履歴記録
-    $stmt = $pdo->prepare("
-        INSERT INTO cast_order_completions 
-        (base_order_id, cast_id, completed_at, template_id, template_name, reply_message, base_status_after, success)
-        VALUES (?, ?, NOW(), ?, ?, ?, 'dispatched', TRUE)
-    ");
-    $stmt->execute([
-        $order_id,
-        $_SESSION['cast_id'],
-        $template_id,
-        $template['template_name'],
-        $message
-    ]);
-    
-    // ローカルDB更新
-    $stmt = $pdo->prepare("
-        UPDATE base_orders 
-        SET status = 'shipping', updated_at = NOW() 
-        WHERE base_order_id = ?
-    ");
-    $stmt->execute([$order_id]);
-    
+
+    // 成功レスポンス
+    // reply_message は承認待ちなので返さない、または案内文を返す
     echo json_encode([
         'success' => true,
-        'test_mode' => false,
-        'message' => '対応完了しました',
+        'test_mode' => $test_mode,
+        'message' => '承認待ちリストへ移動しました。管理者の確認後に送信されます。',
         'order_id' => $order_id,
-        'template_name' => $template['template_name'],
-        'reply_message' => $message
+        'reply_message' => "【承認待ち】管理者の確認をお待ちください。\n（まだお客様には送信されていません）"
     ]);
-    
+
 } catch (Exception $e) {
     http_response_code(400);
     echo json_encode([
         'success' => false,
-        'test_mode' => $test_mode,
         'error' => $e->getMessage()
     ]);
 }
