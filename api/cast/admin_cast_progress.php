@@ -303,8 +303,8 @@ try {
                         問題なければ「送信確定」を押してください。
                     </p>
                     <div class="mb-3">
-                        <label class="form-label fw-bold">送信メッセージプレビュー:</label>
-                        <textarea class="form-control" id="previewMessage" rows="10" readonly style="background-color: #f8f9fa; font-family: monospace;"></textarea>
+                        <label class="form-label fw-bold">送信メッセージ（編集可能）:</label>
+                        <textarea class="form-control" id="previewMessage" rows="10" style="background-color: #fff; font-family: monospace;"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -387,7 +387,8 @@ try {
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({ 
                             order_id: currentApproveConfig.orderId, 
-                            cast_id: currentApproveConfig.castId 
+                            cast_id: currentApproveConfig.castId,
+                            custom_message: document.getElementById('previewMessage').value // 編集されたメッセージを送信
                         }) // previewなし = 本送信
                     });
                     
