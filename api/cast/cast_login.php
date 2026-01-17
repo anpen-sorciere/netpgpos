@@ -70,6 +70,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['cast_name'] = $cast['cast_name'];
                 $_SESSION['cast_email'] = $cast['email'];
                 
+                // 自動ログイン処理 (常に有効)
+                // 1. トークン生成 (32バイト乱数 -> 64文字HEX)
+                $token = bin2hex(random_bytes(32));
+                
+                // 2. 有効期限 (30日)
+                $expires = time() + (30 * 24 * 60 * 60);
+                $expires_date = date('Y-m-d H:i:s', $expires);
+                
+                // 3. DB保存
+                $token_stmt = $pdo->prepare("UPDATE cast_mst SET remember_token = ?, remember_expires = ? WHERE cast_id = ?");
+                $token_stmt->execute([$token, $expires_date, $cast['cast_id']]);
+                
+                // 4. Cookie設定 (HttpOnly, Secure)
+                // パスは /netpgpos/api/cast/ 以下で有効にする
+                $cookie_path = dirname($_SERVER['SCRIPT_NAME']); 
+                // ローカル開発などでHTTPSでない場合を考慮してSecure属性を調整
+                $secure = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on');
+                
+                setcookie('cast_remember_token', $token, [
+                    'expires' => $expires,
+                    'path' => $cookie_path,
+                    'domain' => '', // カレントドメイン
+                    'secure' => $secure,
+                    'httponly' => true,
+                    'samesite' => 'Lax'
+                ]);
+                
                 // 最終ログイン日時を更新
                 $update_stmt = $pdo->prepare("UPDATE cast_mst SET last_login_at = NOW() WHERE cast_id = ?");
                 $update_stmt->execute([$cast['cast_id']]);
@@ -100,6 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .login-card { width: 100%; max-width: 400px; padding: 30px; background: white; border-radius: 15px; box-shadow: 0 4px 15px rgba(233, 30, 99, 0.2); }
         .btn-pink { background-color: #e91e63; color: white; border: none; }
         .btn-pink:hover { background-color: #d81b60; color: white; }
+        .form-check-input:checked { background-color: #e91e63; border-color: #e91e63; }
     </style>
 </head>
 <body>
@@ -118,6 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label class="form-label">パスワード</label>
                 <input type="password" name="password" class="form-control" required>
             </div>
+
             <button type="submit" class="btn btn-pink w-100 py-2">ログイン</button>
         </form>
     </div>

@@ -1,11 +1,68 @@
-<?php
 session_start();
+require_once __DIR__ . '/../../../common/config.php';
+
+// 自動ログイン処理 (Remember Me)
+if (!isset($_SESSION['cast_id']) && isset($_COOKIE['cast_remember_token'])) {
+    try {
+        $pdo_auth = new PDO(
+            "mysql:host={$host};dbname={$dbname};charset=utf8mb4",
+            $user,
+            $password,
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+        );
+        
+        $token = $_COOKIE['cast_remember_token'];
+        
+        // トークン照合 (有効期限内かつトークン一致)
+        $stmt_auth = $pdo_auth->prepare("
+            SELECT * FROM cast_mst 
+            WHERE remember_token = ? 
+            AND remember_expires > NOW() 
+            AND drop_flg = 0 
+            AND login_enabled = 1
+        ");
+        $stmt_auth->execute([$token]);
+        $cast_auth = $stmt_auth->fetch(PDO::FETCH_ASSOC);
+        
+        if ($cast_auth) {
+            // 自動ログイン成功
+            $_SESSION['cast_id'] = $cast_auth['cast_id'];
+            $_SESSION['cast_name'] = $cast_auth['cast_name'];
+            $_SESSION['cast_email'] = $cast_auth['email'];
+            
+            // 最終ログイン日時更新
+            $upd = $pdo_auth->prepare("UPDATE cast_mst SET last_login_at = NOW() WHERE cast_id = ?");
+            $upd->execute([$cast_auth['cast_id']]);
+
+            // ★ 有効期限の延長 (最終利用から30日間キープ)
+            $new_expires = time() + (30 * 24 * 60 * 60);
+            $new_expires_date = date('Y-m-d H:i:s', $new_expires);
+
+            // DB更新
+            $upd_token = $pdo_auth->prepare("UPDATE cast_mst SET remember_expires = ? WHERE cast_id = ?");
+            $upd_token->execute([$new_expires_date, $cast_auth['cast_id']]);
+
+            // Cookie更新
+            $cookie_path = dirname($_SERVER['SCRIPT_NAME']);
+            $secure = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on');
+            setcookie('cast_remember_token', $token, [
+                'expires' => $new_expires,
+                'path' => $cookie_path,
+                'domain' => '',
+                'secure' => $secure,
+                'httponly' => true,
+                'samesite' => 'Lax'
+            ]);
+        }
+    } catch (Exception $e) {
+        // DBエラー時は無視してログイン画面へ
+    }
+}
+
 if (!isset($_SESSION['cast_id'])) {
     header('Location: cast_login.php');
     exit;
 }
-
-require_once __DIR__ . '/../../../common/config.php';
 
 $cast_name = $_SESSION['cast_name'];
 $orders = [];
