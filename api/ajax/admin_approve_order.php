@@ -124,13 +124,23 @@ try {
     }
 
     // BASE API実行 (ステータス更新 & メッセージ送信)
-    $update_data = [
-        'order_id' => $order_id,
-        'status' => 'dispatched',
-        'add_comment' => $final_message
-    ];
-    
-    $manager->makeApiRequest('write_orders', '/orders/edit_status', $update_data, 'POST');
+    // order_item_idごとにリクエストを送る必要があるためループ処理
+    foreach ($items as $index => $item) {
+        // cast_handled = 1 の商品のみ対象（SQLで絞り込んでいるが念のため）
+        if (!$item['cast_handled']) continue;
+
+        $update_data = [
+            'order_item_id' => $item['base_order_item_id'], // DBのカラム名は base_order_item_id
+            'status' => 'dispatched',
+            'add_comment' => ($index === 0) ? $final_message : '' // メッセージは最初の商品にのみ添付（重複回避）
+        ];
+        
+        // 2件目以降でメッセージが空の場合は add_comment を送らない方が安全かもしれないが、
+        // BASEの仕様上、空文字でも上書きされるか、あるいは追加されるか不明。
+        // 一般的には代表して1つにコメントをつける運用。
+        
+        $manager->makeApiRequest('write_orders', '/orders/edit_status', $update_data, 'POST');
+    }
 
     // 履歴記録 (cast_order_completionsへの保存)
     // 複数の商品がある場合は代表して最初の1件分のログを残すか、または商品ごとに残すか。
