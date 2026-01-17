@@ -106,10 +106,16 @@ class OrderSync {
             }
             
             // 更新日時 (APIから来ていれば使う、なければNOW)
+            // strtotimeが失敗(false)や、1970-01-01になる場合は現在時刻を使用
             $api_updated_at = null;
             if (!empty($order['updated'])) {
-                $api_updated_at = date('Y-m-d H:i:s', strtotime($order['updated']));
-            } else {
+                $timestamp = strtotime($order['updated']);
+                if ($timestamp !== false && $timestamp > 0) {
+                     $api_updated_at = date('Y-m-d H:i:s', $timestamp);
+                }
+            }
+            
+            if (!$api_updated_at) {
                 $api_updated_at = date('Y-m-d H:i:s');
             }
 
