@@ -8,9 +8,9 @@
 ini_set('memory_limit', '512M');
 set_time_limit(300); // 5分
 
-require_once __DIR__ . '/../../common/config.php';
-require_once __DIR__ . '/../../common/dbconnect.php';
-require_once __DIR__ . '/../../common/functions.php';
+require_once __DIR__ . '/../../../common/config.php';
+require_once __DIR__ . '/../../../common/dbconnect.php';
+require_once __DIR__ . '/../classes/OrderSync.php';
 require_once __DIR__ . '/../classes/base_practical_auto_manager.php';
 
 // ログファイル設定
@@ -53,11 +53,11 @@ try {
     sync_log("Fetched " . count($orders) . " orders from BASE.");
 
     if (!empty($orders)) {
-        // syncOrdersToDb関数（common/functions.php）を利用して保存
+        // OrderSync::syncOrdersToDbを利用して保存
         // 第3引数のmanagerは詳細取得用
-        $saved = syncOrdersToDb($pdo, $orders, $manager);
+        $saved = OrderSync::syncOrdersToDb($pdo, $orders, $manager);
         
-        // 保存結果のログ出し（syncOrdersToDbが詳細を返さない場合は簡易ログ）
+        // 保存結果のログ出し
         sync_log("Sync completed. Check DB for updates.");
     }
 

@@ -2,7 +2,7 @@
 session_start();
 require_once __DIR__ . '/../../../common/config.php';
 require_once __DIR__ . '/../../../common/dbconnect.php';
-require_once __DIR__ . '/../../../common/functions.php';
+require_once __DIR__ . '/../classes/OrderSync.php';
 require_once __DIR__ . '/../classes/base_practical_auto_manager.php';
 
 
@@ -151,7 +151,7 @@ try {
                     
                     // 詳細データをDB保存
                     if (!empty($detailed_orders)) {
-                        syncOrdersToDb($sync_pdo, $detailed_orders, null);
+                        OrderSync::syncOrdersToDb($sync_pdo, $detailed_orders, null);
                         echo "<!-- [差分同期] 新規注文 " . count($detailed_orders) . "件をDB保存 (試行:" . count($new_order_ids) . "件) -->";
                     }
                     
@@ -517,185 +517,5 @@ if ($page < $total_pages) {
 echo '</div>';
 echo '</div>';
 
-// ★ キャストポータル用データ同期関数
-function syncOrdersToDb($pdo, $orders, $manager = null) {
-    if (empty($orders)) return;
-
-    // base_orders アップサート文
-    $stmtOrder = $pdo->prepare("
-        INSERT INTO base_orders (base_order_id, order_date, customer_name, total_amount, status, is_surprise, surprise_date, payment_method, dispatch_status_detail)
-        VALUES (:base_order_id, :order_date, :customer_name, :total_amount, :status, :is_surprise, :surprise_date, :payment_method, :dispatch_status_detail)
-        ON DUPLICATE KEY UPDATE
-            customer_name = VALUES(customer_name),
-            total_amount = VALUES(total_amount),
-            status = VALUES(status),
-            is_surprise = VALUES(is_surprise),
-            surprise_date = VALUES(surprise_date),
-            payment_method = VALUES(payment_method),
-            dispatch_status_detail = VALUES(dispatch_status_detail),
-            updated_at = NOW()
-    ");
-
-    // base_order_items アップサート文
-    $stmtItem = $pdo->prepare("
-        INSERT INTO base_order_items (base_order_id, product_id, product_name, price, quantity, cast_id, customer_name_from_option, item_surprise_date)
-        VALUES (:base_order_id, :product_id, :product_name, :price, :quantity, :cast_id, :customer_name_from_option, :item_surprise_date)
-        ON DUPLICATE KEY UPDATE
-            product_name = VALUES(product_name),
-            price = VALUES(price),
-            quantity = VALUES(quantity),
-            cast_id = VALUES(cast_id),
-            customer_name_from_option = VALUES(customer_name_from_option),
-            item_surprise_date = VALUES(item_surprise_date)
-    ");
-    
-    // キャスト名からcast_idを検索するための準備済みステートメント
-    $stmtFindCast = $pdo->prepare("
-        SELECT cast_id FROM cast_mst 
-        WHERE cast_name = :cast_name AND drop_flg = 0
-        LIMIT 1
-    ");
-
-    foreach ($orders as $order) {
-        $order_id = $order['unique_key'] ?? null;
-        if (!$order_id) continue;
-        
-        // order_itemsが含まれていない場合の処理
-        if (!isset($order['order_items']) || empty($order['order_items'])) {
-            // managerがnull（既に詳細取得済み）の場合はスキップ
-            // managerが存在する場合のみ、個別詳細API取得は行わない（API上限対策）
-            continue; // order_itemsがない場合はDB保存できないためスキップ
-        }
-        
-        /* 個別詳細API取得は使用しない（API上限対策）
-        // API上限対策: 個別詳細APIは叩かず、データがない場合はスキップ
-        if (!isset($order['order_items']) || empty($order['order_items'])) {
-            // order_itemsがない注文はスキップ（通常はAPIレスポンスに含まれているはず）
-            continue;
-        }
-        
-        if ((!isset($order['order_items']) || empty($order['order_items'])) && $manager) {
-            try {
-                $detail = $manager->getDataWithAutoAuth('read_orders', "/orders/{$order_id}");
-                if (isset($detail['order'])) {
-                    $order = array_merge($order, $detail['order']);
-                }
-            } catch (Exception $e) {
-                // 詳細取得失敗した場合はスキップ
-                error_log("Failed to fetch order details for {$order_id}: " . $e->getMessage());
-                continue;
-            }
-        }
-        */
-
-        // データの整形
-        $ordered_at = date('Y-m-d H:i:s', is_numeric($order['ordered']) ? $order['ordered'] : strtotime($order['ordered']));
-        $last_name = $order['last_name'] ?? '';
-        $first_name = $order['first_name'] ?? '';
-        $customer_name = trim($last_name . ' ' . $first_name);
-        $total_price = $order['total'] ?? 0;
-        $payment_method = $order['payment'] ?? '';
-        $dispatch_status = $order['dispatch_status'] ?? 'unknown';
-
-        // サプライズ判定（オーダーレベル）
-        $is_surprise = 0;
-        $surprise_date = null;
-        
-        if (isset($order['order_items']) && is_array($order['order_items'])) {
-            foreach ($order['order_items'] as $item) {
-                if (isset($item['options'])) {
-                    foreach ($item['options'] as $opt) {
-                        $nm = $opt['option_name'] ?? '';
-                        $val = $opt['option_value'] ?? '';
-                        if (mb_strpos($nm, 'サプライズ') !== false) {
-                            $is_surprise = 1;
-                            $surprise_date = $val;
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Order実行
-        try {
-            $stmtOrder->execute([
-                ':base_order_id' => $order_id,
-                ':order_date' => $ordered_at,
-                ':customer_name' => $customer_name,
-                ':total_amount' => $total_price,
-                ':status' => $dispatch_status,
-                ':is_surprise' => $is_surprise,
-                ':surprise_date' => $surprise_date,
-                ':payment_method' => $payment_method,
-                ':dispatch_status_detail' => $dispatch_status
-            ]);
-        } catch (Exception $e) {
-            // エラーログだけ吐いて継続
-            // error_log("Order Sync Error ($order_id): " . $e->getMessage());
-        }
-
-        // Items実行
-        if (isset($order['order_items']) && is_array($order['order_items'])) {
-            foreach ($order['order_items'] as $item) {
-                $base_item_id = $item['item_id'] ?? 'unknown';
-                $title = $item['title'] ?? '';
-                $price = $item['price'] ?? 0;
-                $quantity = $item['amount'] ?? 1;
-
-                // オプション解析
-                $item_customer = null;
-                $item_cast_name = null;
-                $item_surprise_date = null;
-
-                if (isset($item['options'])) {
-                    foreach ($item['options'] as $opt) {
-                        $nm = $opt['option_name'] ?? $opt['name'] ?? '';
-                        $val = $opt['option_value'] ?? $opt['value'] ?? '';
-
-                        if (mb_strpos($nm, 'お客様名') !== false || mb_strpos($nm, 'ニックネーム') !== false) {
-                            $item_customer = $val;
-                        }
-                        if (mb_strpos($nm, 'キャスト名') !== false) {
-                            $item_cast_name = $val;
-                        }
-                        if (mb_strpos($nm, 'サプライズ') !== false) {
-                            $item_surprise_date = $val;
-                        }
-                    }
-                }
-                
-                // キャスト名からcast_idを検索
-                $cast_id = null;
-                if ($item_cast_name) {
-                    try {
-                        $stmtFindCast->execute([':cast_name' => $item_cast_name]);
-                        $cast_row = $stmtFindCast->fetch(PDO::FETCH_ASSOC);
-                        if ($cast_row) {
-                            $cast_id = $cast_row['cast_id'];
-                        }
-                    } catch (Exception $e) {
-                        // cast検索エラーは無視してnullのまま保存
-                    }
-                }
-
-                try {
-                    $stmtItem->execute([
-                        ':base_order_id' => $order_id,
-                        ':product_id' => $base_item_id,
-                        ':product_name' => $title,
-                        ':price' => $price,
-                        ':quantity' => $quantity,
-                        ':cast_id' => $cast_id,
-                        ':customer_name_from_option' => $item_customer,
-                        ':item_surprise_date' => $item_surprise_date
-                    ]);
-                } catch (Exception $e) {
-                    error_log("Item Sync Error ($order_id / $base_item_id): " . $e->getMessage());
-                    // デバッグ用にコメント表示
-                    echo "<!-- Item Sync Error: Order=$order_id, Product=$base_item_id, Error=" . htmlspecialchars($e->getMessage()) . " -->";
-                }
-            }
-        }
-    }
-}
+// Function moved to OrderSync class
 ?>
