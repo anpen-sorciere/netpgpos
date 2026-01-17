@@ -148,7 +148,7 @@ try {
     // 承認ボタンイベント（動的生成されるためここでバインド）
     document.querySelectorAll('.btn-approve').forEach(btn => {
         btn.addEventListener('click', async function() {
-            if (!confirm('このキャスト対応を承認し、BASEへ反映しますか？\n（お客様へ発送メールが送信されます）')) return;
+            // if (!confirm('このキャスト対応を承認し、BASEへ反映しますか？\n（お客様へ発送メールが送信されます）')) return; // プレビュー確認へ変更
 
             const orderId = this.dataset.orderId;
             const castId = this.dataset.castId;
@@ -157,18 +157,77 @@ try {
             this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 処理中';
 
             try {
+                // Step 1: プレビュー取得
                 const response = await fetch('../../api/ajax/admin_approve_order.php', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ order_id: orderId, cast_id: castId })
+                    body: JSON.stringify({ order_id: orderId, cast_id: castId, preview: true })
                 });
                 
                 const result = await response.json();
                 
+                if (result.success && result.preview) {
+                    // プレビュー成功、モーダル表示
+                    const confirmModalEl = document.getElementById('approveConfirmModal');
+                    const confirmModal = new bootstrap.Modal(confirmModalEl);
+                    
+                    document.getElementById('previewMessage').value = result.message;
+                    
+                    // 送信確定ボタンの設定
+                    const confirmBtn = document.getElementById('btnConfirmSend');
+                    
+                    // 以前のリスナーを削除するためにクローン作成
+                    const newConfirmBtn = confirmBtn.cloneNode(true);
+                    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+                    
+                    newConfirmBtn.addEventListener('click', async function() {
+                        // 本送信処理
+                        this.disabled = true;
+                        this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 送信中...';
+                        
+                        try {
+                            const sendResponse = await fetch('../../api/ajax/admin_approve_order.php', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({ order_id: orderId, cast_id: castId }) // previewなし
+                            });
+                            
+                            const sendResult = await sendResponse.json();
+                            
+                            if (sendResult.success) {
+                                alert('承認・送信完了しました！');
+                                confirmModal.hide();
+                                location.reload();
+                            } else {
+                                throw new Error(sendResult.error || '送信エラー');
+                            }
+                        } catch (sendError) {
+                            alert('送信エラー: ' + sendError.message);
+                            this.disabled = false;
+                            this.innerHTML = '<i class="fas fa-paper-plane"></i> 送信確定';
+                        }
+                    });
+                    
+                    // ボタンの状態を戻して表示
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    
+                    confirmModal.show();
+                    
+                } else {
+                    throw new Error(result.error || 'プレビュー取得エラー');
+                }
+                
                 if (result.success) {
                     alert('承認完了しました！');
                     // モーダルリロード（親画面の更新ボタンを押す処理を模倣してもいいが、一旦リロード）
-                    location.reload(); 
+                if (result.success) {
+                    // 親画面の関数を呼んでリロードしてもらうのが無難
+                    // location.reload();
+                    // モーダルのみ閉じてリロード
+                    bootstrap.Modal.getInstance(document.getElementById('approveConfirmModal')).hide();
+                    location.reload();
+                } else { 
                 } else {
                     throw new Error(result.error || '承認エラー');
                 }

@@ -108,6 +108,17 @@ try {
     // メッセージ結合（改行で区切る）
     $final_message = implode("\n\n--------------------------------\n\n", $messages);
 
+    // プレビューモードならここで終了
+    if (!empty($input['preview'])) {
+        echo json_encode([
+            'success' => true,
+            'preview' => true,
+            'message' => $final_message,
+            'processed_items' => $processed_items
+        ]);
+        exit;
+    }
+
     // BASE API実行 (ステータス更新 & メッセージ送信)
     $update_data = [
         'unique_key' => $order_id,
@@ -116,6 +127,35 @@ try {
     ];
     
     $manager->makeApiRequest('write_orders', '/1/orders/edit_status', $update_data, 'POST');
+
+    // 履歴記録 (cast_order_completionsへの保存)
+    // 複数の商品がある場合は代表して最初の1件分のログを残すか、または商品ごとに残すか。
+    // 元々 cast_complete_order.php では order_id 単位で1レコードだったようなのでそれに合わせる。
+    // ただし items 分ループして template_id が異なる可能性考慮が必要だが、
+    // 現状はまとめて送っているので、使用した template_id（の配列など）を記録したいところ。
+    // シンプルに、ここで承認した情報を記録する。
+    
+    // itemsの最初の要素の情報を使う（定型文は結合されているが、メインの識別として）
+    $main_item = $items[0]; 
+    $tmpl_id_log = $main_item['cast_handled_template_id'];
+    
+    // テンプレート名取得（まだ取得してない場合のため再取得）
+    $stmt_tmpl = $pdo->prepare("SELECT template_name FROM reply_message_templates WHERE id = ?");
+    $stmt_tmpl->execute([$tmpl_id_log]);
+    $tmpl_name_log = $stmt_tmpl->fetchColumn();
+
+    $stmt_log = $pdo->prepare("
+        INSERT INTO cast_order_completions 
+        (base_order_id, cast_id, completed_at, template_id, template_name, reply_message, base_status_after, success)
+        VALUES (?, ?, NOW(), ?, ?, ?, 'dispatched', TRUE)
+    ");
+    $stmt_log->execute([
+        $order_id,
+        $cast_id ?: $main_item['cast_id'], // 指定なければitemから
+        $tmpl_id_log,
+        $tmpl_name_log,
+        $final_message
+    ]);
 
     // DB更新 (承認済みとして処理完了)
     // base_ordersのステータス更新
