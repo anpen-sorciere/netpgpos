@@ -7,14 +7,15 @@ class OrderSync {
      * 注文データ同期関数
      * Order MonitorやCronで使用される共通ロジック
      */
-    public static function syncOrdersToDb($pdo, $orders, $manager = null) {
+    public static function syncOrdersToDb($pdo, $orders, $manager = null, $shop_id = 1) {
         if (empty($orders)) return;
 
         // base_orders アップサート文
         $stmtOrder = $pdo->prepare("
-            INSERT INTO base_orders (base_order_id, order_date, customer_name, total_amount, status, is_surprise, surprise_date, payment_method, dispatch_status_detail)
-            VALUES (:base_order_id, :order_date, :customer_name, :total_amount, :status, :is_surprise, :surprise_date, :payment_method, :dispatch_status_detail)
+            INSERT INTO base_orders (base_order_id, shop_id, order_date, customer_name, total_amount, status, is_surprise, surprise_date, payment_method, dispatch_status_detail)
+            VALUES (:base_order_id, :shop_id, :order_date, :customer_name, :total_amount, :status, :is_surprise, :surprise_date, :payment_method, :dispatch_status_detail)
             ON DUPLICATE KEY UPDATE
+                shop_id = VALUES(shop_id),
                 customer_name = VALUES(customer_name),
                 total_amount = VALUES(total_amount),
                 status = VALUES(status),
@@ -95,6 +96,7 @@ class OrderSync {
             try {
                 $stmtOrder->execute([
                     ':base_order_id' => $order_id,
+                    ':shop_id' => $shop_id,
                     ':order_date' => $ordered_at,
                     ':customer_name' => $customer_name,
                     ':total_amount' => $total_price,

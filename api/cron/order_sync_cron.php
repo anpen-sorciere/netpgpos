@@ -24,15 +24,6 @@ function sync_log($message) {
 sync_log("=== Sync Start ===");
 
 try {
-    $manager = new BasePracticalAutoManager();
-    
-    // 認証チェック
-    $auth = $manager->getAuthStatus();
-    if (empty($auth['read_orders']['authenticated'])) {
-        sync_log("❌ Error: Not authenticated. Please run auto_auth.php first.");
-        exit;
-    }
-    
     // DB接続
     $pdo = new PDO(
         "mysql:host={$host};dbname={$dbname};charset=utf8mb4",
@@ -41,28 +32,52 @@ try {
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
     );
 
-    // 未対応の注文のみを取得するため、直近のデータを取得
-    // limit=50で十分（短間隔で回す前提）
-    $response = $manager->getDataWithAutoAuth('read_orders', '/orders', [
-        'limit' => 50,
-        'order' => 'desc',
-        'sort' => 'order_date'
-    ]);
+    // 有効な店舗を取得
+    $stmt = $pdo->query("SELECT shop_id, shop_name FROM shop_mst WHERE base_is_active = 1");
+    $shops = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $orders = $response['orders'] ?? [];
-    sync_log("Fetched " . count($orders) . " orders from BASE.");
+    if (empty($shops)) {
+        sync_log("No active shops found.");
+        exit;
+    }
 
-    if (!empty($orders)) {
-        // OrderSync::syncOrdersToDbを利用して保存
-        // 第3引数のmanagerは詳細取得用
-        $saved = OrderSync::syncOrdersToDb($pdo, $orders, $manager);
-        
-        // 保存結果のログ出し
-        sync_log("Sync completed. Check DB for updates.");
+    foreach ($shops as $shop) {
+        $shop_id = $shop['shop_id'];
+        $shop_name = $shop['shop_name'];
+        sync_log("--- Processing Shop [ID: {$shop_id}] {$shop_name} ---");
+
+        try {
+            $manager = new BasePracticalAutoManager($shop_id);
+            
+            // 認証チェック
+            $auth = $manager->getAuthStatus();
+            if (empty($auth['read_orders']['authenticated'])) {
+                sync_log("❌ [{$shop_name}] Error: Not authenticated. Please configure tokens first.");
+                continue; // 次の店舗へ
+            }
+
+            // 未対応の注文のみを取得するため、直近のデータを取得
+            $response = $manager->getDataWithAutoAuth('read_orders', '/orders', [
+                'limit' => 50,
+                'order' => 'desc',
+                'sort' => 'order_date'
+            ]);
+
+            $orders = $response['orders'] ?? [];
+            sync_log("[{$shop_name}] Fetched " . count($orders) . " orders from BASE.");
+
+            if (!empty($orders)) {
+                // OrderSync::syncOrdersToDbを利用して保存（shop_idを渡す）
+                OrderSync::syncOrdersToDb($pdo, $orders, $manager, $shop_id);
+                sync_log("[{$shop_name}] Sync completed.");
+            }
+        } catch (Exception $e) {
+            sync_log("❌ [{$shop_name}] Error: " . $e->getMessage());
+        }
     }
 
 } catch (Exception $e) {
-    sync_log("❌ Error: " . $e->getMessage());
+    sync_log("❌ Error (Global): " . $e->getMessage());
 }
 
 sync_log("=== Sync End ===\n");

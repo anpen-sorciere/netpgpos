@@ -4,26 +4,60 @@
  * 不明な仕様に対応した堅牢なトークン管理とスコープ切り替え
  */
 class BasePracticalAutoManager {
+    private $shop_id; // 店舗ID
     private $client_id;
     private $client_secret;
     private $redirect_uri;
-    private $api_url;
+    private $api_url = 'https://api.thebase.in/1'; // デフォルト固定
     private $encryption_key;
     
-    public function __construct() {
-        global $base_client_id, $base_client_secret, $base_redirect_uri, $base_api_url;
+    /**
+     * コンストラクタ
+     * @param int $shop_id 店舗ID (デフォルト: 1)
+     */
+    public function __construct($shop_id = 1) {
+        $this->shop_id = $shop_id;
         
-        $this->client_id = $base_client_id;
-        $this->client_secret = $base_client_secret;
-        $this->redirect_uri = $base_redirect_uri;
-        $this->api_url = $base_api_url;
+        // DBからAPI設定をロード
+        $this->loadShopConfig();
         
-        // 暗号化キーの取得は後で行う（エラーを避けるため）
+        // 暗号化キーの取得（共通キーまたは店舗別キー、今回は共通キーとするが処理は同じ）
         try {
             $this->encryption_key = $this->getEncryptionKey();
         } catch (Exception $e) {
-            // 暗号化キーの取得に失敗した場合はデフォルト値を使用
-            $this->encryption_key = 'default_key_' . md5($this->client_id);
+            $this->encryption_key = 'default_key_' . md5('shop_' . $this->shop_id);
+        }
+    }
+
+    /**
+     * 店舗設定のロード
+     */
+    private function loadShopConfig() {
+        global $host, $user, $password, $dbname;
+        
+        try {
+            $pdo = new PDO(
+                "mysql:host={$host};dbname={$dbname};charset=utf8mb4",
+                $user,
+                $password,
+                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+            );
+            
+            $stmt = $pdo->prepare("SELECT base_client_id, base_client_secret, base_redirect_uri FROM shop_mst WHERE shop_id = ?");
+            $stmt->execute([$this->shop_id]);
+            $config = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($config) {
+                $this->client_id = $config['base_client_id'];
+                $this->client_secret = $config['base_client_secret'];
+                $this->redirect_uri = $config['base_redirect_uri'];
+            } else {
+                // DBにない場合は一旦空にしておく（後でグローバルからのフォールバックも検討可だが、移行前提設計とする）
+                $this->client_id = null;
+            }
+            
+        } catch (PDOException $e) {
+            // DBエラー時は何もしない
         }
     }
 
@@ -38,10 +72,7 @@ class BasePracticalAutoManager {
                 "mysql:host={$host};dbname={$dbname};charset=utf8mb4",
                 $user,
                 $password,
-                [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true
-                ]
+                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
             );
             
             // 暗号化キーを取得または生成
@@ -53,16 +84,13 @@ class BasePracticalAutoManager {
             if ($result) {
                 return $result['value'];
             } else {
-                // 新しい暗号化キーを生成
                 $key = bin2hex(random_bytes(32));
                 $sql = "INSERT INTO system_config (key_name, value) VALUES ('encryption_key', ?)";
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute([$key]);
                 return $key;
             }
-            
         } catch (PDOException $e) {
-            // データベース接続失敗時はセッションキーを使用
             if (!isset($_SESSION['base_encryption_key'])) {
                 $_SESSION['base_encryption_key'] = bin2hex(random_bytes(32));
             }
@@ -90,7 +118,7 @@ class BasePracticalAutoManager {
     }
 
     /**
-     * スコープ別トークンの保存
+     * スコープ別トークンの保存 (shop_id 対応)
      */
     public function saveScopeToken($scope_key, $access_token, $refresh_token, $expires_in) {
         global $host, $user, $password, $dbname;
@@ -100,10 +128,7 @@ class BasePracticalAutoManager {
                 "mysql:host={$host};dbname={$dbname};charset=utf8mb4",
                 $user,
                 $password,
-                [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true
-                ]
+                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
             );
             
             $current_time = time();
@@ -113,9 +138,10 @@ class BasePracticalAutoManager {
             $encrypted_access = $this->encrypt($access_token);
             $encrypted_refresh = $this->encrypt($refresh_token);
             
+            // shop_id を含めて保存
             $sql = "INSERT INTO base_api_tokens 
-                    (scope_key, access_token, refresh_token, access_expires, refresh_expires) 
-                    VALUES (?, ?, ?, ?, ?)
+                    (shop_id, scope_key, access_token, refresh_token, access_expires, refresh_expires) 
+                    VALUES (?, ?, ?, ?, ?, ?)
                     ON DUPLICATE KEY UPDATE 
                     access_token = VALUES(access_token),
                     refresh_token = VALUES(refresh_token),
@@ -124,6 +150,7 @@ class BasePracticalAutoManager {
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
+                $this->shop_id,
                 $scope_key,
                 $encrypted_access,
                 $encrypted_refresh,
@@ -131,17 +158,22 @@ class BasePracticalAutoManager {
                 $refresh_expires
             ]);
             
-            $this->logSystemEvent("TOKEN_SAVED", "スコープ {$scope_key} のトークンを保存しました");
+            $this->logSystemEvent("TOKEN_SAVED", "店舗ID:{$this->shop_id}, スコープ:{$scope_key} のトークンを保存しました");
+            
+            // shop_mst のステータスも更新
+            $upd = $pdo->prepare("UPDATE shop_mst SET base_token_status = 'active' WHERE shop_id = ?");
+            $upd->execute([$this->shop_id]);
+            
             return true;
             
         } catch (PDOException $e) {
-            $this->logSystemEvent("TOKEN_SAVE_ERROR", "トークン保存エラー: " . $e->getMessage() . " | File: " . $e->getFile() . " | Line: " . $e->getLine());
+            $this->logSystemEvent("TOKEN_SAVE_ERROR", "トークン保存エラー: " . $e->getMessage());
             return false;
         }
     }
 
     /**
-     * スコープ別トークンの取得
+     * スコープ別トークンの取得 (shop_id 対応)
      */
     public function getScopeToken($scope_key) {
         global $host, $user, $password, $dbname;
@@ -151,21 +183,15 @@ class BasePracticalAutoManager {
                 "mysql:host={$host};dbname={$dbname};charset=utf8mb4",
                 $user,
                 $password,
-                [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true
-                ]
+                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
             );
             
             $sql = "SELECT access_token, refresh_token, access_expires, refresh_expires 
                     FROM base_api_tokens 
-                    WHERE scope_key = ?";
+                    WHERE shop_id = ? AND scope_key = ?";
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$scope_key]);
+            $stmt->execute([$this->shop_id, $scope_key]);
             $result = $stmt->fetch();
-            
-            // デバッグログ
-            $this->logSystemEvent("SCOPE_TOKEN_QUERY", "スコープ {$scope_key} のクエリ結果: " . ($result ? 'データあり' : 'データなし'));
             
             if (!$result) {
                 return null;
