@@ -138,10 +138,17 @@ try {
                         </td>
                         <td class="text-center">
                             <?php if ($is_handled): ?>
-                                <button class="btn btn-primary btn-sm btn-approve" 
+                                <button class="btn btn-primary btn-sm btn-approve mb-1" 
                                         data-order-id="<?= $order['base_order_id'] ?>"
+                                        data-item-id="<?= $order['id'] ?>"
                                         data-cast-id="<?= $cast_id ?>">
-                                    <i class="fas fa-check"></i> 承認・反映
+                                    <i class="fas fa-check"></i> 承認
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm btn-reject" 
+                                        data-order-id="<?= $order['base_order_id'] ?>"
+                                        data-item-id="<?= $order['id'] ?>"
+                                        data-product-name="<?= htmlspecialchars($order['product_name']) ?>">
+                                    <i class="fas fa-undo"></i> 差戻し
                                 </button>
                             <?php else: ?>
                                 <span class="text-muted small">対応待ち</span>

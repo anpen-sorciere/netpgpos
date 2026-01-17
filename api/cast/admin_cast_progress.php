@@ -499,6 +499,43 @@ try {
                         });
                 });
             });
+
+            // 差し戻しボタンのイベント委譲（動的に生成されるボタン用）
+            document.getElementById('modalBody').addEventListener('click', async function(e) {
+                const btn = e.target.closest('.btn-reject');
+                if (!btn) return;
+
+                const orderId = btn.dataset.orderId;
+                const itemId = btn.dataset.itemId;
+                const productName = btn.dataset.productName;
+
+                if (!confirm(`「${productName}」の対応を差し戻しますか？\nキャストに再対応を依頼します。`)) {
+                    return;
+                }
+
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                try {
+                    const response = await fetch('../ajax/reject_order.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ order_id: orderId, item_id: itemId })
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        alert('差し戻しが完了しました。');
+                        location.reload();
+                    } else {
+                        throw new Error(result.error || '差し戻し失敗');
+                    }
+                } catch (error) {
+                    alert('エラー: ' + error.message);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-undo"></i> 差戻し';
+                }
+            });
         });
     </script>
 </body>
