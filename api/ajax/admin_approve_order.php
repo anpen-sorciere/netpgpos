@@ -252,7 +252,15 @@ try {
     }
 
     // DB更新 (ステータス更新)
-    // base_ordersのステータス更新
+    // 1. 承認したアイテムの cast_handled を 2 (承認完了) に更新
+    foreach ($items as $item) {
+        // cast_handled = 1 のものだけを 2 にする（二重更新防止）
+        if ($item['cast_handled'] == 1) {
+            $pdo->prepare("UPDATE base_order_items SET cast_handled = 2 WHERE id = ?")->execute([$item['id']]);
+        }
+    }
+
+    // 2. base_ordersのステータス更新
     $pdo->prepare("UPDATE base_orders SET status = ?, updated_at = NOW() WHERE base_order_id = ?")->execute([$new_status, $order_id]);
 
     // ログ記録などがあればここで行う

@@ -64,6 +64,7 @@ try {
         LEFT JOIN reply_message_templates t ON oi.cast_handled_template_id = t.id
         WHERE oi.cast_id = :cast_id
         AND o.status IN ('ordered', 'unpaid', '対応中')
+        AND (oi.cast_handled IS NULL OR oi.cast_handled IN (0, 1)) -- 2(承認済)は非表示
         ORDER BY oi.cast_handled ASC, o.order_date ASC
     ";
     
