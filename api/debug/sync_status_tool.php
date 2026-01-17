@@ -76,33 +76,65 @@ if ($execute && $target_id) {
                 foreach ($items as $item) {
                     $item_id = $item['item_id']; // Product ID
                     $order_item_id = $item['order_item_id'] ?? null; // Unique ID
+                    $title = $item['title'] ?? 'Unknown Item';
                     $status = $item['status']; // 'ordered', 'dispatched', 'cancelled', etc.
                     
                     // BASEのステータス判定
-                    // dispatched または cancelled なら「対応完了(1)」、それ以外(ordered)なら「未対応(0)」
                     $should_be_handled = ($status === 'dispatched' || $status === 'cancelled') ? 1 : 0;
                     
-                    // DB更新
-                    // order_item_id がある場合はそれを使う（確実）
-                    if ($order_item_id) {
-                        $sql = "UPDATE base_order_items SET cast_handled = ? WHERE base_order_item_id = ?";
-                        $stmt = $pdo->prepare($sql);
-                        $stmt->execute([$should_be_handled, $order_item_id]);
-                    } else {
-                        // 古いデータなどで order_item_id がない場合は product_id と order_id で推定 (非推奨だが救済)
-                        $sql = "UPDATE base_order_items SET cast_handled = ? WHERE base_order_id = ? AND product_id = ?";
-                        $stmt = $pdo->prepare($sql);
-                        $stmt->execute([$should_be_handled, $order_id, $item_id]);
-                    }
+                    // DBの現状を取得
+                    $current_handled = null;
+                    $db_exists = false;
                     
-                    if ($stmt->rowCount() > 0) {
+                    // まず order_item_id で検索
+                    $stmtCheck = $pdo->prepare("SELECT cast_handled FROM base_order_items WHERE base_order_item_id = ?");
+                    $stmtCheck->execute([$order_item_id]);
+                    $row = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($row) {
+                        $db_exists = true;
+                        $current_handled = (int)$row['cast_handled'];
+                    } else {
+                        // なければ product_id + order_id で検索（後方互換）
+                        $stmtCheck = $pdo->prepare("SELECT cast_handled FROM base_order_items WHERE base_order_id = ? AND product_id = ?");
+                        $stmtCheck->execute([$order_id, $item_id]);
+                        $row = $stmtCheck->fetch(PDO::FETCH_ASSOC);
+                        if ($row) {
+                            $db_exists = true;
+                            $current_handled = (int)$row['cast_handled'];
+                        }
+                    }
+
+                    // 比較と更新
+                    if (!$db_exists) {
+                        $messages[] = ['type' => 'error', 'text' => "[MISSING] Item {$title} (ID: {$order_item_id}) - DBにレコードが存在しません。"];
+                        continue;
+                    }
+
+                    if ($current_handled === $should_be_handled) {
+                        $status_str = $should_be_handled ? '対応済' : '未対応';
+                        $messages[] = ['type' => 'info', 'text' => "[SKIP] Item {$title} - BASE: {$status} / DB: {$status_str} (一致しています)"];
+                    } else {
+                        // 更新実行
+                        if ($order_item_id) {
+                            $sql = "UPDATE base_order_items SET cast_handled = ? WHERE base_order_item_id = ?";
+                            $stmt = $pdo->prepare($sql);
+                            $stmt->execute([$should_be_handled, $order_item_id]);
+                        } else {
+                            $sql = "UPDATE base_order_items SET cast_handled = ? WHERE base_order_id = ? AND product_id = ?";
+                            $stmt = $pdo->prepare($sql);
+                            $stmt->execute([$should_be_handled, $order_id, $item_id]);
+                        }
+                        
+                        $from = $current_handled ? '対応済' : '未対応';
+                        $to = $should_be_handled ? '対応済' : '未対応';
+                        $messages[] = ['type' => 'success', 'text' => "[UPDATED] Item {$title} - DB Status: {$from} -> {$to} (BASE Status: {$status})"];
                         $sync_count++;
-                        $messages[] = ['type' => 'success', 'text' => "Updated Item: Order {$order_id} / Item {$item_id} ({$status}) -> Handled: {$should_be_handled}"];
                     }
                 }
             }
             if ($sync_count === 0) {
-                 $messages[] = ['type' => 'info', 'text' => "変更が必要なデータはありませんでした。（すべてBASEと同期済みです）"];
+                 $messages[] = ['type' => 'info', 'text' => "更新が行われたアイテムはありませんでした。詳細は上記ログを確認してください。"];
             } else {
                  $messages[] = ['type' => 'success', 'text' => "合計 {$sync_count} 件のアイテムステータスを同期しました。"];
             }
