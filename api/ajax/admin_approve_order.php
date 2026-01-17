@@ -124,20 +124,66 @@ try {
     }
 
     // BASE API実行 (ステータス更新 & メッセージ送信)
+    // BASE APIから最新の注文詳細を取得（order_item_idを取得するため）
+    $api_order_detail = $manager->makeApiRequest('read_orders', '/orders/detail/' . $order_id);
+    
+    if (empty($api_order_detail['order']['order_items'])) {
+        throw new Exception('BASEから注文詳細を取得できませんでした');
+    }
+
+    $api_items = $api_order_detail['order']['order_items'];
+
+    // BASE API実行 (ステータス更新 & メッセージ送信)
     // order_item_idごとにリクエストを送る必要があるためループ処理
     foreach ($items as $index => $item) {
         // cast_handled = 1 の商品のみ対象（SQLで絞り込んでいるが念のため）
         if (!$item['cast_handled']) continue;
 
+        // DBのproduct_id (BASEのitem_id) と一致するAPIのitemを探す
+        $target_order_item_id = null;
+        
+        foreach ($api_items as $api_item) {
+            // DBのproduct_idはstring、APIのitem_idはintの可能性があるため緩い比較あるいはキャスト
+            // product_idが保存されていない、あるいは一致しない場合は product_name で保険をかける方法もあるが
+            // 現状は product_id (item_id) の一致を信頼する
+            if (isset($item['product_id']) && $api_item['item_id'] == $item['product_id']) {
+                $target_order_item_id = $api_item['order_item_id'];
+                
+                // 既に発送済みでないかチェック（念の為）
+                if ($api_item['status'] === 'dispatched') {
+                    // 既に発送済みの場合はスキップするか、エラーにするか。
+                    // ここではスキップして、DBのステータス更新だけ進める（二重送信防止）
+                    $target_order_item_id = 'ALREADY_DISPATCHED';
+                }
+                break;
+            }
+        }
+
+        if ($target_order_item_id === 'ALREADY_DISPATCHED') {
+            continue;
+        }
+
+        // マッチする商品が見つからない、または order_item_id が特定できない場合
+        if (!$target_order_item_id) {
+            // エラーログを残しつつ、次の商品へ（あるいは全体をエラーにする）
+            // ここでは商品名でのマッチングも試みる（商品IDが変わっているケースなど）
+            foreach ($api_items as $api_item) {
+                if ($api_item['title'] == $item['product_name']) {
+                    $target_order_item_id = $api_item['order_item_id'];
+                    break;
+                }
+            }
+            
+            if (!$target_order_item_id) {
+                throw new Exception('商品「' . $item['product_name'] . '」のBASE上のID(order_item_id)が特定できませんでした');
+            }
+        }
+
         $update_data = [
-            'order_item_id' => $item['base_order_item_id'], // DBのカラム名は base_order_item_id
+            'order_item_id' => $target_order_item_id,
             'status' => 'dispatched',
             'add_comment' => ($index === 0) ? $final_message : '' // メッセージは最初の商品にのみ添付（重複回避）
         ];
-        
-        // 2件目以降でメッセージが空の場合は add_comment を送らない方が安全かもしれないが、
-        // BASEの仕様上、空文字でも上書きされるか、あるいは追加されるか不明。
-        // 一般的には代表して1つにコメントをつける運用。
         
         $manager->makeApiRequest('write_orders', '/orders/edit_status', $update_data, 'POST');
     }
