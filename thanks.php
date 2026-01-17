@@ -45,7 +45,7 @@ try {
     $file_path = __DIR__ . '/storage/videos/' . $video['file_path'];
 
     // デバッグ用（問題解決後削除）
-    // die("DEBUG: file_path = $file_path, exists = " . (file_exists($file_path) ? 'YES' : 'NO'));
+    die("DEBUG: file_path = $file_path, exists = " . (file_exists($file_path) ? 'YES' : 'NO'));
 
     if (!file_exists($file_path)) {
         http_response_code(404);
@@ -115,10 +115,8 @@ try {
         header("Content-Length: $size");
     }
     
-    // ダウンロードさせる場合
-    // header("Content-Disposition: attachment; filename=\"$filename\""); 
-    // インライン再生させる場合
-    header("Content-Disposition: inline; filename=\"$filename\"");
+    // ダウンロードさせる
+    header("Content-Disposition: attachment; filename=\"$filename\"");
 
     // バッファ出力
     $buffer = 1024 * 8;
