@@ -485,7 +485,7 @@ function getPaymentMethod($method) {
                                         ¥<?= number_format($item['price']) ?>
                                     </td>
                                     <td style="text-align: center">
-                                        <button class="btn btn-sm btn-primary" onclick="showCompletionModal('<?= $order['base_order_id'] ?>', '<?= htmlspecialchars($item['product_name'], ENT_QUOTES) ?>')">
+                                        <button class="btn btn-sm btn-primary" onclick="showCompletionModal('<?= $order['base_order_id'] ?>', '<?= $item['item_id'] ?>', '<?= htmlspecialchars($item['product_name'], ENT_QUOTES) ?>')">
                                             <i class="fas fa-play-circle"></i> 対応する
                                         </button>
                                     </td>
@@ -524,6 +524,7 @@ function getPaymentMethod($method) {
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="modalOrderId">
+                    <input type="hidden" id="modalItemId">
                     <p class="mb-3">
                         <strong id="modalProductName"></strong> の対応方法を選択してください：
                     </p>
@@ -546,8 +547,9 @@ function getPaymentMethod($method) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     // 対応完了モーダル表示
-    function showCompletionModal(orderId, productName) {
+    function showCompletionModal(orderId, itemId, productName) {
         document.getElementById('modalOrderId').value = orderId;
+        document.getElementById('modalItemId').value = itemId;
         document.getElementById('modalProductName').textContent = productName;
         const modal = new bootstrap.Modal(document.getElementById('completionModal'));
         modal.show();
@@ -556,6 +558,7 @@ function getPaymentMethod($method) {
     // 対応完了実行
     async function completeOrder(templateId) {
         const orderId = document.getElementById('modalOrderId').value;
+        const itemId = document.getElementById('modalItemId').value;
         const productName = document.getElementById('modalProductName').textContent;
         const button = event.target;
         
@@ -580,6 +583,7 @@ function getPaymentMethod($method) {
                 },
                 body: JSON.stringify({
                     order_id: orderId,
+                    item_id: itemId,
                     template_id: templateId,
                     product_name: productName
                 })

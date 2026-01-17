@@ -13,7 +13,7 @@ try {
     
     // base_api_tokens の構造を表示
     echo "--- structure of base_api_tokens ---\n";
-    $stmt = $pdo->query("SHOW CREATE TABLE base_api_tokens");
+    $stmt = $pdo->query("SHOW CREATE TABLE base_order_items");
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     echo htmlspecialchars($row['Create Table']);
     

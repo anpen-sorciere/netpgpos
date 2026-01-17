@@ -30,6 +30,10 @@ try {
     // 厳密には product_name も送るべき。
     $product_name = $input['product_name'] ?? null;
 
+    // product_nameは念のため残すが、判定はitem_idで行う（ユニークキー）
+    // cast_dashboard.phpからは item_id が送られてくる想定
+    $item_id = $input['item_id'] ?? null;
+
     if (!$order_id || !$template_id) {
         throw new Exception('order_idとtemplate_idは必須です');
     }
@@ -43,7 +47,14 @@ try {
     );
 
     // 対応済みフラグ更新
-    // product_nameがある場合は特定の商品のみ、なければそのキャストのすべての担当詳細を更新（安全策）
+    // item_idがある場合はそのレコードを一意に特定して更新
+    // item_idがない場合（旧仕様からのリクエストなど）はエラーにするか、以前の挙動に戻すかだが、
+    // 今回はダッシュボードも修正しているので item_id 必須とする。
+    
+    if (!$item_id) {
+         throw new Exception('item_idが指定されていません。ダッシュボードをリロードしてください。');
+    }
+
     $sql = "
         UPDATE base_order_items 
         SET 
@@ -52,16 +63,11 @@ try {
             cast_handled_template_id = ?
         WHERE base_order_id = ? 
         AND cast_id = ?
+        AND id = ?
     ";
-    $params = [$template_id, $order_id, $_SESSION['cast_id']];
+    $params = [$template_id, $order_id, $_SESSION['cast_id'], $item_id];
 
-    if ($product_name) {
-        $sql .= " AND product_name = ?";
-        $params[] = $product_name;
-    } else {
-        // product_nameがない場合、未対応のものだけを更新するように制限
-        $sql .= " AND cast_handled = 0";
-    }
+    // product_name判定は削除（IDで一意に決まるため）
 
     $stmt = $pdo->prepare($sql);
     $result = $stmt->execute($params);
