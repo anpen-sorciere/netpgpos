@@ -133,6 +133,31 @@ function generateRegistrationLink($cast_id, $token) {
             </div>
         <?php endif; ?>
 
+        <?php
+        // 共通ログインURLの生成
+        $common_base_url = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") 
+                          . "://{$_SERVER['HTTP_HOST']}"
+                          . dirname(dirname($_SERVER['SCRIPT_NAME']));
+        $cast_login_url = $common_base_url . "/cast/cast_login.php";
+        ?>
+
+        <!-- キャストログインURL表示エリア -->
+        <div class="card mb-4 border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-key"></i> キャスト用 ログインURL (全員共通)</h5>
+            </div>
+            <div class="card-body bg-light">
+                <p class="mb-2">キャストがログインするためのページです。このURLをLINEなどでキャストへ共有してください。</p>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-link"></i></span>
+                    <input type="text" class="form-control form-control-lg" id="castLoginUrl" value="<?= htmlspecialchars($cast_login_url) ?>" readonly style="background-color: #fff;">
+                    <button class="btn btn-success btn-lg" type="button" onclick="copyLoginUrl()">
+                        <i class="fas fa-copy"></i> URLをコピー
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
                 <i class="fas fa-info-circle"></i> セルフ登録機能の使い方
@@ -262,6 +287,21 @@ function generateRegistrationLink($cast_id, $token) {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // ログインURLコピー機能
+        function copyLoginUrl() {
+            const urlElement = document.getElementById('castLoginUrl');
+            const text = urlElement.value;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                alert('📋 ログインURLをコピーしました！\nLINEなどでキャストに教えてあげてください。');
+            }).catch(err => {
+                urlElement.select();
+                document.execCommand('copy');
+                alert('📋 ログインURLをコピーしました！');
+            });
+        }
+
+        // 登録リンクコピー機能
         function copyLink(castId) {
             const linkElement = document.getElementById('link-' + castId);
             const text = linkElement.textContent;
