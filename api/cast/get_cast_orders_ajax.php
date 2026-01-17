@@ -126,7 +126,7 @@ try {
                         <td>
                             <strong><?= htmlspecialchars($order['customer_name'] ?: '未設定') ?></strong>
                             <?php if (!empty($order['customer_name_from_option'])): ?>
-                                <br><small class="text-muted">備考: <?= htmlspecialchars($order['customer_name_from_option']) ?></small>
+                                <br><small class="text-muted">(<?= htmlspecialchars($order['customer_name_from_option']) ?>)</small>
                             <?php endif; ?>
                         </td>
                         <td>
