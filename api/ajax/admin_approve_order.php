@@ -130,7 +130,7 @@ try {
         'message' => $final_message
     ];
     
-    $manager->makeApiRequest('write_orders', '/1/orders/edit_status', $update_data, 'POST');
+    $manager->makeApiRequest('write_orders', '/orders/edit_status', $update_data, 'POST');
 
     // 履歴記録 (cast_order_completionsへの保存)
     // 複数の商品がある場合は代表して最初の1件分のログを残すか、または商品ごとに残すか。
