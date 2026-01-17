@@ -77,71 +77,108 @@ try {
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
     );
 
-    // 既存チェック用ステートメント
-    $stmtCheckItem = $pdo->prepare("SELECT COUNT(*) FROM base_order_items WHERE base_order_item_id = :id");
+        // DB接続（ループ外で準備済み）
+        // $pdo, $stmtCheckItem は外側にあるが、追加でNULLチェック用のステートメントを準備したいので
+        // ループ外で定義すべきだが、replace_file_contentの範囲制限のため、ここで定義するか、または
+        // 上記の範囲外で定義されていると仮定して進める。
+        // しかし、既存の $stmtCheckItem 定義箇所も含めて書き換えるのが安全。
+        // ここではループ処理全体を書き換えて対応する。
 
-    foreach ($orders as $i => $summary) {
-        $order_id = $summary['unique_key'];
-        echo "<hr><div>[ " . ($i + 1) . " / " . count($orders) . " ] 注文ID: <b>{$order_id}</b> の詳細確認中...</div>";
-        flush();
+        // 追加の準備済みステートメント（既存レコード検索とID更新）
+        $stmtCheckExistingNull = $pdo->prepare("
+            SELECT id FROM base_order_items 
+            WHERE base_order_id = :order_id 
+              AND product_id = :product_id 
+              AND base_order_item_id IS NULL 
+            LIMIT 1
+        ");
         
-        // 詳細API取得（ウェイトを入れる）
-        usleep(500000); // 0.5秒待機
-        
-        try {
-            $detail = $manager->getDataWithAutoAuth('read_orders', "/orders/detail/{$order_id}");
-            $order = $detail['order'] ?? null;
+        $stmtUpdateItemId = $pdo->prepare("
+            UPDATE base_order_items 
+            SET base_order_item_id = :item_id 
+            WHERE id = :id
+        ");
+
+        foreach ($orders as $i => $summary) {
+            $order_id = $summary['unique_key'];
+            echo "<hr><div>[ " . ($i + 1) . " / " . count($orders) . " ] 注文ID: <b>{$order_id}</b> の詳細確認中...</div>";
+            flush();
             
-            if (!$order) {
-                echo "<div class='error'>詳細データの取得に失敗しました。</div>";
-                continue;
-            }
+            // 詳細API取得（ウェイトを入れる）
+            usleep(500000); // 0.5秒待機
             
-            $items = $order['order_items'] ?? [];
-            if (empty($items)) {
-                echo "<div class='warn'>商品データがありません。スキップします。</div>";
-                continue;
-            }
-            
-            // 重要: 未登録の商品だけを抽出
-            $new_items = [];
-            foreach ($items as $item) {
-                $item_id = $item['order_item_id'];
+            try {
+                $detail = $manager->getDataWithAutoAuth('read_orders', "/orders/detail/{$order_id}");
+                $order = $detail['order'] ?? null;
                 
-                // DB存在チェック
-                $stmtCheckItem->execute([':id' => $item_id]);
-                $exists = $stmtCheckItem->fetchColumn();
-                
-                if ($exists > 0) {
-                    $stats['items_already_exist']++;
-//                    echo "<span style='color:grey; font-size:0.8em;'>済:{$item_id} </span>";
-                } else {
-                    // 未登録のみ追加リストへ
-                    $new_items[] = $item;
-                    $stats['new_items_added']++;
-                    echo "<span class='success'>★ 追加対象発見: {$item['title']} (ID:{$item_id})</span><br>";
+                if (!$order) {
+                    echo "<div class='error'>詳細データの取得に失敗しました。</div>";
+                    continue;
                 }
-            }
-            
-            if (!empty($new_items)) {
-                // 未登録商品がある場合のみ同期実行
-                // itemsを未登録のみに書き換えたオーダーオブジェクトを作成
-                $order['order_items'] = $new_items;
                 
-                // 同期実行（OrderSyncはヘッダーも更新するが、それは許容範囲（最新ステータス反映））
-                // アイテムはnew_itemsしか入っていないため、既存アイテムは触られない。
-                OrderSync::syncOrdersToDb($pdo, [$order], null);
+                $items = $order['order_items'] ?? [];
+                if (empty($items)) {
+                    echo "<div class='warn'>商品データがありません。スキップします。</div>";
+                    continue;
+                }
                 
-                echo "<div class='success'><b>" . count($new_items) . " 件の商品を補完しました。</b></div>";
-                $stats['synced_count']++;
-            } else {
-                echo "<div class='info'>すべての商品は登録済みです。変更なし。</div>";
-                $stats['skipped_count']++;
+                // 重要: 未登録の商品だけを抽出
+                $new_items = [];
+                foreach ($items as $item) {
+                    $item_id = $item['order_item_id'];
+                    $product_id = $item['item_id'];
+                    
+                    // 1. 完全一致チェック (base_order_item_id が既に存在するか)
+                    $stmtCheckItem->execute([':id' => $item_id]);
+                    $exists = $stmtCheckItem->fetchColumn();
+                    
+                    if ($exists > 0) {
+                        $stats['items_already_exist']++;
+                        // echo "<span style='color:grey; font-size:0.8em;'>済:{$item_id} </span>";
+                    } else {
+                        // 2. 既存のNULLレコードチェック (旧データとの紐付け)
+                        // 同じ注文ID、同じ商品IDで、まだIDが振られていないレコードがあるか？
+                        $stmtCheckExistingNull->execute([
+                            ':order_id' => $order_id,
+                            ':product_id' => $product_id
+                        ]);
+                        $existing_null_id = $stmtCheckExistingNull->fetchColumn();
+                        
+                        if ($existing_null_id) {
+                            // 既存レコードが見つかった場合 -> IDをアップデートして紐付ける
+                            $stmtUpdateItemId->execute([
+                                ':item_id' => $item_id,
+                                ':id' => $existing_null_id
+                            ]);
+                            $stats['items_already_exist']++; // 実質は既存
+                            echo "<span class='info'>★ 既存データの紐付け更新: {$item['title']} (旧ID:{$existing_null_id} -> 新ID:{$item_id})</span><br>";
+                        } else {
+                            // 3. 完全に新規の場合のみ追加
+                            $new_items[] = $item;
+                            $stats['new_items_added']++;
+                            echo "<span class='success'>★ 追加対象発見 (真の欠落データ): {$item['title']} (ID:{$item_id})</span><br>";
+                        }
+                    }
+                }
+                
+                if (!empty($new_items)) {
+                    // 未登録商品がある場合のみ同期実行
+                    // itemsを未登録のみに書き換えたオーダーオブジェクトを作成
+                    $order['order_items'] = $new_items;
+                    
+                    // 同期実行
+                    OrderSync::syncOrdersToDb($pdo, [$order], null);
+                    
+                    echo "<div class='success'><b>" . count($new_items) . " 件の欠落商品を新規追加しました。</b></div>";
+                    $stats['synced_count']++;
+                } else {
+                    echo "<div class='info'>変更なし（すべて登録済み、または既存データに紐付け完了）。</div>";
+                    $stats['skipped_count']++;
+                }
+                
+            } catch (Exception $e) {
+                echo "<div class='error'>エラー: " . htmlspecialchars($e->getMessage()) . "</div>";
             }
-            
-        } catch (Exception $e) {
-            echo "<div class='error'>エラー: " . htmlspecialchars($e->getMessage()) . "</div>";
-        }
         
         // ブラウザへの出力を強制
         if (($i % 5) === 0) {
