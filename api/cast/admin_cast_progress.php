@@ -51,7 +51,7 @@ try {
             FROM base_orders o
             INNER JOIN base_order_items oi ON o.base_order_id = oi.base_order_id
             WHERE oi.cast_id = :cast_id
-            AND o.status IN ('ordered', 'unpaid')
+            AND o.status IN ('ordered', 'unpaid', '対応中')
         ";
         $stmt_orders = $pdo->prepare($sql);
         $stmt_orders->execute([':cast_id' => $cast_id]);

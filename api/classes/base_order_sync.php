@@ -221,7 +221,7 @@ if ($utype == 1024) {
                                 $status = '注文済み';
                                 break;
                             case 'dispatched':
-                                $status = '発送済み';
+                                $status = '対応済';
                                 break;
                             case 'cancelled':
                                 $status = 'キャンセル';

@@ -217,9 +217,45 @@ try {
         $final_message
     ]);
 
-    // DB更新 (承認済みとして処理完了)
+    // 注文全体のステータスを判定
+    $total_items = count($api_items);
+    $handled_count = 0;
+    $all_dispatched_or_cancelled = true;
+
+    foreach ($api_items as $api_item) {
+        $is_this_item_handled = false;
+        
+        // 今回承認したアイテムかどうかチェック
+        foreach ($items as $db_item) {
+            if (isset($db_item['product_id']) && $api_item['item_id'] == $db_item['product_id']) {
+                $is_this_item_handled = true;
+                break;
+            }
+            // product_idがない場合のproduct_name判定も必要なら追加するが、
+            // 前段のロジックでID特定できているはずなのでここでは省略
+        }
+
+        // 既にAPI上で発送済み/キャンセル済み、または今回承認したアイテムなら「対応完了」とみなす
+        if ($is_this_item_handled || $api_item['status'] === 'dispatched' || $api_item['status'] === 'cancelled') {
+            $handled_count++;
+        } else {
+            $all_dispatched_or_cancelled = false;
+        }
+    }
+
+    $new_status = '注文済み';
+    // 1つでも対応済みがあれば「対応中」
+    if ($handled_count > 0) {
+        $new_status = '対応中';
+    }
+    // 全て対応済みなら「対応済」
+    if ($all_dispatched_or_cancelled) {
+        $new_status = '対応済';
+    }
+
+    // DB更新 (ステータス更新)
     // base_ordersのステータス更新
-    $pdo->prepare("UPDATE base_orders SET status = 'shipping', updated_at = NOW() WHERE base_order_id = ?")->execute([$order_id]);
+    $pdo->prepare("UPDATE base_orders SET status = ?, updated_at = NOW() WHERE base_order_id = ?")->execute([$new_status, $order_id]);
 
     // ログ記録などがあればここで行う
 
