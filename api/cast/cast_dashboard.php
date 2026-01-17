@@ -539,7 +539,7 @@ function getPaymentMethod($method) {
 
                     <div class="d-grid gap-2">
                         <?php foreach ($templates as $tmpl): ?>
-                            <button class="btn btn-outline-success btn-message-type" onclick="completeOrder(<?= $tmpl['id'] ?>)">
+                            <button class="btn btn-outline-success btn-message-type" onclick="completeOrder(<?= $tmpl['id'] ?>, '<?= htmlspecialchars($tmpl['template_name'], ENT_QUOTES) ?>')">
                                 <i class="<?= htmlspecialchars($tmpl['icon_class']) ?>"></i> <?= htmlspecialchars($tmpl['template_name']) ?>
                             </button>
                         <?php endforeach; ?>
@@ -572,7 +572,7 @@ function getPaymentMethod($method) {
     }
 
     // 対応完了実行
-    async function completeOrder(templateId) {
+    async function completeOrder(templateId, templateName) {
         const orderId = document.getElementById('modalOrderId').value;
         const itemId = document.getElementById('modalItemId').value;
         const productName = document.getElementById('modalProductName').textContent;
@@ -583,6 +583,14 @@ function getPaymentMethod($method) {
             alert('商品IDが見つかりません。画面を再読み込みしてください。');
             location.reload();
             return;
+        }
+        
+        // 動画必須チェック: テンプレート名に「動画」が含まれている場合
+        if (templateName && templateName.includes('動画')) {
+            if (videoFileParams.files.length === 0) {
+                alert('このテンプレートには動画の添付が必要です。\n「お礼の動画」から動画ファイルを選択してください。');
+                return;
+            }
         }
 
         // テストモード判定
