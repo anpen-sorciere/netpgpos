@@ -65,25 +65,45 @@ try {
     // ---------------------------------------------------------
     echo "Checking base_api_tokens table...\n";
     
+    // ---------------------------------------------------------
+    // 2. base_api_tokens テーブルの改修
+    // ---------------------------------------------------------
+    echo "Checking base_api_tokens table...\n";
+    
+    // shop_idカラムの追加確認
     $stmt = $pdo->query("SHOW COLUMNS FROM base_api_tokens LIKE 'shop_id'");
     if (!$stmt->fetch()) {
         echo "Adding shop_id to base_api_tokens...\n";
-        
-        // shop_id追加 (INT)
         $pdo->exec("ALTER TABLE base_api_tokens ADD COLUMN shop_id INT NOT NULL DEFAULT 1 FIRST");
-        
-        // 主キー変更 (scope_key -> shop_id, scope_key)
-        // まず既存のPKを削除するが、PKの名前が不明な場合もあるため、DROP PRIMARY KEYを試みる
-        try {
-            $pdo->exec("ALTER TABLE base_api_tokens DROP PRIMARY KEY");
-        } catch (Exception $e) {
-            echo "Notice: Could not drop primary key (might not exist or different name). " . $e->getMessage() . "\n";
-        }
-        
-        $pdo->exec("ALTER TABLE base_api_tokens ADD PRIMARY KEY (shop_id, scope_key)");
-        echo "Done. PK is now (shop_id, scope_key).\n";
     } else {
-        echo "base_api_tokens already has shop_id. Skipping.\n";
+        echo "base_api_tokens already has shop_id.\n";
+    }
+
+    // ユニーク制約の変更: scope_key (単体) -> (shop_id, scope_key)
+    // まず既存のインデックス情報を取得
+    $stmt = $pdo->query("SHOW INDEX FROM base_api_tokens WHERE Key_name = 'scope_key'");
+    if ($stmt->fetch()) {
+        echo "Dropping existing unique index 'scope_key'...\n";
+        try {
+            $pdo->exec("ALTER TABLE base_api_tokens DROP INDEX scope_key");
+            echo "Dropped.\n";
+        } catch (Exception $e) {
+            echo "Warning: Failed to drop index 'scope_key'. " . $e->getMessage() . "\n";
+        }
+    }
+
+    // 新しい複合ユニークキーの確認と追加
+    $stmt = $pdo->query("SHOW INDEX FROM base_api_tokens WHERE Key_name = 'uq_shop_scope'");
+    if (!$stmt->fetch()) {
+        echo "Adding unique index (shop_id, scope_key)...\n";
+        try {
+            $pdo->exec("ALTER TABLE base_api_tokens ADD UNIQUE KEY uq_shop_scope (shop_id, scope_key)");
+            echo "Done.\n";
+        } catch (Exception $e) {
+            echo "Error adding unique key: " . $e->getMessage() . "\n";
+        }
+    } else {
+        echo "Unique key (shop_id, scope_key) already exists.\n";
     }
 
     // ---------------------------------------------------------
