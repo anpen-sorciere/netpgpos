@@ -2,8 +2,8 @@
 // 特定キャストの対応ステータス修復スクリプト
 // 誤って「対応済み」にしてしまったデータを「未対応」に戻します
 
-require_once __DIR__ . '/../../common/config.php';
-require_once __DIR__ . '/../../common/dbconnect.php';
+require_once __DIR__ . '/../../../common/config.php';
+require_once __DIR__ . '/../../../common/dbconnect.php';
 
 session_start();
 

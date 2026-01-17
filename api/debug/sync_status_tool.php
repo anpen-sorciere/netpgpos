@@ -3,8 +3,8 @@
  * BASEステータス同期・修復ツール
  * BASE APIの情報を正として、ローカルDBの cast_handled フラグを更新します。
  */
-require_once __DIR__ . '/../../common/config.php';
-require_once __DIR__ . '/../../common/dbconnect.php';
+require_once __DIR__ . '/../../../common/config.php';
+require_once __DIR__ . '/../../../common/dbconnect.php';
 require_once __DIR__ . '/../classes/base_practical_auto_manager.php';
 
 session_start();
