@@ -8,32 +8,64 @@ error_reporting(E_ALL);
 
 echo "<h2>動画機能セットアップ開始 (v2)</h2>";
 
-// 絶対パスで指定
-$common_dir = 'C:/xampp/htdocs/common';
+// 環境非依存のパス設定 (debug/api/netpgpos/root)
+// 3階層上がルート (netpgposディレクトリがルート直下にある想定)
+$root_dir = dirname(__DIR__, 3); 
+$common_dir = $root_dir . '/common';
+
 $config_path = $common_dir . '/config.php';
 $dbconnect_path = $common_dir . '/dbconnect.php';
 
+echo "Root Dir: " . $root_dir . "<br>";
 echo "Config Path: " . $config_path . "<br>";
 
 if (!file_exists($config_path)) {
-    die("❌ config.php が見つかりません: $config_path");
+    // 4階層上も試す（念の為）
+    $root_dir_v2 = dirname(__DIR__, 4);
+    $config_path_v2 = $root_dir_v2 . '/common/config.php';
+    if (file_exists($config_path_v2)) {
+        $root_dir = $root_dir_v2;
+        $common_dir = $root_dir . '/common';
+        $config_path = $config_path_v2;
+        $dbconnect_path = $common_dir . '/dbconnect.php';
+        echo "Found in parent: " . $config_path . "<br>";
+    } else {
+        die("❌ config.php が見つかりません。<br>Searching: $config_path OR $config_path_v2");
+    }
 }
 
 require_once $config_path;
+// require_once $dbconnect_path; // config内で呼ばれている場合もあるが、明示的に呼ぶ
 
-echo "Config loaded. Host: " . ($host ?? 'UNDEFINED') . "<br>";
+// dbconnect.phpの読み込み
+if (file_exists($dbconnect_path)) {
+    require_once $dbconnect_path;
+} else {
+    // netpgpos内にcommonがあるパターンもケア
+    $local_common = dirname(__DIR__, 2) . '/common/dbconnect.php';
+    if (file_exists($local_common)) {
+        require_once $local_common;
+    } else {
+        die("❌ dbconnect.php が見つかりません");
+    }
+}
 
-require_once $dbconnect_path;
+echo "Config loaded.<br>";
 
 // 1. DBテーブル作成
 try {
-    echo "Connecting to DB...<br>";
-    $pdo = new PDO(
-        "mysql:host={$host};dbname={$dbname};charset=utf8mb4",
-        $user,
-        $password,
-        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-    );
+    // connect()関数があればそれを使う、なければconfigの値で接続
+    if (function_exists('connect')) {
+        $pdo = connect();
+    } else {
+        $pdo = new PDO(
+            "mysql:host={$host};dbname={$dbname};charset=utf8mb4",
+            $user,
+            $password,
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+        );
+    }
+
     echo "DB Connected.<br>";
 
     $sql = "CREATE TABLE IF NOT EXISTS video_uploads (
@@ -60,7 +92,8 @@ try {
 }
 
 // 2. ディレクトリ作成
-$base_dir = 'C:/xampp/htdocs/netpgpos/storage';
+// storageは netpgpos/storage に配置 (netpgposディレクトリがルート直下にある想定)
+$base_dir = $root_dir . '/storage';
 $video_dir = $base_dir . '/videos';
 
 echo "Base Dir: $base_dir<br>";
