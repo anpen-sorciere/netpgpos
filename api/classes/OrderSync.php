@@ -10,6 +10,15 @@ class OrderSync {
     public static function syncOrdersToDb($pdo, $orders, $manager = null, $shop_id = 1) {
         if (empty($orders)) return;
 
+        // デバッグログ用関数
+        $debug_log = function($msg) {
+            $log_file = __DIR__ . '/../cron/sync_log.txt';
+            $timestamp = date('Y-m-d H:i:s');
+            file_put_contents($log_file, "[{$timestamp}] [OrderSync Debug] {$msg}\n", FILE_APPEND);
+        };
+
+        $debug_log("Starting sync for Shop ID: {$shop_id}, Count: " . count($orders));
+
         // base_orders アップサート文
         $stmtOrder = $pdo->prepare("
             INSERT INTO base_orders (base_order_id, shop_id, order_date, customer_name, total_amount, status, is_surprise, surprise_date, payment_method, dispatch_status_detail)
@@ -106,8 +115,10 @@ class OrderSync {
                     ':payment_method' => $payment_method,
                     ':dispatch_status_detail' => $dispatch_status
                 ]);
+                $debug_log("Saved Order: {$order_id} (Shop: {$shop_id})");
             } catch (Exception $e) {
                 // エラーを呼び出し元に伝播させてログに残す
+                $debug_log("!!! Error Saving Order {$order_id}: " . $e->getMessage());
                 throw $e;
             }
 
