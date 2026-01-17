@@ -243,14 +243,12 @@ try {
         }
     }
 
-    $new_status = '注文済み';
-    // 1つでも対応済みがあれば「対応中」
-    if ($handled_count > 0) {
-        $new_status = '対応中';
-    }
-    // 全て対応済みなら「対応済」
+    $new_status = 'ordered';
+    
+    // 全て対応済みなら「dispatched」
+    // (部分的な発送の場合は、BASE上はまだ ordered のままなので ordered とする)
     if ($all_dispatched_or_cancelled) {
-        $new_status = '対応済';
+        $new_status = 'dispatched';
     }
 
     // DB更新 (ステータス更新)
