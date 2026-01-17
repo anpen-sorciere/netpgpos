@@ -136,6 +136,7 @@ try {
         }
         
         $orders_temp[$order_id]['items'][] = [
+            'item_id' => $row['item_id'], // これが不足していた
             'product_name' => $row['product_name'],
             'quantity' => $row['quantity'],
             'price' => $row['price'],
