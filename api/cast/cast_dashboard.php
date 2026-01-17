@@ -548,6 +548,11 @@ function getPaymentMethod($method) {
     <script>
     // 対応完了モーダル表示
     function showCompletionModal(orderId, itemId, productName) {
+        if (!itemId) {
+            alert('システムの更新が必要です。画面を再読み込みします。');
+            location.reload();
+            return;
+        }
         document.getElementById('modalOrderId').value = orderId;
         document.getElementById('modalItemId').value = itemId;
         document.getElementById('modalProductName').textContent = productName;
@@ -562,6 +567,12 @@ function getPaymentMethod($method) {
         const productName = document.getElementById('modalProductName').textContent;
         const button = event.target;
         
+        if (!itemId) {
+            alert('商品IDが見つかりません。画面を再読み込みしてください。');
+            location.reload();
+            return;
+        }
+
         // テストモード判定
         const urlParams = new URLSearchParams(window.location.search);
         const testMode = urlParams.get('test_mode') === '1';
@@ -617,6 +628,14 @@ function getPaymentMethod($method) {
             }
         } catch (error) {
             showAlert('danger', 'エラー', error.message);
+            // エラーの内容がitem_id関連ならリロードを促す
+            if (error.message.includes('item_id') || error.message.includes('リロード')) {
+                setTimeout(() => {
+                    if(confirm('最新の状態に更新するため、再読み込みしますか？')) {
+                        location.reload();
+                    }
+                }, 2000);
+            }
             // ボタン再有効化
             allButtons.forEach(btn => btn.disabled = false);
             button.innerHTML = button.getAttribute('data-original-text');
