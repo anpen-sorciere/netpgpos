@@ -51,6 +51,7 @@ try {
             o.status,
             o.is_surprise,
             o.surprise_date,
+            oi.id,
             oi.product_name,
             oi.customer_name_from_option,
             oi.item_surprise_date,
