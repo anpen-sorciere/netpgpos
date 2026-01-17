@@ -79,14 +79,11 @@ try {
             }
 
             // 未対応の注文のみを取得するため、直近のデータを取得
-            $response = $manager->getDataWithAutoAuth('read_orders', '/orders', [
-                'limit' => 50,
-                'order' => 'desc',
-                'sort' => 'order_date'
-            ]);
+            // 一覧APIでは商品詳細が取れない場合があるため、getCombinedOrderDataを使用
+            $result_data = $manager->getCombinedOrderData(50, 0, null); // limit=50, offset=0
+            $orders = $result_data['merged_orders'] ?? []; // 商品情報マージ済みのデータを使用
 
-            $orders = $response['orders'] ?? [];
-            sync_log("[{$shop_name}] Fetched " . count($orders) . " orders from BASE.");
+            sync_log("[{$shop_name}] Fetched " . count($orders) . " orders (Combined Data) from BASE.");
 
             if (!empty($orders)) {
                 // OrderSync::syncOrdersToDbを利用して保存（shop_idを渡す）

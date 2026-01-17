@@ -66,10 +66,14 @@ class OrderSync {
 
         foreach ($orders as $order) {
             $order_id = $order['unique_key'] ?? null;
-            if (!$order_id) continue;
+            if (!$order_id) {
+                $debug_log("Skipping order: No unique_key found. Data: " . json_encode($order));
+                continue;
+            }
             
             // order_itemsが含まれていない場合の処理スキップ
             if (!isset($order['order_items']) || empty($order['order_items'])) {
+                $debug_log("Skipping order {$order_id}: No order_items found.");
                 continue;
             }
 
