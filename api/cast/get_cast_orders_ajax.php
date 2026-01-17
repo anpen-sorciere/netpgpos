@@ -217,20 +217,6 @@ try {
                 } else {
                     throw new Error(result.error || 'プレビュー取得エラー');
                 }
-                
-                if (result.success) {
-                    alert('承認完了しました！');
-                    // モーダルリロード（親画面の更新ボタンを押す処理を模倣してもいいが、一旦リロード）
-                if (result.success) {
-                    // 親画面の関数を呼んでリロードしてもらうのが無難
-                    // location.reload();
-                    // モーダルのみ閉じてリロード
-                    bootstrap.Modal.getInstance(document.getElementById('approveConfirmModal')).hide();
-                    location.reload();
-                } else { 
-                } else {
-                    throw new Error(result.error || '承認エラー');
-                }
             } catch (e) {
                 alert('エラー: ' + e.message);
                 this.innerHTML = originalText;
