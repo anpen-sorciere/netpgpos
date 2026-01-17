@@ -2,8 +2,8 @@
 /**
  * 特定のキャストの未対応注文リストを返すAjax (admin_cast_progress.php用)
  */
-require_once __DIR__ . '/../../common/config.php';
-require_once __DIR__ . '/../../common/dbconnect.php';
+require_once __DIR__ . '/../../../common/config.php';
+require_once __DIR__ . '/../../../common/dbconnect.php';
 
 $cast_id = $_GET['cast_id'] ?? 0;
 if (!$cast_id) {

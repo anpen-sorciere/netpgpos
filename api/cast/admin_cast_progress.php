@@ -7,8 +7,8 @@ session_start();
 
 // 簡易認証（index.phpなどから遷移している前提）
 // 本来はauth checkが必要だが、現状の構成に合わせて簡易実装
-require_once __DIR__ . '/../../common/config.php';
-require_once __DIR__ . '/../../common/dbconnect.php';
+require_once __DIR__ . '/../../../common/config.php';
+require_once __DIR__ . '/../../../common/dbconnect.php';
 
 // 今日の日付（放置判定用）
 $today = date('Y-m-d');
