@@ -102,8 +102,8 @@ try {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ");
         
-        // 有効期限: 7日後
-        $expires_at = date('Y-m-d H:i:s', strtotime('+7 days'));
+        // 有効期限: 15日後
+        $expires_at = date('Y-m-d H:i:s', strtotime('+15 days'));
         
         $stmt->execute([
             $uuid,
