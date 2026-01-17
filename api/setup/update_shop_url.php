@@ -2,7 +2,15 @@
 /**
  * shop_mst の base_redirect_uri を一括更新するツール
  */
-require_once __DIR__ . '/../../common/config.php';
+// 共通設定の読み込み
+if (file_exists(__DIR__ . '/../../../common/config.php')) {
+    require_once __DIR__ . '/../../../common/config.php';
+} elseif (file_exists(__DIR__ . '/../../common/config.php')) {
+    require_once __DIR__ . '/../../common/config.php';
+} else {
+    // 予備: netpgpos直下の可能性
+    require_once __DIR__ . '/../../config.php';
+}
 
 // 更新するURL (新ツールのパス)
 // 現在のスクリプトの場所から shop_auth.php のURLを推測または固定指定
