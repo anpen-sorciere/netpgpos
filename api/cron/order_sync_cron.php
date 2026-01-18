@@ -35,10 +35,13 @@ foreach ($search_paths_db as $path) {
 require_once __DIR__ . '/../classes/OrderSync.php';
 require_once __DIR__ . '/../classes/base_practical_auto_manager.php';
 
-// ログファイル設定
+// ログファイル設定（本番運用では無効化）
 $log_file = __DIR__ . '/sync_log.txt';
+$log_enabled = false; // trueにするとログ出力が有効になります
+
 function sync_log($message) {
-    global $log_file;
+    global $log_file, $log_enabled;
+    if (!$log_enabled) return; // ログ無効時は何もしない
     $timestamp = date('Y-m-d H:i:s');
     file_put_contents($log_file, "[{$timestamp}] {$message}\n", FILE_APPEND);
 }
