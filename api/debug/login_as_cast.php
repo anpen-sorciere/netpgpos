@@ -10,26 +10,7 @@ session_start();
 // 簡易認証（本来は管理者セッションチェックなど入れるべきですが、デバッグ用として）
 // if (!isset($_SESSION['admin_login'])) { ... }
 
-$cast_id = filter_input(INPUT_GET, 'cast_id', FILTER_VALIDATE_INT);
-
-if (!$cast_id) {
-    // キャストID入力フォームを表示
-    ?>
-    <!DOCTYPE html>
-    <html>
-    <head><meta charset="utf-8"><title>Login as Cast</title></head>
-    <body style="padding:20px; font-family:sans-serif;">
-        <h2>キャストなりすましログイン</h2>
-        <form method="get">
-            <label>Cast ID: <input type="number" name="cast_id" value="38"></label>
-            <button type="submit">ダッシュボードを開く</button>
-        </form>
-    </body>
-    </html>
-    <?php
-    exit;
-}
-
+// DB接続
 try {
     $pdo = new PDO(
         "mysql:host={$host};dbname={$dbname};charset=utf8mb4",
@@ -37,7 +18,87 @@ try {
         $password,
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
     );
+} catch (PDOException $e) {
+    die("DB Error: " . $e->getMessage());
+}
 
+$cast_id = filter_input(INPUT_GET, 'cast_id', FILTER_VALIDATE_INT);
+
+if (!$cast_id) {
+    // キャスト一覧を取得（drop_flg=0のみ）
+    $stmt = $pdo->query("SELECT cast_id, cast_name, shop_id FROM cast_mst WHERE drop_flg = 0 ORDER BY shop_id, cast_name");
+    $casts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // 店舗情報取得
+    $stmt_shops = $pdo->query("SELECT shop_id, shop_name FROM shop_mst");
+    $shops = [];
+    while ($row = $stmt_shops->fetch(PDO::FETCH_ASSOC)) {
+        $shops[$row['shop_id']] = $row['shop_name'];
+    }
+    ?>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Login as Cast</title>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    </head>
+    <body class="bg-light">
+        <div class="container py-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="m-0"><i class="fas fa-user-secret"></i> キャストなりすましログイン</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">方法1: 名前から選択</label>
+                            <select name="cast_id" class="form-select" onchange="if(this.value) this.form.submit();">
+                                <option value="">-- キャストを選択 --</option>
+                                <?php 
+                                $current_shop = null;
+                                foreach ($casts as $c): 
+                                    // 店舗が変わったらグループを表示
+                                    if ($c['shop_id'] !== $current_shop):
+                                        if ($current_shop !== null): ?></optgroup><?php endif;
+                                        $current_shop = $c['shop_id'];
+                                        $shop_name = $shops[$c['shop_id']] ?? '店舗ID:' . $c['shop_id'];
+                                ?>
+                                <optgroup label="<?= htmlspecialchars($shop_name) ?>">
+                                <?php endif; ?>
+                                    <option value="<?= $c['cast_id'] ?>">
+                                        <?= htmlspecialchars($c['cast_name']) ?> (ID: <?= $c['cast_id'] ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                                <?php if ($current_shop !== null): ?></optgroup><?php endif; ?>
+                            </select>
+                        </div>
+                        
+                        <hr>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">方法2: IDを直接入力</label>
+                            <div class="input-group">
+                                <input type="number" name="cast_id" class="form-control" placeholder="Cast ID">
+                                <button type="submit" class="btn btn-primary">ログイン</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="mt-3">
+                <a href="../../index.php" class="btn btn-outline-secondary btn-sm">&larr; メインメニューに戻る</a>
+            </div>
+        </div>
+    </body>
+    </html>
+    <?php
+    exit;
+}
+
+try {
     // キャスト情報取得
     $stmt = $pdo->prepare("SELECT * FROM cast_mst WHERE cast_id = ?");
     $stmt->execute([$cast_id]);
