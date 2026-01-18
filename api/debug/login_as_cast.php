@@ -2,8 +2,37 @@
 // 管理者用: キャストなりすましログインツール
 // 指定したキャストIDとしてセッションを開始し、ダッシュボードへリダイレクトします。
 
-require_once __DIR__ . '/../../../common/config.php';
-require_once __DIR__ . '/../../../common/dbconnect.php';
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
+// パス解決（複数パターン対応）
+$config_paths = [
+    __DIR__ . '/../../../common/config.php',
+    __DIR__ . '/../../common/config.php',
+];
+$config_found = false;
+foreach ($config_paths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        $config_found = true;
+        break;
+    }
+}
+if (!$config_found) {
+    die("Error: config.php not found. Searched: " . implode(", ", $config_paths));
+}
+
+// dbconnect.php
+$db_paths = [
+    __DIR__ . '/../../../common/dbconnect.php',
+    __DIR__ . '/../../common/dbconnect.php',
+];
+foreach ($db_paths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        break;
+    }
+}
 
 session_start();
 
