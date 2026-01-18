@@ -55,7 +55,7 @@ $cast_id = filter_input(INPUT_GET, 'cast_id', FILTER_VALIDATE_INT);
 
 if (!$cast_id) {
     // キャスト一覧を取得（drop_flg=0のみ）
-    $stmt = $pdo->query("SELECT cast_id, cast_name FROM cast_mst WHERE drop_flg = 0 ORDER BY cast_name");
+    $stmt = $pdo->query("SELECT cast_id, cast_name, cast_type FROM cast_mst WHERE drop_flg = 0 ORDER BY cast_type ASC, cast_name ASC");
     $casts = $stmt->fetchAll(PDO::FETCH_ASSOC);
     ?>
     <!DOCTYPE html>
