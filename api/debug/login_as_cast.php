@@ -55,15 +55,8 @@ $cast_id = filter_input(INPUT_GET, 'cast_id', FILTER_VALIDATE_INT);
 
 if (!$cast_id) {
     // キャスト一覧を取得（drop_flg=0のみ）
-    $stmt = $pdo->query("SELECT cast_id, cast_name, shop_id FROM cast_mst WHERE drop_flg = 0 ORDER BY shop_id, cast_name");
+    $stmt = $pdo->query("SELECT cast_id, cast_name FROM cast_mst WHERE drop_flg = 0 ORDER BY cast_name");
     $casts = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // 店舗情報取得
-    $stmt_shops = $pdo->query("SELECT shop_id, shop_name FROM shop_mst");
-    $shops = [];
-    while ($row = $stmt_shops->fetch(PDO::FETCH_ASSOC)) {
-        $shops[$row['shop_id']] = $row['shop_name'];
-    }
     ?>
     <!DOCTYPE html>
     <html>
@@ -85,22 +78,11 @@ if (!$cast_id) {
                             <label class="form-label fw-bold">方法1: 名前から選択</label>
                             <select name="cast_id" class="form-select" onchange="if(this.value) this.form.submit();">
                                 <option value="">-- キャストを選択 --</option>
-                                <?php 
-                                $current_shop = null;
-                                foreach ($casts as $c): 
-                                    // 店舗が変わったらグループを表示
-                                    if ($c['shop_id'] !== $current_shop):
-                                        if ($current_shop !== null): ?></optgroup><?php endif;
-                                        $current_shop = $c['shop_id'];
-                                        $shop_name = $shops[$c['shop_id']] ?? '店舗ID:' . $c['shop_id'];
-                                ?>
-                                <optgroup label="<?= htmlspecialchars($shop_name) ?>">
-                                <?php endif; ?>
+                                <?php foreach ($casts as $c): ?>
                                     <option value="<?= $c['cast_id'] ?>">
                                         <?= htmlspecialchars($c['cast_name']) ?> (ID: <?= $c['cast_id'] ?>)
                                     </option>
                                 <?php endforeach; ?>
-                                <?php if ($current_shop !== null): ?></optgroup><?php endif; ?>
                             </select>
                         </div>
                         
