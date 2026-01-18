@@ -133,15 +133,17 @@ try {
         }
     }
 
-    if (empty($messages)) {
+    if (empty($messages) && empty($input['custom_message'])) {
         throw new Exception('送信するメッセージを作成できませんでした（テンプレート未設定など）');
     }
 
     // メッセージ結合（改行で区切る）またはカスタムメッセージ使用
     if (!empty($input['custom_message'])) {
         $final_message = $input['custom_message'];
-    } else {
+    } elseif (!empty($messages)) {
         $final_message = implode("\n\n--------------------------------\n\n", $messages);
+    } else {
+        throw new Exception('送信するメッセージがありません');
     }
 
     // プレビューモードならここで終了
