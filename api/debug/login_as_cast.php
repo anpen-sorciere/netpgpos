@@ -73,6 +73,7 @@ if (!$cast_id) {
                     <h5 class="m-0"><i class="fas fa-user-secret"></i> キャストなりすましログイン</h5>
                 </div>
                 <div class="card-body">
+                    <!-- 方法1: プルダウン選択 -->
                     <form method="get">
                         <div class="mb-3">
                             <label class="form-label fw-bold">方法1: 名前から選択</label>
@@ -85,9 +86,12 @@ if (!$cast_id) {
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        
-                        <hr>
-                        
+                    </form>
+                    
+                    <hr>
+                    
+                    <!-- 方法2: ID直接入力 -->
+                    <form method="get">
                         <div class="mb-3">
                             <label class="form-label fw-bold">方法2: IDを直接入力</label>
                             <div class="input-group">
