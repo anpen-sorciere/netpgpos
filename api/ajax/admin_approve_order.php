@@ -173,23 +173,32 @@ try {
         // cast_handled = 1 の商品のみ対象（SQLで絞り込んでいるが念のため）
         if (!$item['cast_handled']) continue;
 
-        // DBのproduct_id (BASEのitem_id) と一致するAPIのitemを探す
+        // DBのbase_order_item_id (BASEのorder_item_id) と一致するAPIのitemを探す
         $target_order_item_id = null;
         
         foreach ($api_items as $api_item) {
-            // DBのproduct_idはstring、APIのitem_idはintの可能性があるため緩い比較あるいはキャスト
-            // product_idが保存されていない、あるいは一致しない場合は product_name で保険をかける方法もあるが
-            // 現状は product_id (item_id) の一致を信頼する
-            if (isset($item['product_id']) && $api_item['item_id'] == $item['product_id']) {
+            // base_order_item_id が一致するものを探す（最も確実）
+            if (isset($item['base_order_item_id']) && $api_item['order_item_id'] == $item['base_order_item_id']) {
                 $target_order_item_id = $api_item['order_item_id'];
                 
                 // 既に発送済みでないかチェック（念の為）
                 if ($api_item['status'] === 'dispatched') {
-                    // 既に発送済みの場合はスキップするか、エラーにするか。
-                    // ここではスキップして、DBのステータス更新だけ進める（二重送信防止）
+                    // 既に発送済みの場合はスキップ
                     $target_order_item_id = 'ALREADY_DISPATCHED';
                 }
                 break;
+            }
+            
+            // 下位互換性/フォールバック: base_order_item_idがない古いデータの場合は product_id で判定
+            // ただし重複リスクがあるため、これは「まだ発送されていない」ものに限るなどの配慮が必要だが、
+            // 新規データは必ず base_order_item_id を持つのでここでは単純なマッチングのみ残す
+            if (empty($item['base_order_item_id']) && isset($item['product_id']) && $api_item['item_id'] == $item['product_id']) {
+                 // 重複回避ロジックが必要だが、まずは既存動作維持（リスクあり）
+                 $target_order_item_id = $api_item['order_item_id'];
+                 if ($api_item['status'] === 'dispatched') {
+                    $target_order_item_id = 'ALREADY_DISPATCHED';
+                 }
+                 break;
             }
         }
 
@@ -197,20 +206,10 @@ try {
             continue;
         }
 
-        // マッチする商品が見つからない、または order_item_id が特定できない場合
+        // マッチする商品が見つからない場合
         if (!$target_order_item_id) {
-            // エラーログを残しつつ、次の商品へ（あるいは全体をエラーにする）
-            // ここでは商品名でのマッチングも試みる（商品IDが変わっているケースなど）
-            foreach ($api_items as $api_item) {
-                if ($api_item['title'] == $item['product_name']) {
-                    $target_order_item_id = $api_item['order_item_id'];
-                    break;
-                }
-            }
-            
-            if (!$target_order_item_id) {
-                throw new Exception('商品「' . $item['product_name'] . '」のBASE上のID(order_item_id)が特定できませんでした');
-            }
+            // エラーログを残しつつ、次の商品へ
+            throw new Exception('商品「' . $item['product_name'] . '」のID特定に失敗しました。詳細ID(order_item_id)が不一致です。');
         }
 
         $update_data = [
