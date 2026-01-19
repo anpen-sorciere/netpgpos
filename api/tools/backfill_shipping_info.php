@@ -22,7 +22,7 @@ echo "Checking required files...\n";
 $required_files = [
     __DIR__ . '/../../../common/config.php',
     __DIR__ . '/../../../common/dbconnect.php',
-    __DIR__ . '/../classes/BaseApiManager.php',
+    __DIR__ . '/../classes/base_practical_auto_manager.php',
     __DIR__ . '/../classes/OrderSync.php'
 ];
 
@@ -37,7 +37,7 @@ foreach ($required_files as $file) {
 
 require_once __DIR__ . '/../../../common/config.php';
 require_once __DIR__ . '/../../../common/dbconnect.php';
-require_once __DIR__ . '/../classes/BaseApiManager.php';
+require_once __DIR__ . '/../classes/base_practical_auto_manager.php';
 require_once __DIR__ . '/../classes/OrderSync.php';
 
 echo "Files loaded. Starting process...\n";
@@ -69,7 +69,7 @@ try {
     }
 
     // APIマネージャーの初期化
-    $apiManager = new BaseApiManager();
+    $apiManager = new BasePracticalAutoManager();
     
     $success_count = 0;
     $error_count = 0;
