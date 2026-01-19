@@ -191,19 +191,40 @@ try {
                     if (!empty($order_info['delivery_company_id'])) {
                         $suggested_delivery['company_id'] = $order_info['delivery_company_id'];
                     } 
-                    // 2. delivery_type (配送方法名) から推定
-                    elseif (!empty($order_info['delivery_type'])) {
+                    // 2. shipping_method または delivery_type (配送方法名) から推定
+                    $dtype = null;
+                    
+                    // (A) order.shipping_method
+                    if (!empty($order_info['shipping_method'])) {
+                        $dtype = $order_info['shipping_method'];
+                    } 
+                    // (B) order.order_items[].shipping_method (アイテムごとの指定)
+                    // orderレベルがnullの場合（shipping_lines利用時など）はここを見る必要があるかも
+                    elseif (!empty($order_info['order_items']) && is_array($order_info['order_items'])) {
+                         foreach ($order_info['order_items'] as $itm) {
+                             if (!empty($itm['shipping_method'])) {
+                                 $dtype = $itm['shipping_method'];
+                                 break; // とりあえず最初の有効なものを使う
+                             }
+                         }
+                    }
+                    
+                    // (C) delivery_type (フォールバック)
+                    if (!$dtype && !empty($order_info['delivery_type'])) {
                         $dtype = $order_info['delivery_type'];
+                    }
+
+                    if ($dtype) {
                         // 生の配送方法名を保存（フロントエンド表示用）
                         $suggested_delivery['raw_delivery_type_name'] = $dtype;
 
                         if (strpos($dtype, 'ヤマト') !== false || strpos($dtype, '宅急便') !== false || strpos($dtype, 'ネコポス') !== false || strpos($dtype, 'コンパクト') !== false) {
                             $suggested_delivery['company_id'] = 1; // ヤマト
-                        } elseif (strpos($dtype, '佐川') !== false) {
+                        } elseif (strpos($dtype, '佐川') !== false || strpos($dtype, '飛脚') !== false) {
                             $suggested_delivery['company_id'] = 2; // 佐川
-                        } elseif (strpos($dtype, '郵便') !== false || strpos($dtype, 'レターパック') !== false || strpos($dtype, '定形外') !== false || strpos($dtype, 'ゆうパック') !== false) {
+                        } elseif (strpos($dtype, '郵便') !== false || strpos($dtype, 'レターパック') !== false || strpos($dtype, '定形外') !== false || strpos($dtype, 'ゆうパック') !== false || strpos($dtype, 'クリックポスト') !== false || strpos($dtype, 'スマートレター') !== false || strpos($dtype, 'ゆうメール') !== false || strpos($dtype, 'ゆうパケット') !== false) {
                             $suggested_delivery['company_id'] = 3; // 日本郵便
-                        } elseif (strpos($dtype, '西濃') !== false) {
+                        } elseif (strpos($dtype, '西濃') !== false || strpos($dtype, 'カンガルー') !== false) {
                             $suggested_delivery['company_id'] = 4; // 西濃
                         } elseif (strpos($dtype, '福山') !== false) {
                             $suggested_delivery['company_id'] = 5; // 福山
@@ -216,6 +237,7 @@ try {
                     }
 
                     $response['suggested_delivery'] = $suggested_delivery;
+                    $response['debug_raw_order'] = $order_info; // デバッグ用：全データを含める
                 }
             } catch (Exception $e) {
                 // APIエラーでもプレビュー自体は返せるようにする（エラーはログに吐くなど）

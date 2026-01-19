@@ -366,6 +366,12 @@ try {
                         <label class="form-label fw-bold">送信メッセージ（編集可能）:</label>
                         <textarea class="form-control" id="previewMessage" rows="10" style="background-color: #fff; font-family: monospace;"></textarea>
                     </div>
+
+                    <!-- デバッグ情報 -->
+                    <details class="mt-3 border-top pt-2">
+                        <summary class="text-muted small" style="cursor: pointer;">デバッグ情報 (配送方法調査用)</summary>
+                        <pre id="debugInfo" class="bg-light p-2 small border mt-1 text-break" style="max-height: 200px; overflow-y: auto; white-space: pre-wrap;"></pre>
+                    </details>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">キャンセル</button>
@@ -489,6 +495,11 @@ try {
                                     const badge = document.getElementById('deliveryTypeDisplay');
                                     badge.textContent = result.suggested_delivery.raw_delivery_type_name;
                                     badge.classList.remove('d-none');
+                                }
+
+                                // デバッグ情報の表示
+                                if (result.debug_raw_order) {
+                                    document.getElementById('debugInfo').textContent = JSON.stringify(result.debug_raw_order, null, 2);
                                 }
 
                                 // 値が入ったらプレビューも更新した方が親切だが、
