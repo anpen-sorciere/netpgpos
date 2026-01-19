@@ -621,6 +621,12 @@ function getPaymentMethod($method) {
                 return;
             }
         }
+        // 運営に郵送商品渡し完了確認
+        else if (templateName && templateName.includes('運営に郵送商品渡し完了')) {
+            if (!confirm('運営スタッフへの商品受け渡しは完了しましたか？\n\n「OK」→ 承認待ちへ進む\n「キャンセル」→ 処理を中止')) {
+                return;
+            }
+        }
 
         // テストモード判定
         const urlParams = new URLSearchParams(window.location.search);
