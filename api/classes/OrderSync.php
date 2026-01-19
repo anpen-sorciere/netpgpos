@@ -21,8 +21,8 @@ class OrderSync {
 
         // base_orders アップサート文
         $stmtOrder = $pdo->prepare("
-            INSERT INTO base_orders (base_order_id, shop_id, order_date, customer_name, total_amount, status, is_surprise, surprise_date, payment_method, dispatch_status_detail, updated_at)
-            VALUES (:base_order_id, :shop_id, :order_date, :customer_name, :total_amount, :status, :is_surprise, :surprise_date, :payment_method, :dispatch_status_detail, :updated_at)
+            INSERT INTO base_orders (base_order_id, shop_id, order_date, customer_name, total_amount, status, is_surprise, surprise_date, payment_method, dispatch_status_detail, delivery_company_id, tracking_number, shipping_method, updated_at)
+            VALUES (:base_order_id, :shop_id, :order_date, :customer_name, :total_amount, :status, :is_surprise, :surprise_date, :payment_method, :dispatch_status_detail, :delivery_company_id, :tracking_number, :shipping_method, :updated_at)
             ON DUPLICATE KEY UPDATE
                 shop_id = VALUES(shop_id),
                 customer_name = VALUES(customer_name),
@@ -32,6 +32,9 @@ class OrderSync {
                 surprise_date = VALUES(surprise_date),
                 payment_method = VALUES(payment_method),
                 dispatch_status_detail = VALUES(dispatch_status_detail),
+                delivery_company_id = VALUES(delivery_company_id),
+                tracking_number = VALUES(tracking_number),
+                shipping_method = VALUES(shipping_method),
                 updated_at = VALUES(updated_at)
         ");
 
@@ -40,11 +43,11 @@ class OrderSync {
         $stmtItem = $pdo->prepare("
             INSERT INTO base_order_items (
                 base_order_item_id, base_order_id, product_id, product_name, price, quantity, 
-                cast_id, customer_name_from_option, item_surprise_date
+                cast_id, customer_name_from_option, item_surprise_date, shipping_method
             )
             VALUES (
                 :base_order_item_id, :base_order_id, :product_id, :product_name, :price, :quantity, 
-                :cast_id, :customer_name_from_option, :item_surprise_date
+                :cast_id, :customer_name_from_option, :item_surprise_date, :shipping_method
             )
             ON DUPLICATE KEY UPDATE
                 base_order_item_id = VALUES(base_order_item_id),
@@ -54,7 +57,8 @@ class OrderSync {
                 quantity = VALUES(quantity),
                 cast_id = VALUES(cast_id),
                 customer_name_from_option = VALUES(customer_name_from_option),
-                item_surprise_date = VALUES(item_surprise_date)
+                item_surprise_date = VALUES(item_surprise_date),
+                shipping_method = VALUES(shipping_method)
         ");
         
         // キャスト名からcast_idを検索するための準備済みステートメント
@@ -147,6 +151,9 @@ class OrderSync {
                     ':surprise_date' => $surprise_date,
                     ':payment_method' => $payment_method,
                     ':dispatch_status_detail' => $dispatch_status,
+                    ':delivery_company_id' => $order['delivery_company_id'] ?? null,
+                    ':tracking_number' => $order['tracking_number'] ?? null,
+                    ':shipping_method' => $order['shipping_method'] ?? null,
                     ':updated_at' => $api_updated_at
                 ]);
                 $debug_log("Saved Order: {$order_id} (Shop: {$shop_id})");
@@ -164,6 +171,7 @@ class OrderSync {
                     $title = $item['title'] ?? '';
                     $price = $item['price'] ?? 0;
                     $quantity = $item['amount'] ?? 1;
+                    $item_shipping_method = $item['shipping_method'] ?? null; // 追加: アイテムごとの配送方法
 
                     // オプション解析
                     $item_customer = null;
@@ -210,7 +218,8 @@ class OrderSync {
                             ':quantity' => $quantity,
                             ':cast_id' => $cast_id,
                             ':customer_name_from_option' => $item_customer,
-                            ':item_surprise_date' => $item_surprise_date
+                            ':item_surprise_date' => $item_surprise_date,
+                            ':shipping_method' => $item_shipping_method // 追加
                         ]);
                     } catch (Exception $e) {
                          // 詳細なエラー情報を付加してスロー
