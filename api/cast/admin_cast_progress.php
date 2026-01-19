@@ -342,6 +342,7 @@ try {
                             <div class="row g-2">
                                 <div class="col-md-6">
                                     <label class="form-label small">配送業者</label>
+                                    <span id="deliveryTypeDisplay" class="badge bg-secondary text-white ms-1 fw-normal d-none"></span>
                                     <select class="form-select form-select-sm" id="deliveryCompany">
                                         <option value="">(指定なし)</option>
                                         <option value="1">ヤマト運輸</option>
@@ -481,6 +482,7 @@ try {
                     templateSelect.value = "";
                     deliveryCompany.value = ""; // リセット
                     trackingNumber.value = ""; // リセット
+                    document.getElementById('deliveryTypeDisplay').classList.add('d-none'); // バッジ非表示リセット
 
                     try {
                         // Step 1: プレビュー取得 (初期状態)
@@ -491,20 +493,49 @@ try {
                             body: JSON.stringify({ 
                                 order_id: orderId, 
                                 cast_id: castId, 
-                                preview: true 
+                                preview: true,
+                                init_fetch: true // ★配送情報を自動取得
                             })
                         });
                         
                         const result = await response.json();
                         
                         if (result.success && result.preview) {
-                            // プレビュー成功、モーダル表示
+                            // プレビュー成功
                             document.getElementById('previewMessage').value = result.message;
+
+                            // ★配送情報の自動入力
+                            if (result.suggested_delivery) {
+                                if (result.suggested_delivery.company_id) {
+                                    deliveryCompany.value = result.suggested_delivery.company_id;
+                                }
+                                if (result.suggested_delivery.tracking_number) {
+                                    trackingNumber.value = result.suggested_delivery.tracking_number;
+                                }
+                                
+                                // 生の配送方法名の表示
+                                if (result.suggested_delivery.raw_delivery_type_name) {
+                                    const badge = document.getElementById('deliveryTypeDisplay');
+                                    badge.textContent = result.suggested_delivery.raw_delivery_type_name;
+                                    badge.classList.remove('d-none');
+                                }
+
+                                // 値が入ったらプレビューも更新した方が親切だが、
+                                // init_fetch時にも変数は空文字で置換されているはずなので
+                                // ユーザーが何か変更したときに再取得すればOK。
+                                // ただし「ヤマト運輸」などが自動選択されたのにメッセージ内の {delivery_company} が空だと違和感あるかも？
+                                // init_fetchの結果で一度 updatePreview を呼ぶか、
+                                // admin_approve_order.php側で init_fetch 時は suggested_delivery を使ってメッセージ組むか。
+                                // 現状 admin_approve_order.php は tracking_number はリクエストの入力をそのまま使う仕様。
+                                // なので、ここで値をセットした後に再度 updatePreview() を呼ぶのが確実。
+                                if (result.suggested_delivery.company_id || result.suggested_delivery.tracking_number) {
+                                     // 値をセットしてから少し待って再更新（UI反映後）
+                                     setTimeout(updatePreview, 100);
+                                }
+                            }
                             
                             // 本送信用データを一時保存
                             currentApproveConfig = { orderId, castId };
-                            
-                            // もしレスポンスに現在のtemplate_idが含まれていればセットしたいが、今回は空でOK
                             
                             confirmModal.show();
                             

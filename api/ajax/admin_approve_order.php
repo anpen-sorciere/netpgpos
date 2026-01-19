@@ -161,12 +161,70 @@ try {
 
     // プレビューモードならここで終了
     if (!empty($input['preview'])) {
-        echo json_encode([
+        $response = [
             'success' => true,
             'preview' => true,
             'message' => $final_message,
             'processed_items' => $processed_items
-        ]);
+        ];
+
+        // 初回表示時（配送情報の自動取得）
+        if (!empty($input['init_fetch'])) {
+            try {
+                // BASE APIから注文詳細を取得
+                // $managerは上で初期化済み
+                $api_order_detail = $manager->makeApiRequest('read_orders', '/orders/detail/' . $order_id);
+                
+                if (!empty($api_order_detail['order'])) {
+                    // 配送方法の推定
+                    // BASEのレスポンスには delivery_type (配送方法名) などが含まれると想定
+                    // delivery_company_id は発送済みでないと入っていない可能性が高いが、念のためチェック
+                    
+                    $suggested_delivery = [
+                        'company_id' => '',
+                        'tracking_number' => ''
+                    ];
+
+                    $order_info = $api_order_detail['order'];
+
+                    // 1. delivery_company_id があればそれを使う
+                    if (!empty($order_info['delivery_company_id'])) {
+                        $suggested_delivery['company_id'] = $order_info['delivery_company_id'];
+                    } 
+                    // 2. delivery_type (配送方法名) から推定
+                    elseif (!empty($order_info['delivery_type'])) {
+                        $dtype = $order_info['delivery_type'];
+                        // 生の配送方法名を保存（フロントエンド表示用）
+                        $suggested_delivery['raw_delivery_type_name'] = $dtype;
+
+                        if (strpos($dtype, 'ヤマト') !== false || strpos($dtype, '宅急便') !== false || strpos($dtype, 'ネコポス') !== false || strpos($dtype, 'コンパクト') !== false) {
+                            $suggested_delivery['company_id'] = 1; // ヤマト
+                        } elseif (strpos($dtype, '佐川') !== false) {
+                            $suggested_delivery['company_id'] = 2; // 佐川
+                        } elseif (strpos($dtype, '郵便') !== false || strpos($dtype, 'レターパック') !== false || strpos($dtype, '定形外') !== false || strpos($dtype, 'ゆうパック') !== false) {
+                            $suggested_delivery['company_id'] = 3; // 日本郵便
+                        } elseif (strpos($dtype, '西濃') !== false) {
+                            $suggested_delivery['company_id'] = 4; // 西濃
+                        } elseif (strpos($dtype, '福山') !== false) {
+                            $suggested_delivery['company_id'] = 5; // 福山
+                        }
+                    }
+
+                    // 追跡番号 (発送済みなどで入っていれば)
+                    if (!empty($order_info['tracking_number'])) {
+                        $suggested_delivery['tracking_number'] = $order_info['tracking_number'];
+                    }
+
+                    $response['suggested_delivery'] = $suggested_delivery;
+                }
+            } catch (Exception $e) {
+                // APIエラーでもプレビュー自体は返せるようにする（エラーはログに吐くなど）
+                // ここでは配送情報の取得失敗として扱う
+                $response['suggested_delivery_error'] = $e->getMessage();
+            }
+        }
+
+        echo json_encode($response);
         exit;
     }
 
