@@ -486,9 +486,13 @@ function getPaymentMethod($method) {
                                         ¥<?= number_format($item['price']) ?>
                                     </td>
                                     <td style="text-align: center">
+                                        <?php if ($order['status'] === 'unpaid'): ?>
+                                            <span class="badge bg-secondary">入金待ち</span>
+                                        <?php else: ?>
                                         <button class="btn btn-sm btn-primary" onclick="showCompletionModal('<?= $order['base_order_id'] ?>', '<?= $item['item_id'] ?>', '<?= htmlspecialchars($item['product_name'], ENT_QUOTES) ?>')">
                                             <i class="fas fa-play-circle"></i> 対応する
                                         </button>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
