@@ -392,35 +392,6 @@ try {
             const previewMessage = document.getElementById('previewMessage');
             let currentApproveConfig = null; // 送信データ保持用
 
-            // テンプレート変更時の処理（共通関数に置き換えのため削除）
-                
-                const newTemplateId = this.value;
-                if (!newTemplateId) return; // 空なら何もしない（あるいは初期値に戻すロジックが必要だが、複雑化回避）
-
-                // プレビュー再取得
-                previewMessage.disabled = true;
-                previewMessage.value = "再読み込み中...";
-                
-                try {
-                    const response = await fetch('../../api/ajax/admin_approve_order.php', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ 
-                            order_id: currentApproveConfig.orderId, 
-                            cast_id: currentApproveConfig.castId, 
-                            template_id: newTemplateId, // ★変更されたテンプレートID
-                            preview: true 
-                        })
-                    });
-                    const result = await response.json();
-                    if (result.success) {
-                        previewMessage.value = result.message;
-                    } else {
-                        previewMessage.value = "エラー: " + result.error;
-                    }
-                } catch (e) {
-                    previewMessage.value = "通信エラー";
-                } finally {
             const deliveryCompany = document.getElementById('deliveryCompany');
             const trackingNumber = document.getElementById('trackingNumber');
 
