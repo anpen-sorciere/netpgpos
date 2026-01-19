@@ -322,7 +322,6 @@ try {
                         問題なければ「送信確定」を押してください。
                     </p>
 
-                    <!-- テンプレート選択 -->
                     <div class="mb-3">
                         <label class="form-label fw-bold">使用する定型文:</label>
                         <select class="form-select" id="templateSelect">
@@ -334,6 +333,32 @@ try {
                             <?php endforeach; ?>
                         </select>
                         <div class="form-text text-muted small">変更するとメッセージが再構築されます。</div>
+                    </div>
+
+                    <!-- 配送情報（任意） -->
+                    <div class="card bg-light mb-3">
+                        <div class="card-body py-2">
+                            <h6 class="card-title text-muted border-bottom pb-1 mb-2">配送情報（必要な場合のみ入力）</h6>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small">配送業者</label>
+                                    <select class="form-select form-select-sm" id="deliveryCompany">
+                                        <option value="">(指定なし)</option>
+                                        <option value="1">ヤマト運輸</option>
+                                        <option value="2">佐川急便</option>
+                                        <option value="3">日本郵便</option>
+                                        <option value="4">西濃運輸</option>
+                                        <option value="5">福山通運</option>
+                                        <option value="6">その他</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small">追跡番号</label>
+                                    <input type="text" class="form-control form-control-sm" id="trackingNumber" placeholder="1234-5678-9012">
+                                </div>
+                            </div>
+                            <div class="form-text small mt-1">選択・入力するとメッセージ内の変数 <code>{delivery_company}</code> <code>{tracking_number}</code> が置換されます。</div>
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -366,9 +391,7 @@ try {
             const previewMessage = document.getElementById('previewMessage');
             let currentApproveConfig = null; // 送信データ保持用
 
-            // テンプレート変更時の処理
-            templateSelect.addEventListener('change', async function() {
-                if (!currentApproveConfig) return;
+            // テンプレート変更時の処理（共通関数に置き換えのため削除）
                 
                 const newTemplateId = this.value;
                 if (!newTemplateId) return; // 空なら何もしない（あるいは初期値に戻すロジックが必要だが、複雑化回避）
@@ -397,9 +420,50 @@ try {
                 } catch (e) {
                     previewMessage.value = "通信エラー";
                 } finally {
+            const deliveryCompany = document.getElementById('deliveryCompany');
+            const trackingNumber = document.getElementById('trackingNumber');
+
+            // プレビュー更新関数
+            async function updatePreview() {
+                if (!currentApproveConfig) return;
+
+                const templateId = templateSelect.value;
+                const deliveryId = deliveryCompany.value;
+                const trackingNum = trackingNumber.value;
+
+                previewMessage.disabled = true;
+                previewMessage.value = "再読み込み中...";
+                
+                try {
+                    const response = await fetch('../../api/ajax/admin_approve_order.php', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ 
+                            order_id: currentApproveConfig.orderId, 
+                            cast_id: currentApproveConfig.castId, 
+                            template_id: templateId, 
+                            delivery_company_id: deliveryId, // 追加
+                            tracking_number: trackingNum, // 追加
+                            preview: true 
+                        })
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        previewMessage.value = result.message;
+                    } else {
+                        previewMessage.value = "エラー: " + result.error;
+                    }
+                } catch (e) {
+                    previewMessage.value = "通信エラー";
+                } finally {
                     previewMessage.disabled = false;
                 }
-            });
+            }
+
+            // イベントリスナー設定
+            templateSelect.addEventListener('change', updatePreview);
+            deliveryCompany.addEventListener('change', updatePreview);
+            trackingNumber.addEventListener('change', updatePreview); // 変更確定時
 
             // イベントデリゲーション：動的に生成される「承認」ボタンのクリックを監視
             document.body.addEventListener('click', async function(e) {
@@ -415,13 +479,20 @@ try {
 
                     // テンプレート選択リセット
                     templateSelect.value = "";
+                    deliveryCompany.value = ""; // リセット
+                    trackingNumber.value = ""; // リセット
 
                     try {
                         // Step 1: プレビュー取得 (初期状態)
+                        // 初期状態では配送情報は空で送る
                         const response = await fetch('../../api/ajax/admin_approve_order.php', {
                             method: 'POST',
                             headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({ order_id: orderId, cast_id: castId, preview: true })
+                            body: JSON.stringify({ 
+                                order_id: orderId, 
+                                cast_id: castId, 
+                                preview: true 
+                            })
                         });
                         
                         const result = await response.json();
@@ -464,7 +535,9 @@ try {
                         body: JSON.stringify({ 
                             order_id: currentApproveConfig.orderId, 
                             cast_id: currentApproveConfig.castId,
-                            template_id: templateSelect.value, // ★選択されたテンプレートIDも送信
+                            template_id: templateSelect.value, 
+                            delivery_company_id: deliveryCompany.value, // 追加
+                            tracking_number: trackingNumber.value, // 追加
                             custom_message: document.getElementById('previewMessage').value 
                         }) 
                     });

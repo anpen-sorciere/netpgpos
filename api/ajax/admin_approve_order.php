@@ -23,6 +23,10 @@ try {
     $input = json_decode(file_get_contents('php://input'), true);
     $order_id = $input['order_id'] ?? null;
     $cast_id = $input['cast_id'] ?? null; // どのキャストの対応を承認するか
+    
+    // 配送情報
+    $delivery_company_id = $input['delivery_company_id'] ?? null;
+    $tracking_number = $input['tracking_number'] ?? null;
 
     if (!$order_id) {
         throw new Exception('注文IDは必須です');
@@ -98,6 +102,15 @@ try {
             $stmt_cast->execute([$item['cast_id']]);
             $cast_name = $stmt_cast->fetchColumn();
             $msg = str_replace('{cast_name}', $cast_name, $msg);
+
+            // 配送情報の変数置換
+            $delivery_companies = [
+                1 => 'ヤマト運輸', 2 => '佐川急便', 3 => '日本郵便',
+                4 => '西濃運輸', 5 => '福山通運', 6 => 'その他'
+            ];
+            $delivery_company_name = isset($delivery_companies[$delivery_company_id]) ? $delivery_companies[$delivery_company_id] : '';
+            $msg = str_replace('{delivery_company}', $delivery_company_name, $msg);
+            $msg = str_replace('{tracking_number}', $tracking_number ?? '', $msg);
 
             // 動画添付チェック
             // order_item_id = $item['id'] (base_order_items.id)
@@ -215,7 +228,9 @@ try {
         $update_data = [
             'order_item_id' => $target_order_item_id,
             'status' => 'dispatched',
-            'add_comment' => ($index === 0) ? $final_message : '' // メッセージは最初の商品にのみ添付（重複回避）
+            'add_comment' => ($index === 0) ? $final_message : '', // メッセージは最初の商品にのみ添付（重複回避）
+            'delivery_company_id' => $delivery_company_id, // 配送会社ID
+            'tracking_number' => $tracking_number // 追跡番号
         ];
         
         $manager->makeApiRequest('write_orders', '/orders/edit_status', $update_data, 'POST');
