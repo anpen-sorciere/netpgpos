@@ -5,8 +5,23 @@
  */
 session_start();
 
-// 簡易認証（index.phpなどから遷移している前提）
-// 本来はauth checkが必要だが、現状の構成に合わせて簡易実装
+// セッション認証チェック
+if (!isset($_SESSION['utype'])) {
+    // セッションが切れている場合はメインメニューへリダイレクト
+    ?>
+    <!DOCTYPE html>
+    <html><head><meta charset="utf-8"></head>
+    <body>
+        <script>
+            alert('セッションが切れています。メインメニューに移動します。');
+            window.location.href = '../../index.php';
+        </script>
+    </body>
+    </html>
+    <?php
+    exit;
+}
+
 require_once __DIR__ . '/../../../common/config.php';
 require_once __DIR__ . '/../../../common/dbconnect.php';
 
@@ -67,10 +82,10 @@ try {
                 continue;
             }
 
-            // 承認待ちかどうか
-            if (!empty($order['cast_handled'])) {
+            // 承認待ちかどうか（cast_handled = 1 のみ。2は承認済みなので除外）
+            if ($order['cast_handled'] == 1) {
                 $approval_pending_count++;
-            } else {
+            } elseif (empty($order['cast_handled']) || $order['cast_handled'] == 0) {
                 // キャスト未対応のものだけを「未対応件数」としてカウントするか、
                 // あるいは「全担当分」とするか？
                 // ユーザー要望は「承認待ちがある人を優先」なので、
