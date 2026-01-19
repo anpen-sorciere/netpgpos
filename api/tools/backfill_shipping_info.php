@@ -47,10 +47,18 @@ header('Content-Type: text/plain; charset=utf-8');
 // 認証チェックなどを入れるべきだが、今回限りのツールかつ管理者実行前提とする
 // 安全のためCLI実行か、あるいはブラウザアクセスの場合は簡易チェック
 // ここでは簡易的に実行開始
-echo "Starting Backfill Process...\n";
+echo "Starting Backfill Process...<br>\n";
 
 try {
-    $pdo = get_pdo(); // dbconnect.phpで定義されている関数と仮定
+    // DB接続 (get_pdo関数がない可能性があるため直接接続)
+    // config.phpで定義されている変数を想定: $host, $dbname, $user, $password
+    $dsn = "mysql:host={$host};dbname={$dbname};charset=utf8mb4";
+    $options = [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false,
+    ];
+    $pdo = new PDO($dsn, $user, $password, $options);
     
     // 対象の注文を取得（未発送のもののみ）
     // status が 'cancelled' や 'dispatched' 以外のものを対象にする
