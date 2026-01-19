@@ -17,23 +17,7 @@ ini_set('memory_limit', '512M');
 header('Content-Type: text/plain; charset=utf-8');
 
 echo "Script Path: " . __FILE__ . "\n";
-echo "Checking required files...\n";
 
-$required_files = [
-    __DIR__ . '/../../../common/config.php',
-    __DIR__ . '/../../../common/dbconnect.php',
-    __DIR__ . '/../classes/base_practical_auto_manager.php',
-    __DIR__ . '/../classes/OrderSync.php'
-];
-
-foreach ($required_files as $file) {
-    if (!file_exists($file)) {
-        // realpathで絶対パスを表示してみる
-        echo "Error: Required file not found: " . $file . " (Realpath: " . realpath($file) . ")<br>\n";
-        echo "Current Dir: " . __DIR__ . "<br>\n";
-        exit;
-    }
-}
 
 require_once __DIR__ . '/../../../common/config.php';
 require_once __DIR__ . '/../../../common/dbconnect.php';
@@ -42,7 +26,7 @@ require_once __DIR__ . '/../classes/OrderSync.php';
 
 echo "Files loaded. Starting process...\n";
 
-header('Content-Type: text/plain; charset=utf-8');
+
 
 // 認証チェックなどを入れるべきだが、今回限りのツールかつ管理者実行前提とする
 // 安全のためCLI実行か、あるいはブラウザアクセスの場合は簡易チェック
@@ -50,15 +34,11 @@ header('Content-Type: text/plain; charset=utf-8');
 echo "Starting Backfill Process...<br>\n";
 
 try {
-    // DB接続 (get_pdo関数がない可能性があるため直接接続)
-    // config.phpで定義されている変数を想定: $host, $dbname, $user, $password
-    $dsn = "mysql:host={$host};dbname={$dbname};charset=utf8mb4";
-    $options = [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
-    ];
-    $pdo = new PDO($dsn, $user, $password, $options);
+    // DB接続 (common/dbconnect.php の connect() 関数を使用)
+    $pdo = connect();
+    if ($pdo === null) {
+        throw new Exception("Database connection failed. Check config_local.php or MySQL status.");
+    }
     
     // 対象の注文を取得（未発送のもののみ）
     // status が 'cancelled' や 'dispatched' 以外のものを対象にする
