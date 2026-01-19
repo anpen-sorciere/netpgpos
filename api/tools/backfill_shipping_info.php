@@ -5,14 +5,42 @@
  * shipping_method, tracking_number, delivery_company_id などをDBに保存する。
  */
 
+// デバッグ設定（画面にエラーを出す）
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 // タイムリミット解除
 set_time_limit(0);
 ini_set('memory_limit', '512M');
 
-require_once __DIR__ . '/../../common/config.php';
-require_once __DIR__ . '/../../common/dbconnect.php';
+header('Content-Type: text/plain; charset=utf-8');
+
+echo "Script Path: " . __FILE__ . "\n";
+echo "Checking required files...\n";
+
+$required_files = [
+    __DIR__ . '/../../../common/config.php',
+    __DIR__ . '/../../../common/dbconnect.php',
+    __DIR__ . '/../classes/BaseApiManager.php',
+    __DIR__ . '/../classes/OrderSync.php'
+];
+
+foreach ($required_files as $file) {
+    if (!file_exists($file)) {
+        // realpathで絶対パスを表示してみる
+        echo "Error: Required file not found: " . $file . " (Realpath: " . realpath($file) . ")<br>\n";
+        echo "Current Dir: " . __DIR__ . "<br>\n";
+        exit;
+    }
+}
+
+require_once __DIR__ . '/../../../common/config.php';
+require_once __DIR__ . '/../../../common/dbconnect.php';
 require_once __DIR__ . '/../classes/BaseApiManager.php';
 require_once __DIR__ . '/../classes/OrderSync.php';
+
+echo "Files loaded. Starting process...\n";
 
 header('Content-Type: text/plain; charset=utf-8');
 
