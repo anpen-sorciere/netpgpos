@@ -32,6 +32,11 @@ try {
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
     );
 
+    // デバッグログ開始
+    $log_file = __DIR__ . '/debug_sync.txt';
+    $start_msg = "\n" . date('Y-m-d H:i:s') . " [Start] Sync requested for CastID: {$cast_id}\n";
+    file_put_contents($log_file, $start_msg, FILE_APPEND);
+
     // 対象の注文を取得（ordered, unpaidなど未完了のもの）
     // base_order_items に cast_id が含まれる base_order_id を抽出
     $sql = "
@@ -45,6 +50,8 @@ try {
     $stmt = $pdo->prepare($sql);
     $stmt->execute([':cast_id' => $cast_id]);
     $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    file_put_contents($log_file, " -> Found " . count($orders) . " orders to check.\n", FILE_APPEND);
 
     if (empty($orders)) {
         echo json_encode([
