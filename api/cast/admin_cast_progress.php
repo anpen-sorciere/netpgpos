@@ -362,6 +362,17 @@ try {
                         </div>
                     </div>
 
+                    <!-- 特典クーポン入力（動的表示） -->
+                    <div id="couponInputContainer" class="card bg-warning bg-opacity-10 mb-3 d-none">
+                        <div class="card-body py-2">
+                             <h6 class="card-title text-dark border-bottom border-warning pb-1 mb-2">
+                                <i class="fas fa-ticket-alt text-warning"></i> 特典クーポンコード <span class="badge bg-danger">必須</span>
+                            </h6>
+                            <input type="text" class="form-control" id="couponCode" placeholder="例: A1B2C3D4E5" maxlength="20">
+                            <div class="form-text text-danger small"><strong>※ 特典申請があるため、発行したクーポンコードを入力してください。</strong></div>
+                        </div>
+                    </div>
+
                     <div class="mb-3">
                         <label class="form-label fw-bold">送信メッセージ（編集可能）:</label>
                         <textarea class="form-control" id="previewMessage" rows="10" style="background-color: #fff; font-family: monospace;"></textarea>
@@ -400,6 +411,10 @@ try {
 
             const deliveryCompany = document.getElementById('deliveryCompany');
             const trackingNumber = document.getElementById('trackingNumber');
+            
+            // クーポン関連
+            const couponInputContainer = document.getElementById('couponInputContainer');
+            const couponCodeInput = document.getElementById('couponCode');
 
             // プレビュー更新関数
             async function updatePreview() {
@@ -408,6 +423,7 @@ try {
                 const templateId = templateSelect.value;
                 const deliveryId = deliveryCompany.value;
                 const trackingNum = trackingNumber.value;
+                const couponCode = couponCodeInput.value.trim(); // 追加
 
                 previewMessage.disabled = true;
                 previewMessage.value = "再読み込み中...";
@@ -419,10 +435,11 @@ try {
                         body: JSON.stringify({ 
                             order_id: currentApproveConfig.orderId, 
                             cast_id: currentApproveConfig.castId, 
-                            shop_id: currentApproveConfig.shopId, // 追加
+                            shop_id: currentApproveConfig.shopId,
                             template_id: templateId, 
-                            delivery_company_id: deliveryId, // 追加
-                            tracking_number: trackingNum, // 追加
+                            delivery_company_id: deliveryId,
+                            tracking_number: trackingNum,
+                            coupon_code: couponCode, // 追加
                             preview: true 
                         })
                     });
@@ -443,6 +460,7 @@ try {
             templateSelect.addEventListener('change', updatePreview);
             deliveryCompany.addEventListener('change', updatePreview);
             trackingNumber.addEventListener('change', updatePreview); // 変更確定時
+            couponCodeInput.addEventListener('change', updatePreview); // クーポン変更時
 
             // イベントデリゲーション：お客様名クリック
             document.body.addEventListener('click', async function(e) {
@@ -522,6 +540,7 @@ try {
                     const castId = btn.dataset.castId;
                     const shopId = btn.dataset.shopId; // 追加
                     const itemId = btn.dataset.itemId; // 追加
+                    const hasRewards = btn.dataset.hasRewards === '1'; // 追加: 特典有無
                     const originalText = btn.innerHTML;
                     
                     btn.disabled = true;
@@ -532,6 +551,15 @@ try {
                     deliveryCompany.value = ""; // リセット
                     trackingNumber.value = ""; // リセット
                     document.getElementById('deliveryTypeDisplay').classList.add('d-none'); // バッジ非表示リセット
+
+                    // クーポン入力欄の制御
+                    couponCodeInput.value = ""; // リセット
+                    if (hasRewards) {
+                        couponInputContainer.classList.remove('d-none');
+                        couponInputContainer.scrollIntoView({ behavior: 'smooth', block: 'center' }); // 目立たせる
+                    } else {
+                        couponInputContainer.classList.add('d-none');
+                    }
 
                     try {
                         // Step 1: プレビュー取得 (初期状態)
@@ -591,7 +619,7 @@ try {
                             }
                             
                             // 本送信用データを一時保存
-                            currentApproveConfig = { orderId, castId, shopId, itemId };
+                            currentApproveConfig = { orderId, castId, shopId, itemId, hasRewards };
                             
                             confirmModal.show();
                             
@@ -612,6 +640,16 @@ try {
             btnConfirmSend.addEventListener('click', async function() {
                 if (!currentApproveConfig) return;
                 
+                // バリデーション: 特典ありの場合、クーポンコード必須
+                if (currentApproveConfig.hasRewards) {
+                    const code = couponCodeInput.value.trim();
+                    if (!code) {
+                        alert('【必須】クーポンコードを入力してください。\n特典申請が含まれている注文です。');
+                        couponCodeInput.focus();
+                        return;
+                    }
+                }
+                
                 this.disabled = true;
                 this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> 送信中...';
                 
@@ -627,6 +665,7 @@ try {
                             template_id: templateSelect.value, 
                             delivery_company_id: deliveryCompany.value, // 追加
                             tracking_number: trackingNumber.value, // 追加
+                            coupon_code: couponCodeInput.value.trim(), // 追加
                             custom_message: document.getElementById('previewMessage').value 
                         }) 
                     });

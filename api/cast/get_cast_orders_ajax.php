@@ -183,7 +183,8 @@ try {
                                         data-order-id="<?= $order['base_order_id'] ?>"
                                         data-item-id="<?= $order['id'] ?>"
                                         data-cast-id="<?= $cast_id ?>"
-                                        data-shop-id="<?= $order['shop_id'] ?>">
+                                        data-shop-id="<?= $order['shop_id'] ?>"
+                                        data-has-rewards="<?= !empty($rewards) ? '1' : '0' ?>">
                                     <i class="fas fa-check"></i> 承認
                                 </button>
                                 <button class="btn btn-outline-danger btn-sm btn-reject" 
