@@ -523,11 +523,17 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 </div>
             </div>
             <div class="modal-body">
-                <div id="editControls" class="edit-controls" style="display:none;">
-                    <button onclick="addNewSheet()" style="background:#555; color:white; border:none; padding:5px 10px; border-radius:4px;">
-                        <i class="fas fa-plus"></i> 席を追加
+                <div id="editControls" class="edit-controls" style="display:none; gap:10px; align-items:center;">
+                    <button onclick="addNewSheet('rect')" style="background:#555; color:white; border:none; padding:5px 10px; border-radius:4px;">
+                        <i class="fas fa-square"></i> テーブル追加
                     </button>
-                    <span style="font-size:0.8rem; color:#aaa; margin-left:10px;">※ドラッグして移動できます</span>
+                    <button onclick="addNewSheet('circle')" style="background:#555; color:white; border:none; padding:5px 10px; border-radius:4px;">
+                        <i class="fas fa-circle"></i> カウンター追加
+                    </button>
+                    <button id="toggleShapeBtn" onclick="toggleSeatShape()" style="background:#555; color:white; border:none; padding:5px 10px; border-radius:4px; display:none;">
+                        <i class="fas fa-sync-alt"></i> 形状変更
+                    </button>
+                    <span style="font-size:0.8rem; color:#aaa;">※ドラッグ移動 / 選択して形状変更</span>
                 </div>
                 <div id="seatMapContainer">
                     <!-- Seats generated here -->
@@ -649,6 +655,32 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         }
     
         // --- Sheet Map Logic ---
+        function toggleSeatShape() {
+            if(!selectedSheetId) return;
+            const sheet = sheets.find(s => s.sheet_id == selectedSheetId);
+            if(!sheet) return;
+            
+            // Toggle type
+            sheet.type = (sheet.type === 'circle') ? 'rect' : 'circle';
+            
+            // Re-render
+            renderSheets();
+            
+            // Re-select logic visual
+            selectSheet(sheet.sheet_id, sheet.sheet_name);
+            
+            // Auto-save changes
+            saveLayout();
+            
+            // Ensure editable
+            if(isEditMode) {
+                const el = document.querySelector(`.seat-obj[data-id="${sheet.sheet_id}"]`);
+                if(el){
+                    el.classList.add('editable');
+                    // Re-attach events (renderSheets clears them but handleSeatInteraction handles correct mode)
+                }
+            }
+        }
         function openSheetModal() {
             document.getElementById('sheetModal').style.display = 'flex';
             renderSheets();
@@ -755,7 +787,8 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 y: s.y_pos,
                 w: s.width,
                 h: s.height,
-                name: s.sheet_name
+                name: s.sheet_name,
+                type: s.type || 'rect'
             }));
     
             fetch('api/cast/update_sheet_layout.php', {
@@ -769,19 +802,20 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             });
         }
     
-        function addNewSheet() {
+        function addNewSheet(type = 'rect') {
             if (!shopId) {
                 alert('Shop ID not found. Cannot add seat.');
                 return;
             }
-            console.log('Adding seat for shop:', shopId);
+            console.log('Adding seat for shop:', shopId, 'Type:', type);
             fetch('api/cast/add_sheet.php', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     shop_id: shopId,
                     name: 'New Seat',
-                    x: 40, y: 40, w: 15, h: 10
+                    x: 40, y: 40, w: 15, h: 10,
+                    type: type
                 })
             })
             .then(res => res.json())

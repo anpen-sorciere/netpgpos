@@ -21,7 +21,7 @@ try {
     $pdo = connect();
     $pdo->beginTransaction();
 
-    $stmt = $pdo->prepare("UPDATE sheet_mst SET x_pos = :x, y_pos = :y, width = :w, height = :h, sheet_name = :name WHERE sheet_id = :id");
+    $stmt = $pdo->prepare("UPDATE sheet_mst SET x_pos = :x, y_pos = :y, width = :w, height = :h, sheet_name = :name, type = :type WHERE sheet_id = :id");
 
     foreach ($input['updates'] as $update) {
         $stmt->execute([
@@ -30,6 +30,7 @@ try {
             ':w' => $update['w'],
             ':h' => $update['h'],
             ':name' => $update['name'],
+            ':type' => $update['type'] ?? 'rect',
             ':id' => $update['id']
         ]);
     }
