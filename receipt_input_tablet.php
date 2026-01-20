@@ -838,23 +838,20 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             // Default dimensions
             let initW = 10; 
             let initH = 10;
-            let dbType = 'rect'; // DB only knows rect or circle in column comment, but we use string. 
-                                 // Let's store 'rect' or 'circle' mostly, but we can store 'rect' for both.
-                                 // Actually, let's keep it simple: DB column `type` is varchar(20). 
-                                 // 'rect' for tables, 'circle' for round. 
-                                 
-            // Adjust size based on request
+            let dbType = 'rect'; 
+
+            // Adjust size based on request (Targeting ~1024x500 canvas)
             if (type === 'rect_landscape') {
-                initW = 15; // wide
-                initH = 8;
+                initW = 12; // ~120px
+                initH = 16; // ~80px
                 dbType = 'rect';
             } else if (type === 'rect_portrait') {
-                initW = 8;
-                initH = 15; // tall
+                initW = 8;  // ~80px
+                initH = 24; // ~120px
                 dbType = 'rect';
             } else if (type === 'circle') {
-                initW = 8;
-                initH = 16; // ~ square aspect for circle
+                initW = 4;  // ~40px
+                initH = 8;  // ~40px
                 dbType = 'circle';
             }
             
