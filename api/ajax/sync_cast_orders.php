@@ -102,14 +102,23 @@ try {
             // ここではシンプルに、BASEの order_status が 'dispatched' や 'cancelled' になっているのに
             // ローカルが 'ordered'/'unpaid'/'対応中' のままなら更新する、というロジックにする。
             
+            // デバッグログ出力
+            $log_msg = date('Y-m-d H:i:s') . " [Debug] OrderID: {$order_id} (Shop:{$shop_id}) | Local: {$current_status} | API: {$api_status}\n";
+            file_put_contents(__DIR__ . '/debug_sync.txt', $log_msg, FILE_APPEND);
+
             if ($api_status !== $current_status) {
                 // 特に dispatched や cancelled への変化を取り込む
+                // 厳密なチェック: APIが dispatched/cancelled ならローカルもそれに合わせる
                 if ($api_status === 'dispatched' || $api_status === 'cancelled') {
                     $upd = $pdo->prepare("UPDATE base_orders SET status = :status, updated_at = NOW() WHERE base_order_id = :id");
                     $upd->execute([':status' => $api_status, ':id' => $order_id]);
                     $updated_count++;
+                    file_put_contents(__DIR__ . '/debug_sync.txt', " -> Updated to {$api_status}\n", FILE_APPEND);
+                } else {
+                    file_put_contents(__DIR__ . '/debug_sync.txt', " -> Status mismatch but target status is not final (ignored)\n", FILE_APPEND);
                 }
-                // もしBASEが ordered で ローカルが unpaid の場合など細かい差異は一旦無視する（運用上影響小）
+            } else {
+                file_put_contents(__DIR__ . '/debug_sync.txt', " -> Status matched (no change)\n", FILE_APPEND);
             }
 
         } catch (Exception $e) {
