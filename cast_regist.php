@@ -392,6 +392,22 @@ if ($search_query !== '') {
                             <?php endif; ?>
                         </td>
                     </tr>
+                    <tr>
+                        <th><label for="social_x"><i class="fab fa-twitter"></i> X(Twitter) ID</label></th>
+                        <td>
+                            @<input id="social_x" type="text" name="social_x" value="<?= htmlspecialchars($post['social_x'] ?? '') ?>" autocomplete="off" style="width: 80%;" placeholder="user_id">
+                        </td>
+                        <th><label for="social_instagram"><i class="fab fa-instagram"></i> Instagram ID</label></th>
+                        <td>
+                            @<input id="social_instagram" type="text" name="social_instagram" value="<?= htmlspecialchars($post['social_instagram'] ?? '') ?>" autocomplete="off" style="width: 80%;" placeholder="user_id">
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><label for="social_tiktok"><i class="fab fa-tiktok"></i> TikTok ID</label></th>
+                        <td colspan="3">
+                            @<input id="social_tiktok" type="text" name="social_tiktok" value="<?= htmlspecialchars($post['social_tiktok'] ?? '') ?>" autocomplete="off" style="width: 30%;" placeholder="user_id">
+                        </td>
+                    </tr>
                 </tbody>
             </table>
             <div class="control-group">

@@ -38,28 +38,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'UPDATE cast_mst SET
                     cast_name = ?, cast_yomi = ?, real_name = ?, yomigana = ?, birthday = ?, address = ?,
                     station = ?, tel1 = ?, tel2 = ?, tc = ?, joinday = ?, dropday = ?,
-                    cast_type = ?, drop_flg = ?
+                    cast_type = ?, drop_flg = ?,
+                    social_x = ?, social_instagram = ?, social_tiktok = ?
                 WHERE cast_id = ?'
             );
             $stmt->execute([
                 $post['cast_name'], $post['cast_yomi'], $post['real_name'], $post['yomigana'],
                 $post['birthday'], $post['address'], $post['station'], $post['tel1'],
                 $post['tel2'], $post['tc'], $post['joinday'], $post['dropday'],
-                $post['cast_type'], $post['drop_flg'], $post['cast_id']
+                $post['cast_type'], $post['drop_flg'],
+                $post['social_x'] ?? null, $post['social_instagram'] ?? null, $post['social_tiktok'] ?? null,
+                $post['cast_id']
             ]);
         } else {
             // 新規登録処理
             $stmt = $db->prepare(
                 'INSERT INTO cast_mst (
                     cast_name, cast_yomi, real_name, yomigana, birthday, address, station,
-                    tel1, tel2, tc, joinday, dropday, cast_type, drop_flg
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                    tel1, tel2, tc, joinday, dropday, cast_type, drop_flg,
+                    social_x, social_instagram, social_tiktok
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
             );
             $stmt->execute([
                 $post['cast_name'], $post['cast_yomi'], $post['real_name'], $post['yomigana'],
                 $post['birthday'], $post['address'], $post['station'], $post['tel1'],
                 $post['tel2'], $post['tc'], $post['joinday'], $post['dropday'],
-                $post['cast_type'], $post['drop_flg']
+                $post['cast_type'], $post['drop_flg'],
+                $post['social_x'] ?? null, $post['social_instagram'] ?? null, $post['social_tiktok'] ?? null
             ]);
         }
 
@@ -240,6 +245,18 @@ $post = $_SESSION['cast_regist'];
                     <tr>
                         <th>在籍状況</th>
                         <td><?= ($post['drop_flg'] == 1) ? '退職済' : '在籍' ?></td>
+                    </tr>
+                    <tr>
+                        <th>X(Twitter) ID</th>
+                        <td><?= htmlspecialchars($post['social_x'] ?? '') ?></td>
+                    </tr>
+                    <tr>
+                        <th>Instagram ID</th>
+                        <td><?= htmlspecialchars($post['social_instagram'] ?? '') ?></td>
+                    </tr>
+                    <tr>
+                        <th>TikTok ID</th>
+                        <td><?= htmlspecialchars($post['social_tiktok'] ?? '') ?></td>
                     </tr>
                 </tbody>
             </table>
