@@ -67,9 +67,9 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
     // データ取得
     $casts = cast_get_all($pdo);
     $items = item_get_all($pdo);
+    $shop_info = get_shop_info($utype);
     $sheets = get_sheet_layout($pdo, $shop_info['id']); // 座席取得
     $payments = payment_get_all($pdo);
-    $shop_info = get_shop_info($utype);
 
     // カテゴリ分類
     $items_by_category = [];
