@@ -119,7 +119,11 @@ try {
                                     <br><span class="badge bg-info text-dark mt-1"><?= htmlspecialchars($order['template_abbreviation']) ?></span>
                                 <?php endif; ?>
                             <?php else: ?>
-                                <span class="badge bg-danger">キャスト未対応</span>
+                                <?php if ($order['status'] === 'unpaid'): ?>
+                                    <span class="badge bg-secondary">未入金</span>
+                                <?php else: ?>
+                                    <span class="badge bg-danger">キャスト未対応</span>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </td>
                         <td class="<?= $date_class ?>">
@@ -154,7 +158,11 @@ try {
                                     <i class="fas fa-undo"></i> 差戻し
                                 </button>
                             <?php else: ?>
-                                <span class="text-muted small">対応待ち</span>
+                                <?php if ($order['status'] === 'unpaid'): ?>
+                                    <span class="badge bg-secondary">入金待ち</span>
+                                <?php else: ?>
+                                    <span class="text-muted small">対応待ち</span>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </td>
                     </tr>
