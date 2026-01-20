@@ -624,12 +624,42 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         let sheets = <?= json_encode($sheets) ?>;
         let isEditMode = false;
         const shopId = <?= $shop_info['id'] ?>;
+        
+        // Real-time State
+        let activeSessions = {}; // sheet_id -> session object
+        let workingSessionId = 0; // If set, we are ordering for this session
     
         // --- Init ---
         // Auto open sheet modal if not selected
         window.addEventListener('load', () => {
-             // renderSheets check is done inside openSheetModal
+             fetchSeatStatus();
+             // Polling every 30s
+             setInterval(fetchSeatStatus, 30000);
         });
+
+        function fetchSeatStatus() {
+            if(!shopId) return;
+            fetch('api/cast/seat_operation.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'get_status', shop_id: shopId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    activeSessions = {};
+                    if(data.sessions) {
+                        data.sessions.forEach(s => {
+                            activeSessions[s.sheet_id] = s;
+                        });
+                    }
+                    if(document.getElementById('sheetModal').style.display === 'flex') {
+                        renderSheets();
+                    }
+                }
+            })
+            .catch(e => console.error('Status poll error', e));
+        }
     
         // --- Cart Logic ---
         function addToCart(id, name, price, backPrice) {
