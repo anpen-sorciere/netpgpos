@@ -268,8 +268,8 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 justify-content: space-between;
                 align-items: center;
             }
-            .cart-item-name { font-weight: bold; font-size: 1rem; }
-            .cart-item-price { color: #ccc; font-size: 0.9rem; }
+            .cart-item-name { font-weight: bold; font-size: 1rem; color: #333; }
+            .cart-item-price { color: #666; font-size: 0.9rem; }
             .cart-controls {
                 display: flex;
                 gap: 10px;
@@ -280,47 +280,63 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             .qty-ctrl {
                 display: flex;
                 align-items: center;
-                background: #222;
+                background: #eee;
                 border-radius: 20px;
                 padding: 2px;
+                border: 1px solid #ddd;
             }
             .qty-btn {
                 width: 32px; height: 32px;
                 border-radius: 50%;
                 border: none;
-                background: #555;
-                color: white;
+                background: #fff;
+                color: #333;
                 font-size: 1.2rem;
                 cursor: pointer;
                 display: flex; justify-content: center; align-items: center;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.1);
             }
-            .qty-val { width: 40px; text-align: center; font-weight: bold; }
+            .qty-val { width: 40px; text-align: center; font-weight: bold; color: #333; }
             .cast-select-btn {
-                background: #444; border: 1px solid #555;
-                color: #ddd; padding: 5px 10px;
+                background: #fff; border: 1px solid #ccc;
+                color: #555; padding: 5px 10px;
                 border-radius: 4px; cursor: pointer;
                 font-size: 0.85rem;
                 flex: 1; text-align: center;
                 white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
             }
-            .cast-select-btn.selected { background: #2c3e50; border-color: var(--accent-color); color: var(--accent-color); }
+            .cast-select-btn.selected { background: #e8f4fc; border-color: var(--accent-color); color: var(--accent-color); }
     
             /* Cart Footer */
             .cart-footer {
                 padding: 20px;
-                background: #222;
+                background: #f8f9fa;
                 border-top: 1px solid var(--border-color);
             }
             .total-display {
-                display: flex; justify-content: space-between;
-                font-size: 1.5rem; font-weight: bold;
-                margin-bottom: 15px;
+                display: flex; justify-content: space-between; align-items: center;
+                margin-bottom: 15px; color: #333;
             }
+            .total-label { font-size: 1.2rem; font-weight: bold; color: #555; }
+            .total-price { font-size: 1.5rem; font-weight: bold; color: var(--accent-color); }
             .checkout-btn {
-                width: 100%;
-                padding: 15px;
+                width: 100%; border: none; padding: 15px;
                 background: var(--confirm-color);
                 color: white;
+                font-size: 1.2rem; font-weight: bold; border-radius: 8px;
+                cursor: pointer; transition: 0.2s;
+                box-shadow: 0 4px 6px rgba(46, 204, 113, 0.3);
+            }
+            .checkout-btn:active { transform: translateY(2px); box-shadow: none; }
+            
+            /* Input Visibility Fixes */
+            input[type="date"], input[type="time"], select.form-control {
+                background-color: #fff;
+                color: #333;
+                border: 1px solid #ccc;
+                padding: 5px;
+                border-radius: 4px;
+            }
                 border: none;
                 border-radius: 8px;
                 font-size: 1.2rem;
