@@ -1,6 +1,8 @@
 <?php
-require_once __DIR__ . '/../../common/config.php';
-require_once __DIR__ . '/../../common/dbconnect.php';
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
+require_once __DIR__ . '/../../../common/dbconnect.php';
 
 $order_id = $_GET['order_id'] ?? '';
 
@@ -10,12 +12,11 @@ if (!$order_id) {
 }
 
 try {
-    $pdo = new PDO(
-        "mysql:host={$host};dbname={$dbname};charset=utf8mb4",
-        $user,
-        $password,
-        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-    );
+    $pdo = connect();
+    if (!$pdo) {
+        echo "Database connection failed.";
+        exit;
+    }
 
     echo "<h1>Order Debug: " . htmlspecialchars($order_id) . "</h1>";
 
@@ -55,7 +56,7 @@ try {
         echo "<tr>";
         echo "<td>" . htmlspecialchars($item['base_order_item_id']) . " (" . $item['id'] . ")</td>";
         echo "<td>" . htmlspecialchars($item['product_name']) . "</td>";
-        echo "<td>" . htmlspecialchars($item['cast_id']) . "</td>";
+        echo "<td>" . htmlspecialchars($item['cast_id'] ?? 'NULL') . "</td>";
         echo "<td>" . htmlspecialchars($item['cast_handled'] ?? 'NULL') . "</td>";
         echo "<td>" . htmlspecialchars($item['item_surprise_date'] ?? 'NULL') . "</td>";
         echo "<td>" . htmlspecialchars($item['shipping_method'] ?? 'NULL') . "</td>";
