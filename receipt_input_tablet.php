@@ -568,7 +568,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
     <div class="modal-overlay" id="sheetModal">
         <div class="modal-content" style="max-width:900px;">
             <div class="modal-header">
-                <span>Select Seat / Layout</span>
+                <span>Select Seat / Layout <span id="selectedSheetName" style="font-size:0.9rem; color:#666; margin-left:10px;">(未選択)</span></span>
                 <div style="display:flex; align-items:center; gap:10px;">
                     <label style="font-size:0.9rem;">
                         <input type="checkbox" id="editModeToggle" onchange="toggleEditMode()"> レイアウト編集
@@ -788,6 +788,10 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             // Update State
             selectedSheetId = id;
             
+             // Fixed: Update label if exists
+            const label = document.getElementById('selectedSheetName');
+            if(label) label.innerText = name ? name : '(未選択)';
+
             // Visual Update in DOM
             document.querySelectorAll('.seat-obj').forEach(el => {
                 if(el.dataset.id == id) el.classList.add('selected');
