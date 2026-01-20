@@ -452,6 +452,7 @@ try {
                     const orderId = btn.dataset.orderId;
                     const castId = btn.dataset.castId;
                     const shopId = btn.dataset.shopId; // 追加
+                    const itemId = btn.dataset.itemId; // 追加
                     const originalText = btn.innerHTML;
                     
                     btn.disabled = true;
