@@ -12,7 +12,7 @@ require_once(__DIR__ . '/../common/functions.php');
 session_start();
 
 // セッションにデータがなければ、強制的に入力画面へ戻す
-if (!isset($_SESSION['join'])) {
+if (!isset($_SESSION['cast_regist'])) {
     header('Location: cast_regist.php');
     exit();
 }
@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db = connect();
 
         // セッションからデータ取得
-        $post = $_SESSION['join'];
+        $post = $_SESSION['cast_regist'];
 
         // cast_idがある場合は更新、ない場合は新規登録
         if (isset($post['cast_id']) && $post['cast_id'] !== '') {
@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $db = null;
         // セッションデータをクリアして登録完了画面へ
-        unset($_SESSION['join']);
+        unset($_SESSION['cast_regist']);
         header('Location: cast_regist.php?status=success');
         exit();
     } catch (PDOException $e) {
@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // フォームの入力値を取得
-$post = $_SESSION['join'];
+$post = $_SESSION['cast_regist'];
 ?>
 <!DOCTYPE html>
 <html lang="ja">

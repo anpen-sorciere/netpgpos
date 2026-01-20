@@ -30,11 +30,11 @@ $current_pay = 0;
 // POSTリクエストが送信された場合にのみデータを処理
 if (!empty($_POST) && isset($_POST['submit_action']) && $_POST['submit_action'] === 'save_data') {
     // フォームの内容をセッションで保存
-    $_SESSION['join'] = $_POST;
-    $cast_id = isset($_SESSION['join']['cast_id']) && $_SESSION['join']['cast_id'] !== '' ? (int)$_SESSION['join']['cast_id'] : 0;
-    $work_in_ymd = explode('-', $_SESSION['join']['in_ymd']);
+    $_SESSION['paytbl_input'] = $_POST;
+    $cast_id = isset($_SESSION['paytbl_input']['cast_id']) && $_SESSION['paytbl_input']['cast_id'] !== '' ? (int)$_SESSION['paytbl_input']['cast_id'] : 0;
+    $work_in_ymd = explode('-', $_SESSION['paytbl_input']['in_ymd']);
     $chk_month = $work_in_ymd[0] . $work_in_ymd[1];
-    $pay = isset($_SESSION['join']['pay']) && $_SESSION['join']['pay'] !== '' ? (int)str_replace(',', '', $_SESSION['join']['pay']) : 0;
+    $pay = isset($_SESSION['paytbl_input']['pay']) && $_SESSION['paytbl_input']['pay'] !== '' ? (int)str_replace(',', '', $_SESSION['paytbl_input']['pay']) : 0;
 
     try {
         // 金額が0より大きい場合のみ処理を実行
@@ -55,7 +55,7 @@ if (!empty($_POST) && isset($_POST['submit_action']) && $_POST['submit_action'] 
             }
             
             // 登録成功後、セッションにpayの値を保存（paytbl_result.phpで表示するため）
-            $_SESSION['join']['pay'] = $pay;
+            $_SESSION['paytbl_input']['pay'] = $pay;
         }
         
         // 処理成功後にリダイレクト
@@ -70,7 +70,7 @@ if (!empty($_POST) && isset($_POST['submit_action']) && $_POST['submit_action'] 
     // POSTリクエストがない場合（初回アクセスまたはGETリクエストの場合）
     // キャストや年月が変更された場合はセッションのpayをクリア
     if (isset($_GET['cast_id']) || isset($_GET['in_ymd'])) {
-        unset($_SESSION['join']['pay']);
+        unset($_SESSION['paytbl_input']['pay']);
     }
     
     // フォームの値がセットされていれば、その値で時給データを取得

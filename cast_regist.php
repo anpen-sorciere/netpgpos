@@ -21,7 +21,7 @@ $cast_types = [
 // POSTリクエストが送信された場合の処理
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // フォームの内容をセッションに保存
-    $_SESSION['join'] = $_POST;
+    $_SESSION['cast_regist'] = $_POST;
 
     // 入力情報の不備をチェック
     if ($_POST['cast_name'] == '') {
@@ -36,13 +36,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // 日付フォーマットの変換
     if (!empty($_POST['birthday'])) {
-        $_SESSION['join']['birthday'] = str_replace('-', '', $_POST['birthday']);
+        $_SESSION['cast_regist']['birthday'] = str_replace('-', '', $_POST['birthday']);
     }
     if (!empty($_POST['joinday'])) {
-        $_SESSION['join']['joinday'] = str_replace('-', '', $_POST['joinday']);
+        $_SESSION['cast_regist']['joinday'] = str_replace('-', '', $_POST['joinday']);
     }
     if (!empty($_POST['dropday'])) {
-        $_SESSION['join']['dropday'] = str_replace('-', '', $_POST['dropday']);
+        $_SESSION['cast_regist']['dropday'] = str_replace('-', '', $_POST['dropday']);
     }
 
     // エラーがなければ次のページへ
@@ -72,11 +72,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!empty($selected_cast['dropday'])) {
                 $selected_cast['dropday'] = substr($selected_cast['dropday'], 0, 4) . '-' . substr($selected_cast['dropday'], 4, 2) . '-' . substr($selected_cast['dropday'], 6, 2);
             }
-            $_SESSION['join'] = $selected_cast;
+            $_SESSION['cast_regist'] = $selected_cast;
         }
-    } else if (!isset($_SESSION['join'])) {
+    } else if (!isset($_SESSION['cast_regist'])) {
         // 新規登録の場合はセッションデータをクリア
-        unset($_SESSION['join']);
+        unset($_SESSION['cast_regist']);
     }
 }
 
@@ -89,7 +89,7 @@ $all_casts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $db = null;
 
 // フォームの入力値を保持
-$post = $_SESSION['join'] ?? [];
+$post = $_SESSION['cast_regist'] ?? [];
 $search_query = trim($_GET['search_query'] ?? '');
 $search_results = [];
 $show_search_modal = false;

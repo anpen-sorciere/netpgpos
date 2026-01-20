@@ -1,0 +1,16 @@
+DB Connection info:
+Host: localhost
+DB: sorciere_local
+Connected successfully.
+
+=== pay_tbl Schema ===
+CREATE TABLE `pay_tbl` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `cast_id` int(11) NOT NULL COMMENT 'キャストID',
+  `set_month` varchar(6) NOT NULL COMMENT '対象年月(YYYYMM)',
+  `pay` int(11) NOT NULL COMMENT '時間単価',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=447 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='時給テーブル'
+
+=== cast_mst Triggers ===
+No triggers found for cast_mst.
