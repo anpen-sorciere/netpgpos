@@ -21,8 +21,8 @@ class OrderSync {
 
         // base_orders アップサート文
         $stmtOrder = $pdo->prepare("
-            INSERT INTO base_orders (base_order_id, shop_id, order_date, customer_name, total_amount, status, is_surprise, surprise_date, payment_method, dispatch_status_detail, delivery_company_id, tracking_number, shipping_method, updated_at)
-            VALUES (:base_order_id, :shop_id, :order_date, :customer_name, :total_amount, :status, :is_surprise, :surprise_date, :payment_method, :dispatch_status_detail, :delivery_company_id, :tracking_number, :shipping_method, :updated_at)
+            INSERT INTO base_orders (base_order_id, shop_id, order_date, customer_name, total_amount, status, is_surprise, surprise_date, payment_method, dispatch_status_detail, delivery_company_id, tracking_number, shipping_method, membership_rewards, updated_at)
+            VALUES (:base_order_id, :shop_id, :order_date, :customer_name, :total_amount, :status, :is_surprise, :surprise_date, :payment_method, :dispatch_status_detail, :delivery_company_id, :tracking_number, :shipping_method, :membership_rewards, :updated_at)
             ON DUPLICATE KEY UPDATE
                 shop_id = VALUES(shop_id),
                 customer_name = VALUES(customer_name),
@@ -35,6 +35,7 @@ class OrderSync {
                 delivery_company_id = VALUES(delivery_company_id),
                 tracking_number = VALUES(tracking_number),
                 shipping_method = VALUES(shipping_method),
+                membership_rewards = VALUES(membership_rewards),
                 updated_at = VALUES(updated_at)
         ");
 
@@ -92,6 +93,12 @@ class OrderSync {
             $total_price = $order['total'] ?? 0;
             $payment_method = $order['payment'] ?? '';
             $dispatch_status = $order['dispatch_status'] ?? 'unknown';
+            
+            // 特典申請データ (membership_rewards)
+            $membership_rewards_json = null;
+            if (isset($order['membership_rewards']) && is_array($order['membership_rewards'])) {
+                $membership_rewards_json = json_encode($order['membership_rewards'], JSON_UNESCAPED_UNICODE);
+            }
 
             // サプライズ判定（オーダーレベル）
             $is_surprise = 0;
@@ -168,6 +175,7 @@ class OrderSync {
                     ':delivery_company_id' => $order['delivery_company_id'] ?? null,
                     ':tracking_number' => $order['tracking_number'] ?? null,
                     ':shipping_method' => $order['shipping_method'] ?? null,
+                    ':membership_rewards' => $membership_rewards_json, // 追加
                     ':updated_at' => $api_updated_at
                 ]);
                 $debug_log("Saved Order: {$order_id} (Shop: {$shop_id})");

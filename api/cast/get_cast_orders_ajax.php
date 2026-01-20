@@ -59,6 +59,7 @@ try {
             oi.cast_handled,
             oi.cast_handled_at,
             o.shop_id,
+            o.membership_rewards,
             t.template_abbreviation,
             t.template_name
         FROM base_orders o
@@ -99,7 +100,7 @@ try {
                     <th>注文日時</th>
                     <th>注文ID</th>
                     <th>お客様名</th>
-                    <th>商品</th>
+                    <th>商品・特典</th>
                     <th>アクション</th>
                 </tr>
             </thead>
@@ -109,6 +110,15 @@ try {
                         $is_delayed = (strtotime($order['order_date']) < strtotime('-3 days'));
                         $date_class = $is_delayed ? 'text-danger fw-bold' : '';
                         $is_handled = !empty($order['cast_handled']);
+                        
+                        // 特典情報デコード
+                        $rewards = [];
+                        if (!empty($order['membership_rewards'])) {
+                            $decoded = json_decode($order['membership_rewards'], true);
+                            if (is_array($decoded)) {
+                                $rewards = $decoded;
+                            }
+                        }
                     ?>
                     <tr class="<?= $is_handled ? 'table-warning' : '' ?>">
                         <td class="text-center">
@@ -142,9 +152,29 @@ try {
                             <?php endif; ?>
                         </td>
                         <td>
-                            <?= htmlspecialchars($order['product_name']) ?>
+                            <div><?= htmlspecialchars($order['product_name']) ?></div>
                             <?php if ($order['item_surprise_date']): ?>
-                                <br><span class="badge bg-warning text-dark">サプライズ: <?= $order['item_surprise_date'] ?></span>
+                                <span class="badge bg-warning text-dark mt-1">サプライズ: <?= $order['item_surprise_date'] ?></span><br>
+                            <?php endif; ?>
+
+                            <?php if (!empty($rewards)): ?>
+                                <div class="mt-2 pt-2 border-top">
+                                    <small class="fw-bold text-success"><i class="fas fa-gift"></i> 特典申請:</small>
+                                    <ul class="list-unstyled mb-0 small">
+                                    <?php foreach ($rewards as $reward): ?>
+                                        <li>
+                                            - <?= htmlspecialchars($reward['name'] ?? '不明') ?>
+                                            <?php 
+                                            $r_status = $reward['status'] ?? '';
+                                            $badge_cls = 'bg-secondary';
+                                            if ($r_status === 'dispatched') $badge_cls = 'bg-success';
+                                            if ($r_status === 'cancelled') $badge_cls = 'bg-danger';
+                                            ?>
+                                            <span class="badge <?= $badge_cls ?> badge-sm" style="font-size:0.7em;"><?= htmlspecialchars($r_status) ?></span>
+                                        </li>
+                                    <?php endforeach; ?>
+                                    </ul>
+                                </div>
                             <?php endif; ?>
                         </td>
                         <td class="text-center">
