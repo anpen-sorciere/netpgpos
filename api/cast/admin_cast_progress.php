@@ -444,6 +444,75 @@ try {
             deliveryCompany.addEventListener('change', updatePreview);
             trackingNumber.addEventListener('change', updatePreview); // 変更確定時
 
+            // イベントデリゲーション：お客様名クリック
+            document.body.addEventListener('click', async function(e) {
+                if (e.target && e.target.closest('.customer-info-trigger')) {
+                    const el = e.target.closest('.customer-info-trigger');
+                    const orderId = el.dataset.orderId;
+                    const shopId = el.dataset.shopId;
+                    
+                    // 簡易的なローディング表示（ポインターをwaitに）
+                    document.body.style.cursor = 'wait';
+
+                    try {
+                        const res = await fetch(`../../api/ajax/get_order_customer_info.php?order_id=${orderId}&shop_id=${shopId}`);
+                        const json = await res.json();
+
+                        if (json.success) {
+                            const d = json.data;
+                            const info = `
+                                <strong>氏名:</strong> ${d.last_name} ${d.first_name}<br>
+                                <strong>電話:</strong> ${d.tel}<br>
+                                <strong>Email:</strong> ${d.mail_address}<br>
+                                <hr class="my-2">
+                                <strong>郵便番号:</strong> ${d.zip_code}<br>
+                                <strong>住所:</strong> ${d.prefecture} ${d.address} ${d.address2}<br>
+                                <hr class="my-2">
+                                <strong>備考:</strong> ${d.remark || 'なし'}
+                            `;
+                            
+                            // 既存のモーダルに関係なく、情報を表示するための簡易モーダルを動的生成して表示
+                            // またはアラートよりリッチなBootstrap Modalを呼び出す
+                            showCustomerInfoModal(info);
+                        } else {
+                            alert('情報取得エラー: ' + json.error);
+                        }
+                    } catch (err) {
+                        alert('通信エラーが発生しました');
+                    } finally {
+                        document.body.style.cursor = 'default';
+                    }
+                }
+            });
+
+            function showCustomerInfoModal(htmlContent) {
+                let modalEl = document.getElementById('customerInfoModal');
+                if (!modalEl) {
+                    const div = document.createElement('div');
+                    div.innerHTML = `
+                        <div class="modal fade" id="customerInfoModal" tabindex="-1" style="z-index: 1060;"> <!-- z-index higher than detail modal -->
+                            <div class="modal-dialog modal-sm modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header py-2">
+                                        <h6 class="modal-title">お客様情報</h6>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body text-break bg-light" style="font-size:0.9rem;">
+                                        ${htmlContent}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(div);
+                    modalEl = document.getElementById('customerInfoModal');
+                } else {
+                    modalEl.querySelector('.modal-body').innerHTML = htmlContent;
+                }
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+
             // イベントデリゲーション：動的に生成される「承認」ボタンのクリックを監視
             document.body.addEventListener('click', async function(e) {
                 if (e.target && (e.target.classList.contains('btn-approve') || e.target.closest('.btn-approve'))) {

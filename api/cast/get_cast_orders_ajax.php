@@ -131,7 +131,12 @@ try {
                         </td>
                         <td><?= $order['base_order_id'] ?></td>
                         <td>
-                            <strong><?= htmlspecialchars($order['customer_name'] ?: '未設定') ?></strong>
+                            <strong class="customer-info-trigger text-primary text-decoration-underline" 
+                                    style="cursor:pointer;"
+                                    data-order-id="<?= $order['base_order_id'] ?>"
+                                    data-shop-id="<?= $order['shop_id'] ?>">
+                                <?= htmlspecialchars($order['customer_name'] ?: '未設定') ?>
+                            </strong>
                             <?php if (!empty($order['customer_name_from_option'])): ?>
                                 <br><small class="text-muted">(<?= htmlspecialchars($order['customer_name_from_option']) ?>)</small>
                             <?php endif; ?>
