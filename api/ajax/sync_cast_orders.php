@@ -32,10 +32,7 @@ try {
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
     );
 
-    // デバッグログ開始
-    $log_file = __DIR__ . '/debug_sync.txt';
-    $start_msg = "\n" . date('Y-m-d H:i:s') . " [Start] Sync requested for CastID: {$cast_id}\n";
-    file_put_contents($log_file, $start_msg, FILE_APPEND);
+
 
     // 対象の注文を取得（ordered, unpaidなど未完了のもの）
     // base_order_items に cast_id が含まれる base_order_id を抽出
@@ -51,7 +48,7 @@ try {
     $stmt->execute([':cast_id' => $cast_id]);
     $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    file_put_contents($log_file, " -> Found " . count($orders) . " orders to check.\n", FILE_APPEND);
+
 
     if (empty($orders)) {
         echo json_encode([
@@ -110,10 +107,6 @@ try {
             // ここではシンプルに、BASEの order_status が 'dispatched' や 'cancelled' になっているのに
             // ローカルが 'ordered'/'unpaid'/'対応中' のままなら更新する、というロジックにする。
             
-            // デバッグログ出力
-            $log_msg = date('Y-m-d H:i:s') . " [Debug] OrderID: {$order_id} (Shop:{$shop_id}) | Local: {$current_status} | API Status: {$api_status}\n";
-            file_put_contents(__DIR__ . '/debug_sync.txt', $log_msg, FILE_APPEND);
-
             if ($api_status !== $current_status) {
                 // 特に dispatched や cancelled への変化を取り込む
                 // 厳密なチェック: APIが dispatched/cancelled ならローカルもそれに合わせる
@@ -121,12 +114,7 @@ try {
                     $upd = $pdo->prepare("UPDATE base_orders SET status = :status, updated_at = NOW() WHERE base_order_id = :id");
                     $upd->execute([':status' => $api_status, ':id' => $order_id]);
                     $updated_count++;
-                    file_put_contents(__DIR__ . '/debug_sync.txt', " -> Updated to {$api_status}\n", FILE_APPEND);
-                } else {
-                    file_put_contents(__DIR__ . '/debug_sync.txt', " -> Status mismatch but target status is not final (ignored: {$api_status})\n", FILE_APPEND);
                 }
-            } else {
-                file_put_contents(__DIR__ . '/debug_sync.txt', " -> Status matched (no change)\n", FILE_APPEND);
             }
 
         } catch (Exception $e) {
