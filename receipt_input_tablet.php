@@ -831,6 +831,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             }
 
             sheets.forEach(sheet => {
+                try {
                 const el = document.createElement('div');
                 const session = activeSessions[sheet.sheet_id];
                 const isOccupied = !!session;
@@ -864,6 +865,9 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 el.onpointerdown = (e) => handleSeatInteraction(e, sheet, el);
                 
                 container.appendChild(el);
+                } catch(err) {
+                    console.error('Error rendering individual sheet:', sheet, err);
+                }
             });
         } catch(e) {
             console.error('Render Error:', e);
