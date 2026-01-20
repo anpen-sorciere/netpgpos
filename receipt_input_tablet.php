@@ -783,6 +783,32 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 }
             }
         }
+    
+        function selectSheet(id, name) {
+            // Update State
+            selectedSheetId = id;
+            
+            // Visual Update in DOM
+            document.querySelectorAll('.seat-obj').forEach(el => {
+                if(el.dataset.id == id) el.classList.add('selected');
+                else el.classList.remove('selected');
+            });
+            
+            // Edit Mode UI
+            if(isEditMode) {
+                 document.getElementById('editSheetName').value = name;
+                 document.getElementById('toggleShapeBtn').style.display = 'block';
+                 document.getElementById('deleteSheetBtn').style.display = 'block';
+                 // Show rename controls
+                 document.getElementById('renameControls').style.display = 'flex';
+            } else {
+                // If not in edit mode, usually we don't show these, but let's be safe
+                document.getElementById('toggleShapeBtn').style.display = 'none';
+                document.getElementById('deleteSheetBtn').style.display = 'none';
+                document.getElementById('renameControls').style.display = 'none';
+            }
+        }
+        
         function openSheetModal() {
             try {
                 document.getElementById('sheetModal').style.display = 'flex';
