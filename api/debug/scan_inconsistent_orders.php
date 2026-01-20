@@ -14,24 +14,26 @@ try {
     $pdo = connect();
     if (!$pdo) exit;
 
-    // 実行時間制限とメモリ制限を緩和
-    @set_time_limit(120);
-    @ini_set('memory_limit', '256M');
-
-    // 不整合データの検出（高速化版）
-    // ディスパッチ済みで、かつ未対応アイテムを含む行のみを抽出してグルーピング
+    // 不整合データの検出（厳密版）
+    // バグの症状：「一部のキャストが対応しただけで、全体が発送済みになってしまった」データのみを検出
+    // 条件:
+    // 1. ステータスが 'dispatched'
+    // 2. cast_handled > 0 の商品がある（誰かが対応した）
+    // 3. cast_handled = 0 (かつ cast_id > 0) の商品が残っている（まだ対応していないキャストがいる）
+    
     $sql = "
         SELECT 
             o.base_order_id, 
             o.order_date, 
             o.customer_name, 
             o.status,
-            COUNT(oi.id) as unhandled_count
+            SUM(CASE WHEN oi.cast_handled > 0 THEN 1 ELSE 0 END) as handled_count,
+            SUM(CASE WHEN (oi.cast_handled = 0 OR oi.cast_handled IS NULL) AND oi.cast_id > 0 THEN 1 ELSE 0 END) as unhandled_count
         FROM base_orders o
         INNER JOIN base_order_items oi ON o.base_order_id = oi.base_order_id
         WHERE o.status = 'dispatched'
-        AND (oi.cast_handled = 0 OR oi.cast_handled IS NULL)
         GROUP BY o.base_order_id
+        HAVING handled_count > 0 AND unhandled_count > 0
         ORDER BY o.order_date DESC
         LIMIT 100
     ";
@@ -55,7 +57,7 @@ try {
         }
 
         echo "<table border='1' cellpadding='5'>";
-        echo "<thead><tr><th>Order ID</th><th>Date</th><th>Customer</th><th>Unhandled Items</th><th>Status</th><th>Action</th></tr></thead>";
+        echo "<thead><tr><th>Order ID</th><th>Date</th><th>Customer</th><th>Handled</th><th>Unknown/Pending</th><th>Status</th><th>Action</th></tr></thead>";
 
         foreach ($inconsistent_orders as $order) {
             $action_result = "-";
@@ -71,7 +73,8 @@ try {
             echo "<td>" . htmlspecialchars($order['base_order_id']) . "</td>";
             echo "<td>" . htmlspecialchars($order['order_date']) . "</td>";
             echo "<td>" . htmlspecialchars($order['customer_name']) . "</td>";
-            echo "<td style='font-weight:bold; color:red;'>" . htmlspecialchars($order['unhandled_count']) . "</td>";
+            echo "<td>" . htmlspecialchars($order['handled_count']) . " OK</td>";
+            echo "<td style='font-weight:bold; color:red;'>" . htmlspecialchars($order['unhandled_count']) . " Pending</td>";
             echo "<td>" . htmlspecialchars($order['status']) . "</td>";
             echo "<td>" . $action_result . "</td>";
             echo "</tr>";
