@@ -180,7 +180,8 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 touch-action: none;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             }
-            .seat-obj.circle { border-radius: 50%; }
+            .seat-obj.circle { border-radius: 50%; z-index: 10; }
+            .seat-obj.rect { z-index: 5; }
             .seat-obj.selected { background: var(--accent-color); border-color: var(--accent-color); color: white; }
             .seat-obj:active { transform: scale(0.95); }
             
@@ -523,17 +524,24 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 </div>
             </div>
             <div class="modal-body">
-                <div id="editControls" class="edit-controls" style="display:none; gap:10px; align-items:center;">
-                    <button onclick="addNewSheet('rect')" style="background:#555; color:white; border:none; padding:5px 10px; border-radius:4px;">
-                        <i class="fas fa-square"></i> テーブル追加
+                <div id="editControls" class="edit-controls" style="display:none; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <button onclick="addNewSheet('circle')" style="background:#555; color:white; border:none; padding:5px 10px; border-radius:4px; font-weight:bold; border: 1px solid #aaa;">
+                        <i class="fas fa-circle"></i> 座席 (円)
                     </button>
-                    <button onclick="addNewSheet('circle')" style="background:#555; color:white; border:none; padding:5px 10px; border-radius:4px;">
-                        <i class="fas fa-circle"></i> カウンター追加
+                    <button onclick="addNewSheet('rect_landscape')" style="background:#444; color:#ccc; border:none; padding:5px 10px; border-radius:4px;">
+                        <i class="fas fa-square" style="transform: rotate(90deg);"></i> テーブル (横)
                     </button>
-                    <button id="toggleShapeBtn" onclick="toggleSeatShape()" style="background:#555; color:white; border:none; padding:5px 10px; border-radius:4px; display:none;">
+                    <button onclick="addNewSheet('rect_portrait')" style="background:#444; color:#ccc; border:none; padding:5px 10px; border-radius:4px;">
+                        <i class="fas fa-square"></i> テーブル (縦)
+                    </button>
+                    <button id="toggleShapeBtn" onclick="toggleSeatShape()" style="background:#777; color:white; border:none; padding:5px 10px; border-radius:4px; display:none;">
                         <i class="fas fa-sync-alt"></i> 形状変更
                     </button>
-                    <span style="font-size:0.8rem; color:#aaa;">※ドラッグ移動 / 選択して形状変更</span>
+                    <button id="deleteSheetBtn" onclick="deleteSheet()" style="background:#e74c3c; color:white; border:none; padding:5px 10px; border-radius:4px; display:none;">
+                        <i class="fas fa-trash"></i> 削除
+                    </button>
+                    
+                    <span style="font-size:0.8rem; color:#aaa; width:100%; margin-top:5px;">※テーブルの上に座席を配置できます</span>
                 </div>
                 <div id="seatMapContainer">
                     <!-- Seats generated here -->
@@ -726,7 +734,15 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             const target = document.querySelector(`.seat-obj[data-id="${id}"]`);
             if(target) target.classList.add('selected');
             
-            closeModal('sheetModal');
+            // Show edit buttons if in edit mode
+            if(isEditMode) {
+                document.getElementById('toggleShapeBtn').style.display = 'inline-block';
+                document.getElementById('deleteSheetBtn').style.display = 'inline-block';
+            } else {
+                document.getElementById('toggleShapeBtn').style.display = 'none';
+                document.getElementById('deleteSheetBtn').style.display = 'none';
+                closeModal('sheetModal');
+            }
         }
     
         // --- Edit Mode Logic ---
@@ -737,6 +753,16 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 if(isEditMode) el.classList.add('editable');
                 else el.classList.remove('editable');
             });
+            
+            // Hide selection buttons if exiting edit mode
+            if(!isEditMode) {
+                document.getElementById('toggleShapeBtn').style.display = 'none';
+                document.getElementById('deleteSheetBtn').style.display = 'none';
+            } else if(selectedSheetId) {
+                // Show if already selected
+                document.getElementById('toggleShapeBtn').style.display = 'inline-block';
+                document.getElementById('deleteSheetBtn').style.display = 'inline-block';
+            }
         }
     
         function startDrag(e, sheet, el) {
@@ -807,22 +833,33 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 alert('Shop ID not found. Cannot add seat.');
                 return;
             }
-            console.log('Adding seat for shop:', shopId, 'Type:', type);
+            // type can be 'rect_landscape', 'rect_portrait', 'circle'
             
-            // Default dimensions based on type (Approximation for tablet landscape)
-            // Container is 500px height. Screen width likely ~1024px.
-            // 10% height = 50px. 5% width = ~51px.
+            // Default dimensions
             let initW = 10; 
             let initH = 10;
-            
-            if (type === 'circle') {
-                initW = 6;  // ~60px
-                initH = 12; // ~60px
-            } else {
-                initW = 10; // ~100px
-                initH = 12; // ~60px
+            let dbType = 'rect'; // DB only knows rect or circle in column comment, but we use string. 
+                                 // Let's store 'rect' or 'circle' mostly, but we can store 'rect' for both.
+                                 // Actually, let's keep it simple: DB column `type` is varchar(20). 
+                                 // 'rect' for tables, 'circle' for round. 
+                                 
+            // Adjust size based on request
+            if (type === 'rect_landscape') {
+                initW = 15; // wide
+                initH = 8;
+                dbType = 'rect';
+            } else if (type === 'rect_portrait') {
+                initW = 8;
+                initH = 15; // tall
+                dbType = 'rect';
+            } else if (type === 'circle') {
+                initW = 8;
+                initH = 16; // ~ square aspect for circle
+                dbType = 'circle';
             }
             
+            console.log('Adding seat:', type, initW, initH);
+
             fetch('api/cast/add_sheet.php', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -832,7 +869,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                     x: 40, y: 40, 
                     w: initW, 
                     h: initH,
-                    type: type
+                    type: dbType
                 })
             })
             .then(res => res.json())
@@ -846,12 +883,22 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                         x_pos: 40, y_pos: 40, 
                         width: initW, 
                         height: initH,
-                        type: type
+                        type: dbType
                     };
                     sheets.push(newSheet);
                     renderSheets();
+                    
                     // Re-apply editable class
-                    if(isEditMode) toggleEditMode();
+                    if (isEditMode) {
+                        setTimeout(() => {
+                            const el = document.querySelector(`.seat-obj[data-id="${data.sheet_id}"]`);
+                            if(el) {
+                                el.classList.add('editable');
+                                el.onmousedown = (e) => startDrag(e, newSheet, el);
+                                el.ontouchstart = (e) => startDrag(e, newSheet, el);
+                            }
+                        }, 50);
+                    }
                 } else {
                     alert('Error adding sheet: ' + (data.message || 'Unknown error'));
                 }
@@ -859,6 +906,44 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             .catch(error => {
                 console.error('Error adding sheet:', error);
                 alert('Add Seat Failed: ' + error.message);
+            });
+        }
+
+        function deleteSheet() {
+            if(!selectedSheetId) return;
+            if(!confirm('選択した座席を削除しますか？')) return;
+
+            fetch('api/cast/delete_sheet.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    shop_id: shopId,
+                    sheet_id: selectedSheetId
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    // Remove locally
+                    sheets = sheets.filter(s => s.sheet_id != selectedSheetId);
+                    renderSheets();
+                    
+                    // Unselect
+                    selectedSheetId = 0;
+                    document.getElementById('selectedSheetName').innerText = '(未選択)';
+                    document.getElementById('input_sheet_no').value = '';
+                    
+                    // Hide buttons
+                    document.getElementById('toggleShapeBtn').style.display = 'none';
+                    document.getElementById('deleteSheetBtn').style.display = 'none';
+                    
+                } else {
+                    alert('削除に失敗しました: ' + (data.message || 'Unknown error'));
+                }
+            })
+            .catch(e => {
+                console.error(e);
+                alert('通信エラーが発生しました');
             });
         }
     
