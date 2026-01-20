@@ -104,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $_SESSION['superchat_message'] = $success_message;
                             $_SESSION['superchat_last_received_date'] = $received_date; // 受領日をセッションに保存
                             $_SESSION['superchat_from_self'] = true; // この画面内からの遷移であることを記録
-                            header('Location: superchat.php?utype=' . htmlspecialchars($utype) . '&year=' . $redirect_year . '&month=' . $redirect_month);
+                            header('Location: superchat.php?utype=' . htmlspecialchars($utype) . '&year=' . $redirect_year . '&month=' . $redirect_month . '&keep_date=1');
                             exit();
                         }
                     } catch (PDOException $e) {
@@ -148,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $_SESSION['superchat_message'] = $success_message;
                             $_SESSION['superchat_last_received_date'] = $received_date; // 受領日をセッションに保存
                             $_SESSION['superchat_from_self'] = true; // この画面内からの遷移であることを記録
-                            header('Location: superchat.php?utype=' . htmlspecialchars($utype) . '&year=' . $redirect_year . '&month=' . $redirect_month);
+                            header('Location: superchat.php?utype=' . htmlspecialchars($utype) . '&year=' . $redirect_year . '&month=' . $redirect_month . '&keep_date=1');
                             exit();
                         }
                     } catch (PDOException $e) {
@@ -213,7 +213,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $current_month = $_GET['month'] ?? date('m');
                         $_SESSION['superchat_message'] = $success_message;
                         $_SESSION['superchat_from_self'] = true; // この画面内からの遷移であることを記録
-                        header('Location: superchat.php?utype=' . htmlspecialchars($utype) . '&year=' . $current_year . '&month=' . $current_month);
+                        header('Location: superchat.php?utype=' . htmlspecialchars($utype) . '&year=' . $current_year . '&month=' . $current_month . '&keep_date=1');
                         exit();
                     } catch (PDOException $e) {
                         $error = "更新に失敗しました: " . $e->getMessage();
@@ -272,9 +272,9 @@ if (isset($_POST['received_date'])) {
 } elseif ($edit_data) {
     // 編集時は編集データの日付を使用
     $default_date = $edit_data['received_date'];
-} elseif (isset($_SESSION['superchat_last_received_date']) && isset($_SESSION['superchat_from_self'])) {
+} elseif (isset($_SESSION['superchat_last_received_date']) && isset($_SESSION['superchat_from_self']) && isset($_GET['keep_date'])) {
     // セッションに保存された受領日を使用（リダイレクト後も保持）
-    // ただし、この画面内からの遷移の場合のみ
+    // ただし、この画面内からの遷移（keep_dateパラメータあり）の場合のみ
     $default_date = $_SESSION['superchat_last_received_date'];
 } else {
     // 別画面から戻ってきた場合はセッションの受領日をクリア
@@ -560,6 +560,7 @@ if (isset($_POST['received_date'])) {
             <div class="month-selector">
                 <form method="GET" style="display: inline;">
                     <input type="hidden" name="utype" value="<?= htmlspecialchars($utype) ?>">
+                    <input type="hidden" name="keep_date" value="1">
                     <label for="year">年:</label>
                     <select name="year" id="year" onchange="this.form.submit()">
                         <?php for ($year = date('Y') - 2; $year <= date('Y') + 1; $year++): ?>
