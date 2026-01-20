@@ -14,23 +14,26 @@ try {
     $pdo = connect();
     if (!$pdo) exit;
 
-    // 不整合データの検出
-    // base_orders.status = 'dispatched' かつ
-    // base_order_items に cast_handled=0 または NULL が存在する
+    // 実行時間制限とメモリ制限を緩和
+    @set_time_limit(120);
+    @ini_set('memory_limit', '256M');
+
+    // 不整合データの検出（高速化版）
+    // ディスパッチ済みで、かつ未対応アイテムを含む行のみを抽出してグルーピング
     $sql = "
         SELECT 
             o.base_order_id, 
             o.order_date, 
             o.customer_name, 
             o.status,
-            COUNT(oi.id) as total_items,
-            SUM(CASE WHEN oi.cast_handled = 0 OR oi.cast_handled IS NULL THEN 1 ELSE 0 END) as unhandled_count
+            COUNT(oi.id) as unhandled_count
         FROM base_orders o
         INNER JOIN base_order_items oi ON o.base_order_id = oi.base_order_id
         WHERE o.status = 'dispatched'
+        AND (oi.cast_handled = 0 OR oi.cast_handled IS NULL)
         GROUP BY o.base_order_id
-        HAVING unhandled_count > 0
         ORDER BY o.order_date DESC
+        LIMIT 100
     ";
 
     $stmt = $pdo->query($sql);
@@ -52,7 +55,7 @@ try {
         }
 
         echo "<table border='1' cellpadding='5'>";
-        echo "<thead><tr><th>Order ID</th><th>Date</th><th>Customer</th><th>Total Items</th><th>Unhandled Items</th><th>Status</th><th>Action</th></tr></thead>";
+        echo "<thead><tr><th>Order ID</th><th>Date</th><th>Customer</th><th>Unhandled Items</th><th>Status</th><th>Action</th></tr></thead>";
 
         foreach ($inconsistent_orders as $order) {
             $action_result = "-";
@@ -68,7 +71,6 @@ try {
             echo "<td>" . htmlspecialchars($order['base_order_id']) . "</td>";
             echo "<td>" . htmlspecialchars($order['order_date']) . "</td>";
             echo "<td>" . htmlspecialchars($order['customer_name']) . "</td>";
-            echo "<td>" . htmlspecialchars($order['total_items']) . "</td>";
             echo "<td style='font-weight:bold; color:red;'>" . htmlspecialchars($order['unhandled_count']) . "</td>";
             echo "<td>" . htmlspecialchars($order['status']) . "</td>";
             echo "<td>" . $action_result . "</td>";
