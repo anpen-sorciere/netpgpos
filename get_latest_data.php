@@ -8,7 +8,8 @@ $pdo = connect();
 
 $data = [
     'items' => item_get_all($pdo),
-    'casts' => cast_get_all($pdo)
+    'casts' => cast_get_all($pdo),
+    'sheets' => get_sheet_layout($pdo, $_GET['utype'] ?? 0)
 ];
 
 echo json_encode($data);
