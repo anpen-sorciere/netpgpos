@@ -96,7 +96,8 @@ try {
             }
 
             $api_order = $detail['order'];
-            $api_status = $api_order['order_status']; // dispatched, ordered, cancelled, etc.
+            // statusは 'dispatch_status' を参照する（OrderSync.php準拠）
+            $api_status = $api_order['dispatch_status'] ?? $api_order['order_status'] ?? 'unknown';
             
             // ステータス不一致なら更新
             // BASE側のステータス定義: ordered, dispatched, cancelled, unpaid (入金待ち？要確認)
@@ -110,7 +111,7 @@ try {
             // ローカルが 'ordered'/'unpaid'/'対応中' のままなら更新する、というロジックにする。
             
             // デバッグログ出力
-            $log_msg = date('Y-m-d H:i:s') . " [Debug] OrderID: {$order_id} (Shop:{$shop_id}) | Local: {$current_status} | API: {$api_status}\n";
+            $log_msg = date('Y-m-d H:i:s') . " [Debug] OrderID: {$order_id} (Shop:{$shop_id}) | Local: {$current_status} | API Status: {$api_status}\n";
             file_put_contents(__DIR__ . '/debug_sync.txt', $log_msg, FILE_APPEND);
 
             if ($api_status !== $current_status) {
@@ -122,7 +123,7 @@ try {
                     $updated_count++;
                     file_put_contents(__DIR__ . '/debug_sync.txt', " -> Updated to {$api_status}\n", FILE_APPEND);
                 } else {
-                    file_put_contents(__DIR__ . '/debug_sync.txt', " -> Status mismatch but target status is not final (ignored)\n", FILE_APPEND);
+                    file_put_contents(__DIR__ . '/debug_sync.txt', " -> Status mismatch but target status is not final (ignored: {$api_status})\n", FILE_APPEND);
                 }
             } else {
                 file_put_contents(__DIR__ . '/debug_sync.txt', " -> Status matched (no change)\n", FILE_APPEND);
