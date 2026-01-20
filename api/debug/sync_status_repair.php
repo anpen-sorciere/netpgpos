@@ -64,8 +64,9 @@ try {
             $base_status = 'Fetch Error';
             $is_diff = false;
             $msg = '-';
+            $item_details = '';
 
-            if ($sync_mode) {
+            if ($sync_mode || true) { // Always fetch for preview
                 // APIリクエスト
                 try {
                     // APIレートリミットへの配慮（少しsleep）
@@ -75,18 +76,52 @@ try {
                     
                     if (isset($res['order']['dispatch_status'])) {
                         $base_status = $res['order']['dispatch_status'];
+                        $api_items = $res['order']['order_items'] ?? [];
                         
-                        // ステータス不一致なら更新
+                        // ステータス不一致なら更新 (Syncモード時)
                         if ($base_status !== $order['status']) {
                             $is_diff = true;
-                            
-                            $upd = $pdo->prepare("UPDATE base_orders SET status = ?, updated_at = NOW() WHERE base_order_id = ?");
-                            $upd->execute([$base_status, $oid]);
-                            
-                            $msg = "<span style='color:blue; font-weight:bold;'>Updated to {$base_status}</span>";
+                            if ($sync_mode) {
+                                $upd = $pdo->prepare("UPDATE base_orders SET status = ?, updated_at = NOW() WHERE base_order_id = ?");
+                                $upd->execute([$base_status, $oid]);
+                                $msg = "<span style='color:blue; font-weight:bold;'>Updated to {$base_status}</span>";
+                            } else {
+                                $msg = "<span style='color:orange;'>Will Update to {$base_status}</span>";
+                            }
                         } else {
                             $msg = "<span style='color:green;'>Match (No change)</span>";
                         }
+
+                        // アイテム詳細の比較生成
+                        $item_details .= "<table style='font-size:0.85em; width:100%; margin-top:5px; border-top:1px dashed #ccc;'>";
+                        $item_details .= "<tr style='background:#f9f9f9;'><th>Item</th><th>BASE Status</th><th>Local Handled</th></tr>";
+                        
+                        // DB上のアイテム取得
+                        $stmtItems = $pdo->prepare("SELECT * FROM base_order_items WHERE base_order_id = ?");
+                        $stmtItems->execute([$oid]);
+                        $db_items = $stmtItems->fetchAll(PDO::FETCH_ASSOC);
+
+                        foreach ($api_items as $a_item) {
+                            $a_status = $a_item['status'];
+                            $d_handled = '-';
+                            
+                            // マッチング
+                            foreach ($db_items as $d_item) {
+                                if ((isset($d_item['base_order_item_id']) && $d_item['base_order_item_id'] == $a_item['order_item_id'])
+                                    || ($d_item['product_id'] == $a_item['item_id'])) {
+                                    $d_handled = $d_item['cast_handled'];
+                                    break;
+                                }
+                            }
+
+                            $item_details .= "<tr>
+                                <td>" . htmlspecialchars($a_item['title']) . "</td>
+                                <td>{$a_status}</td>
+                                <td>" . ($d_handled > 0 ? 'Done' : 'Pending') . "</td>
+                            </tr>";
+                        }
+                        $item_details .= "</table>";
+
                     } else {
                         $msg = "<span style='color:red;'>API Error (No status)</span>";
                     }
@@ -94,17 +129,15 @@ try {
                 } catch (Exception $e) {
                     $msg = "<span style='color:red;'>API Error: " . $e->getMessage() . "</span>";
                 }
-            } else {
-                $msg = "Preview";
             }
 
             $bg = $is_diff ? '#fff3cd' : '#fff';
 
             echo "<tr style='background:{$bg}'>";
-            echo "<td>{$oid}</td>";
+            echo "<td>{$oid}<br>{$item_details}</td>";
             echo "<td>{$shop_id}</td>";
             echo "<td>{$order['status']}</td>";
-            echo "<td>" . ($sync_mode ? $base_status : 'Pending') . "</td>";
+            echo "<td>" . $base_status . "</td>";
             echo "<td>" . ($is_diff ? '<strong>YES</strong>' : '-') . "</td>";
             echo "<td>{$msg}</td>";
             echo "</tr>";
