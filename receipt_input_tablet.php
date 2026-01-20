@@ -458,16 +458,16 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         <div class="right-panel">
             <div class="cart-header">
                 <div>
-                    <label style="color:#aaa; font-size:0.8rem;">DATE</label><br>
-                    <input type="date" id="disp_receipt_day" value="<?= date('Y-m-d') ?>" class="header-input" style="width:130px; background:#222;">
+                    <label style="color:#555; font-size:0.8rem; font-weight:bold;">日付</label><br>
+                    <input type="date" id="disp_receipt_day" value="<?= date('Y-m-d') ?>" class="header-input" style="width:130px; background:#fff; color:#333; border:1px solid #ccc;">
                 </div>
                 <div>
-                    <label style="color:#aaa; font-size:0.8rem;">IN TIME</label><br>
-                    <input type="time" id="disp_in_time" value="<?= date('H:i') ?>" class="header-input" style="width:100px; background:#222;">
+                    <label style="color:#555; font-size:0.8rem; font-weight:bold;">入店時間</label><br>
+                    <input type="time" id="disp_in_time" value="<?= date('H:i') ?>" class="header-input" style="width:100px; background:#fff; color:#333; border:1px solid #ccc;">
                 </div>
             </div>
-            <div style="padding:10px; background:#333; border-bottom:1px solid #555;">
-                <select class="header-input" id="disp_p_type" style="width:100%;">
+            <div style="padding:10px; background:#f8f9fa; border-bottom:1px solid #ddd;">
+                <select class="header-input" id="disp_p_type" style="width:100%; background:#fff; color:#333; border:1px solid #ccc;">
                     <option value="">支払方法を選択...</option>
                     <?php foreach($payments as $p): ?>
                         <option value="<?= $p['payment_type'] ?>"><?= $p['payment_name'] ?></option>
