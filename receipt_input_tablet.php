@@ -92,14 +92,14 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
         <style>
             :root {
-                --bg-color: #1a1a1a;
-                --panel-bg: #2d2d2d;
-                --text-color: #e0e0e0;
+                --bg-color: #f4f7f6;
+                --panel-bg: #ffffff;
+                --text-color: #333333;
                 --accent-color: #3498db;
                 --confirm-color: #2ecc71;
                 --danger-color: #e74c3c;
                 --warning-color: #f39c12;
-                --border-color: #444;
+                --border-color: #e0e0e0;
             }
             * { box-sizing: border-box; touch-action: manipulation; }
             body {
@@ -136,17 +136,19 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
     
             /* Header */
             header {
-                background-color: #000;
+                background-color: #ffffff;
                 padding: 10px 20px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
                 height: 60px;
+                border-bottom: 1px solid var(--border-color);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             }
-            .shop-name { font-weight: bold; font-size: 1.2rem; margin-right: 20px; }
+            .shop-name { font-weight: bold; font-size: 1.2rem; margin-right: 20px; color: #333; }
             .header-controls { display: flex; gap: 15px; align-items: center; }
             .header-input {
-                background: #333; border: 1px solid #555; color: white;
+                background: #f9f9f9; border: 1px solid #ddd; color: #333;
                 padding: 5px 10px; border-radius: 4px; font-size: 1rem;
             }
             
@@ -155,17 +157,17 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 position: relative;
                 width: 100%;
                 height: 500px;
-                background: #222;
-                border: 2px solid #555;
+                background: #f0f0f0;
+                border: 2px solid #ccc;
                 margin-top: 10px;
                 overflow: hidden;
                 border-radius: 8px;
             }
             .seat-obj {
                 position: absolute;
-                background: #444;
-                border: 2px solid #666;
-                color: white;
+                background: #fff;
+                border: 2px solid #999;
+                color: #333;
                 display: flex;
                 justify-content: center;
                 align-items: center;
@@ -175,16 +177,17 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 user-select: none;
                 transition: transform 0.1s;
                 touch-action: none;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             }
             .seat-obj.circle { border-radius: 50%; }
-            .seat-obj.selected { background: var(--accent-color); border-color: #fff; }
+            .seat-obj.selected { background: var(--accent-color); border-color: var(--accent-color); color: white; }
             .seat-obj:active { transform: scale(0.95); }
             
             /* Edit Mode Styles */
-            .seat-obj.editable { cursor: move; border-style: dashed; border-color: var(--warning-color); }
+            .seat-obj.editable { cursor: move; border-style: dashed; border-color: var(--warning-color); background: #fffbe6; }
             .edit-controls {
                 display: flex; gap: 10px; margin-bottom: 10px;
-                padding: 10px; background: #333; border-radius: 4px;
+                padding: 10px; background: #f9f9f9; border-radius: 4px; border: 1px solid #ddd;
             }
     
             /* Category Tabs */
@@ -215,7 +218,8 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 align-content: start;
             }
             .item-card {
-                background: #3a3a3a;
+                background: #ffffff;
+                border: 1px solid var(--border-color);
                 border-radius: 8px;
                 padding: 15px;
                 display: flex;
@@ -226,15 +230,16 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 transition: 0.1s;
                 position: relative;
                 user-select: none;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             }
-            .item-card:active { transform: scale(0.95); background: #555; }
+            .item-card:active { transform: scale(0.95); background: #f0f0f0; }
             .item-name { font-weight: bold; font-size: 1rem; line-height: 1.3; overflow: hidden; }
             .item-price { color: var(--accent-color); font-size: 1.1rem; font-weight: bold; text-align: right; }
             
             /* Cart Area */
             .cart-header {
                 padding: 15px;
-                background: #252525;
+                background: #f8f9fa;
                 border-bottom: 1px solid var(--border-color);
                 display: flex;
                 justify-content: space-between;
@@ -244,9 +249,11 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 flex: 1;
                 overflow-y: auto;
                 padding: 10px;
+                background: #fff;
             }
             .cart-item {
-                background: #333;
+                background: #f9f9f9;
+                border: 1px solid #eee;
                 border-radius: 6px;
                 margin-bottom: 10px;
                 padding: 10px;
@@ -324,25 +331,27 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             /* Modal */
             .modal-overlay {
                 position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-                background: rgba(0,0,0,0.7);
+                background: rgba(0,0,0,0.5);
                 display: none; align-items: center; justify-content: center;
                 z-index: 1000;
+                backdrop-filter: blur(2px);
             }
             .modal-content {
-                background: #2d2d2d;
+                background: #ffffff;
                 width: 90%; max-width: 800px;
                 max-height: 90vh;
                 border-radius: 10px;
                 display: flex; flex-direction: column;
                 overflow: hidden;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
             }
             .modal-header {
-                padding: 15px; background: #222;
+                padding: 15px; background: #f8f9fa;
                 font-weight: bold; font-size: 1.2rem;
                 border-bottom: 1px solid var(--border-color);
                 display: flex; justify-content: space-between;
                 align-items: center;
+                color: #333;
             }
             .modal-body {
                 padding: 15px; overflow-y: auto;
@@ -353,12 +362,14 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 gap: 10px;
             }
             .cast-card {
-                background: #444; padding: 15px;
+                background: #f9f9f9; padding: 15px;
                 text-align: center; border-radius: 6px;
                 cursor: pointer;
+                border: 1px solid #eee;
+                color: #333;
             }
-            .cast-card:active { background: var(--accent-color); }
-            .cast-card.active { background: var(--accent-color); }
+            .cast-card:active { background: var(--accent-color); color: white; }
+            .cast-card.active { background: var(--accent-color); color: white; }
             .close-modal { cursor: pointer; font-size: 1.5rem; }
     
             /* Responsive */
