@@ -363,12 +363,17 @@ try {
         
         // 今回承認したアイテムかどうかチェック
         foreach ($items as $db_item) {
-            if (isset($db_item['product_id']) && $api_item['item_id'] == $db_item['product_id']) {
+            // base_order_item_id (APIのorder_item_id) で厳密に判定
+            if (isset($db_item['base_order_item_id']) && $api_item['order_item_id'] == $db_item['base_order_item_id']) {
                 $is_this_item_handled = true;
                 break;
             }
-            // product_idがない場合のproduct_name判定も必要なら追加するが、
-            // 前段のロジックでID特定できているはずなのでここでは省略
+            // フォールバック: base_order_item_idがない場合は product_id で判定（ただし重複のリスクあり）
+            // 新規データでは必ずIDがあるはずなので、else if等は使わず、IDがない場合のみこちらのリスクある判定を行う
+            if (empty($db_item['base_order_item_id']) && isset($db_item['product_id']) && $api_item['item_id'] == $db_item['product_id']) {
+                $is_this_item_handled = true;
+                break;
+            }
         }
 
         // 既にAPI上で発送済み/キャンセル済み、または今回承認したアイテムなら「対応完了」とみなす
