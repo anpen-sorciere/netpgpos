@@ -58,6 +58,7 @@ try {
             oi.price,
             oi.cast_handled,
             oi.cast_handled_at,
+            o.shop_id,
             t.template_abbreviation,
             t.template_name
         FROM base_orders o
@@ -142,7 +143,8 @@ try {
                                 <button class="btn btn-primary btn-sm btn-approve mb-1" 
                                         data-order-id="<?= $order['base_order_id'] ?>"
                                         data-item-id="<?= $order['id'] ?>"
-                                        data-cast-id="<?= $cast_id ?>">
+                                        data-cast-id="<?= $cast_id ?>"
+                                        data-shop-id="<?= $order['shop_id'] ?>">
                                     <i class="fas fa-check"></i> 承認
                                 </button>
                                 <button class="btn btn-outline-danger btn-sm btn-reject" 

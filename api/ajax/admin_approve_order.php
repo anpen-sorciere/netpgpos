@@ -23,7 +23,8 @@ try {
     $input = json_decode(file_get_contents('php://input'), true);
     $order_id = $input['order_id'] ?? null;
     $cast_id = $input['cast_id'] ?? null; // どのキャストの対応を承認するか
-    
+    $shop_id = $input['shop_id'] ?? 1; // shop_idを追加（デフォルト1、必須にすべきだが互換性維持）
+
     // 配送情報
     $delivery_company_id = $input['delivery_company_id'] ?? null;
     $tracking_number = $input['tracking_number'] ?? null;
@@ -65,8 +66,8 @@ try {
         throw new Exception('承認待ちの対象商品が見つかりません');
     }
 
-    // BASE API連携用マネージャー
-    $manager = new BasePracticalAutoManager();
+    // BASE API連携用マネージャー (shop_idを渡して初期化)
+    $manager = new BasePracticalAutoManager($shop_id);
     $auth_status = $manager->getAuthStatus();
     if (!isset($auth_status['write_orders']['authenticated']) || !$auth_status['write_orders']['authenticated']) {
         throw new Exception('BASE API認証が必要です（管理者側）');

@@ -419,6 +419,7 @@ try {
                         body: JSON.stringify({ 
                             order_id: currentApproveConfig.orderId, 
                             cast_id: currentApproveConfig.castId, 
+                            shop_id: currentApproveConfig.shopId, // 追加
                             template_id: templateId, 
                             delivery_company_id: deliveryId, // 追加
                             tracking_number: trackingNum, // 追加
@@ -450,6 +451,7 @@ try {
                     
                     const orderId = btn.dataset.orderId;
                     const castId = btn.dataset.castId;
+                    const shopId = btn.dataset.shopId; // 追加
                     const originalText = btn.innerHTML;
                     
                     btn.disabled = true;
@@ -469,7 +471,8 @@ try {
                             headers: {'Content-Type': 'application/json'},
                             body: JSON.stringify({ 
                                 order_id: orderId, 
-                                cast_id: castId, 
+                                cast_id: castId,
+                                shop_id: shopId, // 追加
                                 preview: true,
                                 init_fetch: true // ★配送情報を自動取得
                             })
@@ -517,7 +520,7 @@ try {
                             }
                             
                             // 本送信用データを一時保存
-                            currentApproveConfig = { orderId, castId };
+                            currentApproveConfig = { orderId, castId, shopId };
                             
                             confirmModal.show();
                             
@@ -548,6 +551,7 @@ try {
                         body: JSON.stringify({ 
                             order_id: currentApproveConfig.orderId, 
                             cast_id: currentApproveConfig.castId,
+                            shop_id: currentApproveConfig.shopId, // 追加
                             template_id: templateSelect.value, 
                             delivery_company_id: deliveryCompany.value, // 追加
                             tracking_number: trackingNumber.value, // 追加
