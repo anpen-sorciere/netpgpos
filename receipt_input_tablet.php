@@ -785,7 +785,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 // Show if already selected
                 document.getElementById('toggleShapeBtn').style.display = 'inline-block';
                 document.getElementById('deleteSheetBtn').style.display = 'inline-block';
-        // ... end of toggleEditMode()
+            }
         }
     
         function resetLayout() {
