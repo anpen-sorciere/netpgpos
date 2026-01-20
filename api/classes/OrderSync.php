@@ -111,6 +111,20 @@ class OrderSync {
                     }
                 }
             }
+
+
+            // 配送方法のマッピングを作成 (shipping_lines から)
+            $shipping_method_map = [];
+            if (isset($order['shipping_lines']) && is_array($order['shipping_lines'])) {
+                foreach ($order['shipping_lines'] as $line) {
+                    $method_name = $line['shipping_method'] ?? null;
+                    if ($method_name && isset($line['order_item_ids']) && is_array($line['order_item_ids'])) {
+                        foreach ($line['order_item_ids'] as $line_item_id) {
+                            $shipping_method_map[$line_item_id] = $method_name;
+                        }
+                    }
+                }
+            }
             
             // 更新日時 (APIレスポンスの 'modified' または 'updated' を優先使用)
             $api_updated_at = null;
@@ -171,7 +185,9 @@ class OrderSync {
                     $title = $item['title'] ?? '';
                     $price = $item['price'] ?? 0;
                     $quantity = $item['amount'] ?? 1;
-                    $item_shipping_method = $item['shipping_method'] ?? null; // 追加: アイテムごとの配送方法
+                    // item内のshipping_methodではなく、shipping_linesからのマッピングを使用
+                    // マッピングがない場合は、item内のshipping_methodがあればそれを使う（後方互換）
+                    $item_shipping_method = $shipping_method_map[$base_order_item_id] ?? $item['shipping_method'] ?? null;
 
                     // オプション解析
                     $item_customer = null;
