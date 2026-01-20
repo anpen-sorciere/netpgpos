@@ -146,7 +146,8 @@ class BasePracticalAutoManager {
                     access_token = VALUES(access_token),
                     refresh_token = VALUES(refresh_token),
                     access_expires = VALUES(access_expires),
-                    refresh_expires = VALUES(refresh_expires)";
+                    refresh_expires = VALUES(refresh_expires),
+                    updated_at = NOW()";
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
