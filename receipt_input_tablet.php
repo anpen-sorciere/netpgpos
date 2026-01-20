@@ -696,30 +696,46 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             }
         }
         function openSheetModal() {
-            document.getElementById('sheetModal').style.display = 'flex';
-            renderSheets();
+            try {
+                document.getElementById('sheetModal').style.display = 'flex';
+                renderSheets();
+            } catch(e) {
+                console.error(e);
+                alert('Modal Error: ' + e.message);
+            }
         }
     
         function renderSheets() {
-            const container = document.getElementById('seatMapContainer');
-            container.innerHTML = '';
-            
-            sheets.forEach(sheet => {
-                const el = document.createElement('div');
-                el.className = `seat-obj ${sheet.type}`;
-                if(sheet.sheet_id == selectedSheetId) el.classList.add('selected');
-                el.style.left = sheet.x_pos + '%';
-                el.style.top = sheet.y_pos + '%';
-                el.style.width = sheet.width + '%';
-                el.style.height = sheet.height + '%';
-                el.textContent = sheet.sheet_name;
-                el.dataset.id = sheet.sheet_id;
+            try {
+                const container = document.getElementById('seatMapContainer');
+                if(!container) throw new Error('Seat map container not found');
+                container.innerHTML = '';
                 
-                // Event Handling
-                el.onpointerdown = (e) => handleSeatInteraction(e, sheet, el);
-                
-                container.appendChild(el);
-            });
+                if(!sheets) {
+                    console.warn('Sheets is undefined, initializing empty array');
+                    sheets = [];
+                }
+
+                sheets.forEach(sheet => {
+                    const el = document.createElement('div');
+                    el.className = `seat-obj ${sheet.type}`;
+                    if(sheet.sheet_id == selectedSheetId) el.classList.add('selected');
+                    el.style.left = sheet.x_pos + '%';
+                    el.style.top = sheet.y_pos + '%';
+                    el.style.width = sheet.width + '%';
+                    el.style.height = sheet.height + '%';
+                    el.textContent = sheet.sheet_name;
+                    el.dataset.id = sheet.sheet_id;
+                    
+                    // Event Handling
+                    el.onpointerdown = (e) => handleSeatInteraction(e, sheet, el);
+                    
+                    container.appendChild(el);
+                });
+            } catch(e) {
+                console.error('Render Error:', e);
+                alert('Render Error: ' + e.message);
+            }
         }
     
         function handleSeatInteraction(e, sheet, el) {
