@@ -757,11 +757,7 @@ try {
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fas fa-undo"></i> 差戻し';
                 }
-                } catch (error) {
-                    alert('エラー: ' + error.message);
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-undo"></i> 差戻し';
-                }
+
             });
 
             // 同期ボタン
