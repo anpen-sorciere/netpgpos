@@ -8,30 +8,9 @@
 ini_set('memory_limit', '512M');
 set_time_limit(300); // 5分
 
-// 共通ファイルの読み込み (パス解決ロジック)
-$search_paths_config = [
-    __DIR__ . '/../../../common/config.php',
-    __DIR__ . '/../../common/config.php',
-    __DIR__ . '/../../config.php'
-];
-foreach ($search_paths_config as $path) {
-    if (file_exists($path)) {
-        require_once $path;
-        break;
-    }
-}
-
-$search_paths_db = [
-    __DIR__ . '/../../../common/dbconnect.php',
-    __DIR__ . '/../../common/dbconnect.php',
-    __DIR__ . '/../../dbconnect.php'
-];
-foreach ($search_paths_db as $path) {
-    if (file_exists($path)) {
-        require_once $path;
-        break;
-    }
-}
+// 共通ファイルの読み込み
+require_once __DIR__ . '/../../../common/config.php';
+require_once __DIR__ . '/../../../common/dbconnect.php';
 require_once __DIR__ . '/../classes/OrderSync.php';
 require_once __DIR__ . '/../classes/base_practical_auto_manager.php';
 
@@ -49,13 +28,12 @@ function sync_log($message) {
 sync_log("=== Sync Start ===");
 
 try {
-    // DB接続
-    $pdo = new PDO(
-        "mysql:host={$host};dbname={$dbname};charset=utf8mb4",
-        $user,
-        $password,
-        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-    );
+    // DB接続 (connect()関数を使用)
+    $pdo = connect();
+    if ($pdo === null) {
+        sync_log("❌ Database connection failed.");
+        exit;
+    }
 
     // 有効な店舗を取得
     $stmt = $pdo->query("SELECT shop_id, shop_name FROM shop_mst WHERE base_is_active = 1");
@@ -100,14 +78,24 @@ try {
                 // APIの更新日時を取得 (BASE APIは 'updated' または 'ordered' を返す)
                 $api_updated = $simple_order['updated'] ?? $simple_order['ordered'] ?? null;
 
-                // DBの更新日時をチェック
-                $stmtCheck = $pdo->prepare("SELECT updated_at FROM base_orders WHERE base_order_id = ? AND shop_id = ? LIMIT 1");
+                // DBの更新日時とステータスをチェック
+                $stmtCheck = $pdo->prepare("SELECT updated_at, status FROM base_orders WHERE base_order_id = ? AND shop_id = ? LIMIT 1");
                 $stmtCheck->execute([$unique_key, $shop_id]);
                 $db_row = $stmtCheck->fetch(PDO::FETCH_ASSOC);
 
-                // もしDBにあり、かつAPIの更新日時がDB以下なら、詳細取得をスキップ
-                // (注意: BASEのupdatedは文字列なのでstrtotimeで比較)
-                if ($db_row && $api_updated && strtotime($api_updated) <= strtotime($db_row['updated_at'])) {
+                // スキップ判定: unpaidまたはorderedの場合は常に更新対象とする
+                $should_skip = false;
+                if ($db_row && $api_updated) {
+                    $db_status = $db_row['status'] ?? '';
+                    // unpaidまたはorderedの場合は、タイムスタンプに関わらず更新
+                    if ($db_status === 'unpaid' || $db_status === 'ordered') {
+                        $should_skip = false; // 強制的に更新
+                    } elseif (strtotime($api_updated) <= strtotime($db_row['updated_at'])) {
+                        $should_skip = true; // 更新なしなのでスキップ
+                    }
+                }
+                
+                if ($should_skip) {
                     // sync_log("Skipping {$unique_key}: Not updated. (DB: {$db_row['updated_at']} / API: {$api_updated})");
                     continue;
                 }

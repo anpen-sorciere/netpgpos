@@ -40,59 +40,75 @@ try {
         throw new Exception("Database connection failed. Check config_local.php or MySQL status.");
     }
     
-    // 対象の注文を取得（未発送のもののみ）
-    // status が 'cancelled' や 'dispatched' 以外のものを対象にする
-    // あるいは明確に 'ordered' のみでも良い
+    // 対象の注文を取得（未発送のもののみ）shop_idも一緒に取得
     echo "Fetching target orders from DB...\n";
-    $stmt = $pdo->prepare("SELECT base_order_id FROM base_orders WHERE status = 'ordered' ORDER BY order_date DESC");
+    $stmt = $pdo->prepare("SELECT base_order_id, shop_id FROM base_orders WHERE status = 'ordered' ORDER BY shop_id, order_date DESC");
     $stmt->execute();
-    $target_orders = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    $target_orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     $count = count($target_orders);
-    echo "Found {$count} orders to process.\n\n";
-    
     if ($count === 0) {
         echo "No orders to update. Finished.\n";
         exit;
     }
 
-    // APIマネージャーの初期化
-    $apiManager = new BasePracticalAutoManager();
-    
+    // shop_id別にグループ化
+    $orders_by_shop = [];
+    foreach ($target_orders as $row) {
+        $shop_id = $row['shop_id'];
+        if (!isset($orders_by_shop[$shop_id])) {
+            $orders_by_shop[$shop_id] = [];
+        }
+        $orders_by_shop[$shop_id][] = $row['base_order_id'];
+    }
+
+    echo "Found orders in " . count($orders_by_shop) . " shop(s).\n\n";
+
     $success_count = 0;
     $error_count = 0;
     
-    foreach ($target_orders as $index => $order_id) {
-        $current = $index + 1;
-        echo "[{$current}/{$count}] Processing Order ID: {$order_id} ... ";
+    // shop_id別に処理
+    foreach ($orders_by_shop as $shop_id => $order_ids) {
+        echo "\n=== Processing Shop ID: {$shop_id} (" . count($order_ids) . " orders) ===\n";
         
         try {
-            // 詳細API呼び出し
-            $response = $apiManager->makeApiRequest('read_orders', '/orders/detail/' . $order_id);
+            // 各shop_id用のAPIマネージャーを初期化
+            $apiManager = new BasePracticalAutoManager($shop_id);
             
-            if (empty($response['order'])) {
-                echo "Failed (No order data returned)\n";
-                $error_count++;
-                continue;
+            foreach ($order_ids as $index => $order_id) {
+                $current = $index + 1;
+                $total = count($order_ids);
+                echo "[Shop {$shop_id}] [{$current}/{$total}] Processing Order ID: {$order_id} ... ";;
+                
+                try {
+                    // 詳細API呼び出し
+                    $response = $apiManager->makeApiRequest('read_orders', '/orders/detail/' . $order_id);
+                    
+                    if (empty($response['order'])) {
+                        echo "Failed (No order data returned)\n";
+                        $error_count++;
+                        continue;
+                    }
+                    
+                    $order_data = $response['order'];
+                    
+                    // OrderSyncを使って保存（正しいshop_idを渡す）
+                    OrderSync::syncOrdersToDb($pdo, [$order_data], null, $shop_id);
+                    
+                    echo "OK\n";
+                    $success_count++;
+                    
+                    // APIレートリミット対策（少しウェイトを入れる）
+                    usleep(500000); // 0.5秒
+                    
+                } catch (Exception $e) {
+                    echo "Error: " . $e->getMessage() . "\n";
+                    $error_count++;
+                }
             }
-            
-            $order_data = $response['order'];
-            
-            // OrderSyncを使って保存
-            // syncOrdersToDbは配列を受け取るので配列に入れる
-            OrderSync::syncOrdersToDb($pdo, [$order_data], null, 1); // shop_idはとりあえず1固定、あるいはDBから取った方が良い？
-            // OrderSyncの定義: public static function syncOrdersToDb($pdo, $orders, $manager = null, $shop_id = 1)
-            // shop_idはデフォルト1だが、もし複数ショップ運用なら注意。今回は1で進める。
-            
-            echo "OK\n";
-            $success_count++;
-            
-            // APIレートリミット対策（少しウェイトを入れる）
-            usleep(500000); // 0.5秒
-            
         } catch (Exception $e) {
-            echo "Error: " . $e->getMessage() . "\n";
-            $error_count++;
+            echo "\n❌ Shop {$shop_id} Error: " . $e->getMessage() . "\n";
+            $error_count += count($order_ids); // このshopの全注文をエラーカウント
         }
     }
     
