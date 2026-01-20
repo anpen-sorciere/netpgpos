@@ -547,6 +547,11 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                         <i class="fas fa-bomb"></i> 全削除(リセット)
                     </button>
                     
+                    <div style="width:100%; display:flex; gap:5px; margin-top:5px; border-top:1px solid #ddd; padding-top:5px; display:none;" id="renameControls">
+                        <input type="text" id="editSheetName" placeholder="座席名" style="border:1px solid #ccc; border-radius:4px; padding:3px; font-size:0.9rem; flex:1;">
+                        <button onclick="updateSheetName()" style="background:#2ecc71; color:white; border:none; padding:3px 10px; border-radius:4px;">変更</button>
+                    </div>
+                    
                     <span style="font-size:0.8rem; color:#aaa; width:100%; margin-top:5px;">※テーブルの上に座席を配置できます</span>
                 </div>
                 <div id="seatMapContainer">
@@ -761,9 +766,12 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             if(isEditMode) {
                 document.getElementById('toggleShapeBtn').style.display = 'inline-block';
                 document.getElementById('deleteSheetBtn').style.display = 'inline-block';
+                document.getElementById('renameControls').style.display = 'flex';
+                document.getElementById('editSheetName').value = name;
             } else {
                 document.getElementById('toggleShapeBtn').style.display = 'none';
                 document.getElementById('deleteSheetBtn').style.display = 'none';
+                document.getElementById('renameControls').style.display = 'none';
                 closeModal('sheetModal');
             }
         }
@@ -781,10 +789,30 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             if(!isEditMode) {
                 document.getElementById('toggleShapeBtn').style.display = 'none';
                 document.getElementById('deleteSheetBtn').style.display = 'none';
+                document.getElementById('renameControls').style.display = 'none';
             } else if(selectedSheetId) {
                 // Show if already selected
                 document.getElementById('toggleShapeBtn').style.display = 'inline-block';
                 document.getElementById('deleteSheetBtn').style.display = 'inline-block';
+                document.getElementById('renameControls').style.display = 'flex';
+                // Pre-fill name
+                const sheet = sheets.find(s => s.sheet_id == selectedSheetId);
+                if(sheet) document.getElementById('editSheetName').value = sheet.sheet_name;
+            }
+        }
+        
+        function updateSheetName() {
+            if(!selectedSheetId) return;
+            const newName = document.getElementById('editSheetName').value;
+            if(!newName) return;
+            
+            const sheet = sheets.find(s => s.sheet_id == selectedSheetId);
+            if(sheet) {
+                sheet.sheet_name = newName;
+                renderSheets();
+                // update visual
+                document.getElementById('selectedSheetName').innerText = newName;
+                saveLayout();
             }
         }
     
