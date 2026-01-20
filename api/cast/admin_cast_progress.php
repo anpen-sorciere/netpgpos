@@ -280,6 +280,12 @@ try {
                                             data-cast-name="<?= htmlspecialchars($cast['cast_name']) ?>">
                                         <i class="fas fa-list-alt"></i> 詳細
                                     </button>
+                                    <button class="btn btn-outline-primary btn-sm btn-sync ms-1" 
+                                            data-cast-id="<?= $cast['cast_id'] ?>" 
+                                            data-cast-name="<?= htmlspecialchars($cast['cast_name']) ?>"
+                                            title="BASEのステータスと同期">
+                                        <i class="fas fa-sync"></i>
+                                    </button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -751,6 +757,43 @@ try {
                     btn.disabled = false;
                     btn.innerHTML = '<i class="fas fa-undo"></i> 差戻し';
                 }
+                } catch (error) {
+                    alert('エラー: ' + error.message);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-undo"></i> 差戻し';
+                }
+            });
+
+            // 同期ボタン
+            document.querySelectorAll('.btn-sync').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const castId = this.dataset.castId;
+                    const castName = this.dataset.castName;
+                    
+                    if (!confirm(`${castName} さんの未対応注文ステータスをBASEと同期しますか？\n（管理側でBASE操作完了済みの案件などを消込めます）`)) {
+                        return;
+                    }
+
+                    const originalInner = this.innerHTML;
+                    this.disabled = true;
+                    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                    try {
+                        const response = await fetch(`../../api/ajax/sync_cast_orders.php?cast_id=${castId}`);
+                        const result = await response.json();
+
+                        if (result.success) {
+                            alert(result.message);
+                            location.reload();
+                        } else {
+                            throw new Error(result.error || '同期エラー');
+                        }
+                    } catch (error) {
+                        alert('エラー: ' + error.message);
+                        this.disabled = false;
+                        this.innerHTML = originalInner;
+                    }
+                });
             });
         });
     </script>
