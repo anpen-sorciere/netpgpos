@@ -724,6 +724,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
     
         function handleSeatInteraction(e, sheet, el) {
             if(isEditMode) {
+                selectSheet(sheet.sheet_id, sheet.sheet_name); // Select it so we can delete/shape change
                 startDrag(e, sheet, el);
             } else {
                 selectSheet(sheet.sheet_id, sheet.sheet_name);
