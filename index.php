@@ -47,6 +47,7 @@ if(isset($_GET['utype'])) {
         <h1><?= htmlspecialchars($shop_name, ENT_QUOTES) ?>管理システム</h1>
         <ul class="menu-list">
             <li class="menu-item"><a href="receipt_input.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">伝票入力</a></li>
+            <li class="menu-item"><a href="receipt_input_tablet.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button" style="background:linear-gradient(135deg, #1e90ff, #00bfff); color:white;">⚡ スマート伝票入力 (ホール用)</a></li>
             <li class="menu-item"><a href="timecard_input.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">タイムカード入力</a></li>
             <li class="menu-item"><a href="summary.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">集計確認</a></li>
             <li class="menu-item"><a href="daily_wage_summary.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">日当確認</a></li>
