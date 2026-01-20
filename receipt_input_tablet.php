@@ -808,13 +808,30 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 return;
             }
             console.log('Adding seat for shop:', shopId, 'Type:', type);
+            
+            // Default dimensions based on type (Approximation for tablet landscape)
+            // Container is 500px height. Screen width likely ~1024px.
+            // 10% height = 50px. 5% width = ~51px.
+            let initW = 10; 
+            let initH = 10;
+            
+            if (type === 'circle') {
+                initW = 6;  // ~60px
+                initH = 12; // ~60px
+            } else {
+                initW = 10; // ~100px
+                initH = 12; // ~60px
+            }
+            
             fetch('api/cast/add_sheet.php', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     shop_id: shopId,
                     name: 'New Seat',
-                    x: 40, y: 40, w: 15, h: 10,
+                    x: 40, y: 40, 
+                    w: initW, 
+                    h: initH,
                     type: type
                 })
             })
@@ -826,8 +843,10 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                         sheet_id: data.sheet_id,
                         shop_id: shopId,
                         sheet_name: 'New Seat',
-                        x_pos: 40, y_pos: 40, width: 15, height: 10,
-                        type: 'rect'
+                        x_pos: 40, y_pos: 40, 
+                        width: initW, 
+                        height: initH,
+                        type: type
                     };
                     sheets.push(newSheet);
                     renderSheets();
