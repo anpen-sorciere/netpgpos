@@ -541,6 +541,12 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                         <i class="fas fa-trash"></i> 削除
                     </button>
                     
+                    <span style="border-left:1px solid #ccc; margin:0 5px; height:20px;"></span>
+                    
+                    <button onclick="resetLayout()" style="background:#c0392b; color:white; border:none; padding:5px 10px; border-radius:4px; margin-left:auto;">
+                        <i class="fas fa-bomb"></i> 全削除(リセット)
+                    </button>
+                    
                     <span style="font-size:0.8rem; color:#aaa; width:100%; margin-top:5px;">※テーブルの上に座席を配置できます</span>
                 </div>
                 <div id="seatMapContainer">
@@ -762,7 +768,32 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 // Show if already selected
                 document.getElementById('toggleShapeBtn').style.display = 'inline-block';
                 document.getElementById('deleteSheetBtn').style.display = 'inline-block';
-            }
+        // ... end of toggleEditMode()
+        }
+    
+        function resetLayout() {
+            if(!confirm('【警告】\nこの店舗の座席レイアウトを全て削除してリセットします。\n本当によろしいですか？')) return;
+            if(!confirm('本当に全て消えます。\nよろしいですか？')) return;
+
+            fetch('api/cast/delete_all_sheets.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ shop_id: shopId })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    sheets = [];
+                    renderSheets();
+                    alert('レイアウトをリセットしました。');
+                } else {
+                    alert('リセットに失敗しました: ' + (data.message || 'Unknown error'));
+                }
+            })
+            .catch(e => {
+                console.error(e);
+                alert('通信エラー');
+            });
         }
     
         function startDrag(e, sheet, el) {
