@@ -770,6 +770,11 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         }
     
         function addNewSheet() {
+            if (!shopId) {
+                alert('Shop ID not found. Cannot add seat.');
+                return;
+            }
+            console.log('Adding seat for shop:', shopId);
             fetch('api/cast/add_sheet.php', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -795,8 +800,12 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                     // Re-apply editable class
                     if(isEditMode) toggleEditMode();
                 } else {
-                    alert('Error adding sheet');
+                    alert('Error adding sheet: ' + (data.message || 'Unknown error'));
                 }
+            })
+            .catch(error => {
+                console.error('Error adding sheet:', error);
+                alert('Add Seat Failed: ' + error.message);
             });
         }
     
