@@ -24,6 +24,7 @@ try {
     $order_id = $input['order_id'] ?? null;
     $cast_id = $input['cast_id'] ?? null; // どのキャストの対応を承認するか
     $shop_id = $input['shop_id'] ?? 1; // shop_idを追加（デフォルト1、必須にすべきだが互換性維持）
+    $item_id = $input['item_id'] ?? null; // 特定の商品行（base_order_items.id）のみを対象にする場合
 
     // 配送情報
     $delivery_company_id = $input['delivery_company_id'] ?? null;
@@ -56,6 +57,12 @@ try {
     if ($cast_id) {
         $sql .= " AND oi.cast_id = ?";
         $params[] = $cast_id;
+    }
+
+    // item_idが指定されていればさらに絞り込み（行単位の承認）
+    if ($item_id) {
+        $sql .= " AND oi.id = ?";
+        $params[] = $item_id;
     }
 
     $stmt = $pdo->prepare($sql);
