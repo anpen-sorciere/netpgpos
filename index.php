@@ -38,8 +38,10 @@ if(isset($_GET['utype'])) {
             $shop_name = 'ソルシエール';
         } elseif ($utype == 2) {
             $shop_name = 'レーヴェス';
-        } elseif ($utype == 3) {
+        } elseif ($utype == 3) {            
             $shop_name = 'コレクト';
+        } elseif ($utype == 99) {            
+            $shop_name = 'テスト店舗';
         } else {
             exit();
         }
