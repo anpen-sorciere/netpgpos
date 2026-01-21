@@ -667,6 +667,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         let selectedSheetId = 0;
         let sheets = <?= json_encode($sheets) ?>;
         let isEditMode = false;
+        let isNewItemCastSelection = false;
         const shopId = <?= $shop_info['id'] ?>;
         
         // Real-time State
@@ -719,6 +720,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             
             // If items needs cast back, auto-open modal for the new item
             if(backPrice > 0) {
+                isNewItemCastSelection = true;
                 openCastModal(cart.length - 1);
             } else {
                 renderCart();
@@ -752,7 +754,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                             <div class="qty-val">${item.qty}</div>
                             <button class="qty-btn" onclick="updateQty(${index}, 1)">+</button>
                         </div>
-                        <div class="cast-select-btn ${item.castId > 0 ? 'selected' : ''}" onclick="openCastModal(${index})">
+                        <div class="cast-select-btn ${item.castId > 0 ? 'selected' : ''}" onclick="isNewItemCastSelection=false; openCastModal(${index})">
                             <i class="fas fa-user"></i> ${castLabel}
                         </div>
                         <button class="qty-btn" style="background:#e74c3c; width:30px; height:30px; font-size:1rem;" onclick="removeItem(${index})"><i class="fas fa-trash"></i></button>
@@ -789,7 +791,13 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
     
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = 'none';
-            if(modalId === 'castModal') renderCart();
+            if(modalId === 'castModal') {
+                if(isNewItemCastSelection && currentEditIndex >= 0 && cart[currentEditIndex] && cart[currentEditIndex].castId === 0) {
+                    cart.splice(currentEditIndex, 1);
+                }
+                isNewItemCastSelection = false;
+                renderCart();
+            }
         }
     
         function selectCast(id, name) {
@@ -797,6 +805,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 cart[currentEditIndex].castId = id;
                 cart[currentEditIndex].castName = name || '';
             }
+            isNewItemCastSelection = false;
             closeModal('castModal');
         }
     
