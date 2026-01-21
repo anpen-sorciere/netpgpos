@@ -563,6 +563,32 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                     <i class="fas fa-beer"></i> 追加注文 (Order)
                 </button>
                 
+                <label style="display:block; margin-bottom:5px;">支払い方法 (Payment)</label>
+                <select id="checkoutPayment" class="header-input" style="width:100%; margin-bottom:15px; padding:10px;">
+                    <?php foreach($payments as $p): ?>
+                        <option value="<?= $p['payment_type'] ?>"><?= $p['payment_name'] ?></option>
+                    <?php endforeach; ?>
+                </select>
+
+                <label style="display:block; margin-bottom:5px;">調整額 (Adjust Price)</label>
+                <input type="number" id="checkoutAdjust" class="header-input" style="width:100%; margin-bottom:15px; padding:10px;" value="0">
+
+                <label style="display:block; margin-bottom:5px;">担当キャスト (Staff)</label>
+                <select id="checkoutStaff" class="header-input" style="width:100%; margin-bottom:15px; padding:10px;">
+                    <option value="0">未指定</option>
+                    <?php foreach($casts as $c): ?>
+                        <option value="<?= $c['cast_id'] ?>"><?= $c['cast_name'] ?></option>
+                    <?php endforeach; ?>
+                </select>
+
+                <label style="display:block; margin-bottom:5px;">伝票起票者 (Issuer)</label>
+                <select id="checkoutIssuer" class="header-input" style="width:100%; margin-bottom:15px; padding:10px;">
+                    <option value="0">未指定</option>
+                    <?php foreach($casts as $c): ?>
+                        <option value="<?= $c['cast_id'] ?>"><?= $c['cast_name'] ?></option>
+                    <?php endforeach; ?>
+                </select>
+
                 <button onclick="executeCheckout()" style="padding:20px; background:#e67e22; color:white; border:none; border-radius:6px; font-size:1.2rem; display:flex; align-items:center; justify-content:center; gap:10px;">
                     <i class="fas fa-file-invoice-dollar"></i> お会計 (Checkout)
                 </button>
@@ -1051,7 +1077,11 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             body: JSON.stringify({
                 action: 'checkout',
                 shop_id: shopId,
-                session_id: sessionId
+                session_id: sessionId,
+                payment_type: document.getElementById('checkoutPayment').value,
+                adjust_price: document.getElementById('checkoutAdjust').value,
+                staff_id: document.getElementById('checkoutStaff').value,
+                issuer_id: document.getElementById('checkoutIssuer').value
             })
         })
         .then(res => res.json())

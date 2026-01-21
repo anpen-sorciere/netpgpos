@@ -90,26 +90,83 @@ try {
 
         case 'checkout':
             $session_id = $input['session_id'];
+            $payment_type = $input['payment_type'] ?? 1; // Default Cash
+            $adjust_price = $input['adjust_price'] ?? 0;
+            $staff_id = $input['staff_id'] ?? 0;
+            $issuer_id = $input['issuer_id'] ?? 0;
             
-            // トランザクション処理（売上テーブルへの移動など）は本来複雑だが、
-            // ここでは既存の receipt_input_tablet.php の submitReceipt 相当のことをやりたい。
-            // しかし、submitReceipt は form post で receipt_check.php に投げる仕様。
-            // 完全にAPI化するか、あるいは「仮締め」して is_active=0 にするか。
-            // Plan: Calculate total, return it for confirmation? Or finalize immediately?
-            // "Confirm amount -> Seat becomes Empty"
+            // 1. Fetch Session
+            $stmt = $pdo->prepare("SELECT * FROM seat_sessions WHERE session_id = ?");
+            $stmt->execute([$session_id]);
+            $session = $stmt->fetch(PDO::FETCH_ASSOC);
+            if(!$session) throw new Exception('Session not found');
+
+            // 2. Fetch Orders
+            $stmt = $pdo->prepare("SELECT * FROM session_orders WHERE session_id = ?");
+            $stmt->execute([$session_id]);
+            $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // 3. Generate Receipt ID
+            $now = new DateTime();
+            $receipt_id = intval($now->format('ymdHis'));
             
-            // 簡易実装: active=0 にして、売上データ(sales table)へ移行する。
-            // salesテーブルの構造に合わせてInsertが必要。
-            // 既存の functions.php の register_sales() 的なものを呼べればベストだが...
-            // ここでは session を閉じるだけに止めて、売上登録は別途実装が必要かも。
-            // いったん「席を空ける」処理のみ実装。
+            // Dates
+            $receipt_day = $now->format('Ymd');
+            $start = new DateTime($session['start_time']);
+            $in_date = $start->format('Ymd');
+            $in_time = $start->format('Hi');
+            $out_date = $now->format('Ymd');
+            $out_time = $now->format('Hi');
             
             $pdo->beginTransaction();
+            
+            // 4. Insert Receipt
+            $ins = $pdo->prepare("INSERT INTO receipt_tbl (receipt_id, shop_id, sheet_no, receipt_day, in_date, in_time, out_date, out_time, customer_name, issuer_id, staff_id, payment_type, adjust_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $ins->execute([
+                $receipt_id,
+                $shop_id,
+                intval($session['sheet_id']),
+                $receipt_day,
+                $in_date,
+                $in_time,
+                $out_date,
+                $out_time,
+                $session['customer_name'],
+                $issuer_id,
+                $staff_id,
+                $payment_type,
+                $adjust_price
+            ]);
+            
+            // 5. Insert Details
+            $insDetail = $pdo->prepare("INSERT INTO receipt_detail_tbl (shop_id, receipt_id, receipt_day, item_id, quantity, price, cast_id, cast_back_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            
+            foreach($orders as $order) {
+                // Get item info for back price
+                $itemSt = $pdo->prepare("SELECT back_price FROM item_mst WHERE item_id = ?");
+                $itemSt->execute([$order['item_id']]);
+                $itemData = $itemSt->fetch(PDO::FETCH_ASSOC);
+                $back = ($itemData['back_price'] ?? 0) * $order['quantity'];
+                
+                $insDetail->execute([
+                    $shop_id,
+                    $receipt_id,
+                    $receipt_day,
+                    $order['item_id'],
+                    $order['quantity'], 
+                    $order['price'], 
+                    $order['cast_id'],
+                    $back
+                ]);
+            }
+
+            // 6. Close Session
             $upd = $pdo->prepare("UPDATE seat_sessions SET is_active = 0, end_time = NOW() WHERE session_id = ?");
             $upd->execute([$session_id]);
+            
             $pdo->commit();
             
-            echo json_encode(['status' => 'success']);
+            echo json_encode(['status' => 'success', 'receipt_id' => $receipt_id]);
             break;
             
         case 'get_session_details':
