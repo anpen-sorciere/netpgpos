@@ -48,6 +48,7 @@ function get_items($pdo) {
                 im.price, 
                 im.back_price,
                 im.cost,
+                im.del_flg,
                 tm.tax_type_name
             FROM item_mst AS im
             LEFT JOIN category_mst AS cm ON im.category = cm.category_id
@@ -72,6 +73,7 @@ function search_items($pdo, $keyword) {
                 im.price,
                 im.back_price,
                 im.cost,
+                im.del_flg,
                 tm.tax_type_name
             FROM item_mst AS im
             LEFT JOIN category_mst AS cm ON im.category = cm.category_id
@@ -103,7 +105,7 @@ if (!empty($_POST)) {
             $back_price = intval($back_price);
             $cost = intval($cost);
             
-            $stmt = $pdo->prepare("INSERT INTO item_mst (item_name, item_yomi, category, price, back_price, cost, tax_type_id) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt = $pdo->prepare("INSERT INTO item_mst (item_name, item_yomi, category, price, back_price, cost, tax_type_id, del_flg) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $_POST['item_name'], 
                 $_POST['item_yomi'],
@@ -111,7 +113,8 @@ if (!empty($_POST)) {
                 $price, 
                 $back_price,
                 $cost,
-                $_POST['tax_type_id']
+                $_POST['tax_type_id'],
+                $_POST['del_flg'] ?? 0
             ]);
             header('Location: item_mst.php');
             exit();
@@ -128,7 +131,7 @@ if (!empty($_POST)) {
             $back_price = intval($back_price);
             $cost = intval($cost);
             
-            $stmt = $pdo->prepare("UPDATE item_mst SET item_name=?, item_yomi=?, category=?, price=?, back_price=?, cost=?, tax_type_id=? WHERE item_id=?");
+            $stmt = $pdo->prepare("UPDATE item_mst SET item_name=?, item_yomi=?, category=?, price=?, back_price=?, cost=?, tax_type_id=?, del_flg=? WHERE item_id=?");
             $stmt->execute([
                 $_POST['item_name'], 
                 $_POST['item_yomi'],
@@ -137,6 +140,7 @@ if (!empty($_POST)) {
                 $back_price,
                 $cost,
                 $_POST['tax_type_id'],
+                $_POST['del_flg'] ?? 0,
                 $_POST['item_id']
             ]);
             header('Location: item_mst.php');
@@ -391,6 +395,14 @@ if ($search_query !== '') {
                                 <?php endforeach; ?>
                             </select>
                         </td>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><label>表示状態</label></th>
+                        <td>
+                            <label><input type="radio" name="del_flg" value="0" <?= (!isset($edit_item['del_flg']) || $edit_item['del_flg'] == 0) ? 'checked' : '' ?>> 表示</label>
+                            <label><input type="radio" name="del_flg" value="1" <?= (isset($edit_item['del_flg']) && $edit_item['del_flg'] == 1) ? 'checked' : '' ?>> 非表示</label>
+                        </td>
                     </tr>
                 </table>
                 <div class="control-buttons">
@@ -418,6 +430,7 @@ if ($search_query !== '') {
                         <th>税区分</th>
                         <th>原価率</th>
                         <th>利益</th>
+                        <th>表示状態</th>
                         <th>操作</th>
                     </tr>
                 </thead>
@@ -441,7 +454,9 @@ if ($search_query !== '') {
                             <td><?= h($item['cost']) ?></td>
                             <td><?= h($item['tax_type_name']) ?></td>
                             <td><?= $cost_rate ?>%</td>
+                            <td><?= $cost_rate ?>%</td>
                             <td><?= number_format($profit) ?></td>
+                            <td><?= ($item['del_flg'] == 1) ? '<span style="color:red;">非表示</span>' : '表示' ?></td>
                             <td class="action-buttons">
                                 <a href="item_mst.php?edit_id=<?= h($item['item_id']) ?>" class="btn btn-edit">修正</a>
                                 <form action="item_mst.php" method="post" onsubmit="return confirm('本当に削除しますか？');">
@@ -477,6 +492,7 @@ if ($search_query !== '') {
                                 <th>バック価格</th>
                                 <th>仕入価格</th>
                                 <th>税区分</th>
+                                <th>表示状態</th>
                                 <th>操作</th>
                             </tr>
                         </thead>
@@ -491,6 +507,7 @@ if ($search_query !== '') {
                                     <td><?= number_format((int)$result['back_price']) ?></td>
                                     <td><?= number_format((int)$result['cost']) ?></td>
                                     <td><?= h($result['tax_type_name']) ?></td>
+                                    <td><?= ($result['del_flg'] == 1) ? '<span style="color:red;">非表示</span>' : '表示' ?></td>
                                     <td>
                                         <a href="item_mst.php?edit_id=<?= h($result['item_id']) ?><?= isset($_GET['utype']) ? '&utype=' . h($_GET['utype']) : '' ?>" class="btn btn-edit" style="padding:6px 10px;">修正</a>
                                     </td>
