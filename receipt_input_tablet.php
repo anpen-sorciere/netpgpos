@@ -594,13 +594,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                     <?php endforeach; ?>
                 </select>
 
-                <label style="display:block; margin-bottom:5px;">伝票起票者 (Issuer)</label>
-                <select id="checkoutIssuer" class="header-input" style="width:100%; margin-bottom:15px; padding:10px;">
-                    <option value="0">未指定</option>
-                    <?php foreach($casts as $c): ?>
-                        <option value="<?= $c['cast_id'] ?>"><?= $c['cast_name'] ?></option>
-                    <?php endforeach; ?>
-                </select>
+
 
                 <div style="margin-bottom:20px; display:flex; align-items:center;">
                     <input type="checkbox" id="checkoutIsNew" style="width:20px; height:20px;">
@@ -1004,7 +998,6 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 people_count: people,
                 start_time: startTime,
                 is_new_customer: isNew
-            })
             })
         })
         .then(res => res.json())
