@@ -49,7 +49,9 @@ try {
             $sheet_id = $input['sheet_id'];
             $name = $input['customer_name'] ?? 'Guest';
             $people = $input['people_count'] ?? 1;
-            $start_time = date('Y-m-d H:i:s'); // Now
+            
+            // 入店時刻の指定があればそれを使用、なければ現在時刻
+            $start_time = $input['start_time'] ?? date('Y-m-d H:i:s');
             
             // 既にアクティブならエラー
             $check = $pdo->prepare("SELECT session_id FROM seat_sessions WHERE sheet_id = ? AND is_active = 1");

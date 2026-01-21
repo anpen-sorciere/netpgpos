@@ -531,6 +531,12 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                     <option value="4">4名</option>
                     <option value="5">5名以上</option>
                 </select>
+
+                <label style="display:block; margin-bottom:5px;">入店時間 (Check-in Time)</label>
+                <div style="display:flex; gap:10px; margin-bottom:15px;">
+                    <input type="date" id="checkinDate" class="header-input" style="flex:1;">
+                    <input type="time" id="checkinTime" class="header-input" style="flex:1;">
+                </div>
                 
                 <button onclick="executeCheckin()" style="width:100%; padding:15px; background:var(--accent-color); color:white; border:none; border-radius:6px; font-weight:bold; font-size:1.1rem;">
                     チェックイン開始
@@ -909,6 +915,18 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             document.getElementById('checkinModal').dataset.sheetId = sheet.sheet_id;
             document.getElementById('checkinName').value = '';
             document.getElementById('checkinPeople').value = '1';
+            
+            // Default to current time
+            const now = new Date();
+            const yyyy = now.getFullYear();
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const hh = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            
+            document.getElementById('checkinDate').value = `${yyyy}-${mm}-${dd}`;
+            document.getElementById('checkinTime').value = `${hh}:${min}`;
+            
             document.getElementById('checkinModal').style.display = 'flex';
         }
     }
@@ -918,8 +936,13 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         const sheetId = document.getElementById('checkinModal').dataset.sheetId;
         const name = document.getElementById('checkinName').value;
         const people = document.getElementById('checkinPeople').value;
+        const dateVal = document.getElementById('checkinDate').value;
+        const timeVal = document.getElementById('checkinTime').value;
         
         if(!name) { alert('お客様名を入力してください'); return; }
+        if(!dateVal || !timeVal) { alert('入店時間を入力してください'); return; }
+        
+        const startTime = `${dateVal} ${timeVal}:00`;
         
         fetch('api/cast/seat_operation.php', {
             method: 'POST',
@@ -929,7 +952,8 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 shop_id: shopId,
                 sheet_id: sheetId,
                 customer_name: name,
-                people_count: people
+                people_count: people,
+                start_time: startTime
             })
         })
         .then(res => res.json())

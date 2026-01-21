@@ -1,0 +1,18 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../common"
+		}
+	],
+	"settings": {
+		"php.suggest.basic": false,
+		"php.validate.enable": true,
+		"php.validate.run": "onSave",
+		"files.associations": {
+			"*.php": "php"
+		}
+	}
+}
