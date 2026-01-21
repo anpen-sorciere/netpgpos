@@ -64,7 +64,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
     }
 
     $has_item = false;
-    for ($i = 1; $i <= 11; $i++) {
+    for ($i = 1; $i <= 50; $i++) {
         $itemId = $_POST['item_name' . $i] ?? '';
         $quantity = $_POST['suu' . $i] ?? '';
         $castId = $_POST['cast_name' . $i] ?? '';
@@ -389,6 +389,10 @@ try {
                     </div>
                 <?php endfor; ?>
             </div>
+            
+            <div style="margin-top: 10px; text-align: left;">
+                <button type="button" id="add-row-btn" style="padding: 5px 15px; cursor: pointer;">＋ 行を追加</button>
+            </div>
 
             <div class="submit-btn">
                 <button type="submit" id="next_btn" class="btn next-btn">次へ</button>
@@ -402,6 +406,8 @@ try {
 
     <script type="text/javascript">
         document.addEventListener('DOMContentLoaded', function() {
+            let currentRowCount = 11;
+            const maxRowCount = 50;
             // カテゴリーフィルターボタンの状態を管理
             let currentCategory = 'all';
 
@@ -530,13 +536,149 @@ try {
             });
 
             document.getElementById('quantity-1-btn').addEventListener('click', function() {
-                for (let i = 1; i <= 11; i++) {
+                for (let i = 1; i <= currentRowCount; i++) {
                     const itemSelect = document.getElementById('item_name' + i);
                     const quantityInput = document.getElementById('suu' + i);
                     if (itemSelect && itemSelect.value !== '') {
                         quantityInput.value = 1;
                     }
                 }
+            });
+
+            // 行追加ボタンの処理
+            document.getElementById('add-row-btn').addEventListener('click', function() {
+                if (currentRowCount >= maxRowCount) {
+                    alert('これ以上行を追加できません（最大' + maxRowCount + '行まで）');
+                    return;
+                }
+                
+                currentRowCount++;
+                const i = currentRowCount;
+                
+                // 行のHTMLを生成（既存の行構造をコピーするのが一番安全）
+                // ただし、PHPでのループ生成と整合性を取るため、JSでDOM要素を生成またはcloneする
+                // ここでは最初の行をクローンしてIDなどを書き換える手法をとる
+                
+                const firstRow = document.querySelector('.receipt-grid .item-row');
+                const newRow = firstRow.cloneNode(true);
+                
+                // IDとNameの更新
+                const updateAttribute = (element, attr, newIndex) => {
+                   if(element.hasAttribute(attr)) {
+                       element.setAttribute(attr, element.getAttribute(attr).replace(/1/, newIndex)); // replace '1' with new index assuming first row
+                   }
+                };
+                
+                // Selects
+                const itemSelect = newRow.querySelector('.item-name-select');
+                itemSelect.id = 'item_name' + i;
+                itemSelect.name = 'item_name' + i;
+                itemSelect.value = ''; // Reset value
+                // Event listener needs to be re-attached or delegated. 
+                // Since existing listeners are attached via querySelectorAll... we need to attach to new element.
+                itemSelect.addEventListener('change', function() {
+                    const row = this.id.replace('item_name', '');
+                    const selectedOption = this.options[this.selectedIndex];
+                    const price = selectedOption.getAttribute('data-price');
+                    document.getElementById('price' + row).value = price;
+                });
+
+                const castSelect = newRow.querySelector('.cast-name-select');
+                castSelect.id = 'cast_name' + i;
+                castSelect.name = 'cast_name' + i;
+                castSelect.value = '';
+                
+                // Quantity
+                const qtyInput = newRow.querySelector('.quantity-input');
+                qtyInput.id = 'suu' + i;
+                qtyInput.name = 'suu' + i;
+                qtyInput.value = '';
+                
+                // Hidden Price
+                const priceInput = newRow.querySelector('input[type="hidden"][name^="price"]');
+                priceInput.id = 'price' + i;
+                priceInput.name = 'price' + i;
+                priceInput.value = '';
+                
+                // Error Message
+                const errorDiv = newRow.querySelector('.error-message');
+                errorDiv.id = 'error-message-' + i;
+                errorDiv.textContent = '';
+                
+                // Buttons
+                const kampaiBtn = newRow.querySelector('.kampai-btn');
+                kampaiBtn.setAttribute('data-row', i);
+                kampaiBtn.addEventListener('click', function() {
+                    const row = this.getAttribute('data-row');
+                    const itemId = this.getAttribute('data-item-id');
+                    const sel = document.getElementById('item_name' + row);
+                    sel.value = itemId;
+                    const opt = sel.options[sel.selectedIndex];
+                    const pr = opt.getAttribute('data-price');
+                    document.getElementById('price' + row).value = pr;
+                    document.getElementById('suu' + row).value = '';
+                    document.getElementById('cast_name' + row).value = '';
+                });
+
+                // Copy buttons (Only exist if i>1, but we cloned row 1. Row 1 "Copy" buttons logic is... wait loop starts at 1. Wait, Row 1 has NO copy buttons in PHP loop!)
+                // The PHP loop: "if ($i > 1): show copy buttons".
+                // So Row 1 CLONE will NOT have copy buttons. We need to ADD them if we clone Row 1.
+                // Alternative: Clone Row 2 if it exists? Or just manually create HTML. 
+                // Let's manually ensure copy buttons exist for new rows.
+                
+                let actionDiv = newRow.querySelector('.item-action-buttons');
+                // Check if copy buttons exist (if we cloned a row > 1)
+                if(!actionDiv.querySelector('.copy-item-btn')) {
+                    // Create Copy Item Button
+                    const copyItemBtn = document.createElement('button');
+                    copyItemBtn.type = 'button';
+                    copyItemBtn.className = 'copy-item-btn';
+                    copyItemBtn.setAttribute('data-row', i);
+                    copyItemBtn.textContent = '↑';
+                    copyItemBtn.addEventListener('click', function() {
+                        const r = parseInt(this.getAttribute('data-row'));
+                        const p = r - 1;
+                        document.getElementById('item_name' + r).value = document.getElementById('item_name' + p).value;
+                        document.getElementById('price' + r).value = document.getElementById('price' + p).value;
+                    });
+                    
+                    const copyCastBtn = document.createElement('button');
+                    copyCastBtn.type = 'button';
+                    copyCastBtn.className = 'copy-cast-btn';
+                    copyCastBtn.setAttribute('data-row', i);
+                    copyCastBtn.textContent = 'C';
+                    copyCastBtn.addEventListener('click', function() {
+                        const r = parseInt(this.getAttribute('data-row'));
+                        const p = r - 1;
+                        const v = document.getElementById('cast_name' + p).value;
+                        if(v) document.getElementById('cast_name' + r).value = v;
+                    });
+                    
+                    actionDiv.appendChild(copyItemBtn);
+                    actionDiv.appendChild(copyCastBtn);
+                } else {
+                     // Just update event listeners
+                     const copyItemBtn = actionDiv.querySelector('.copy-item-btn');
+                     copyItemBtn.setAttribute('data-row', i);
+                     copyItemBtn.addEventListener('click', function() {
+                        const r = parseInt(this.getAttribute('data-row'));
+                        const p = r - 1;
+                        document.getElementById('item_name' + r).value = document.getElementById('item_name' + p).value;
+                        document.getElementById('price' + r).value = document.getElementById('price' + p).value;
+                    });
+                    
+                    const copyCastBtn = actionDiv.querySelector('.copy-cast-btn');
+                    copyCastBtn.setAttribute('data-row', i);
+                    copyCastBtn.addEventListener('click', function() {
+                        const r = parseInt(this.getAttribute('data-row'));
+                        const p = r - 1;
+                        const v = document.getElementById('cast_name' + p).value;
+                        if(v) document.getElementById('cast_name' + r).value = v;
+                    });
+                }
+
+                // Append
+                document.querySelector('.receipt-grid').appendChild(newRow);
             });
 
             document.querySelectorAll('.category-filter-btn').forEach(button => {
@@ -551,7 +693,7 @@ try {
                 let errorExists = false;
                 let firstErrorElement = null;
 
-                for (let i = 1; i <= 11; i++) {
+                for (let i = 1; i <= currentRowCount; i++) {
                     const itemSelect = document.getElementById('item_name' + i);
                     const quantityInput = document.getElementById('suu' + i);
                     const castSelect = document.getElementById('cast_name' + i);

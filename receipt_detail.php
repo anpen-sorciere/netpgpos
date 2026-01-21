@@ -103,7 +103,7 @@ try {
             // 既存明細の更新または新規明細の追加
             $submitted_details = $_POST['details'];
             
-            for ($i = 0; $i < 11; $i++) {
+            for ($i = 0; $i < 50; $i++) {
                 $detail = $submitted_details[$i];
                 $item_id = isset($detail['item_id']) && $detail['item_id'] !== '' ? (int)$detail['item_id'] : 0;
                 $quantity = isset($detail['quantity']) && $detail['quantity'] !== '' ? (int)$detail['quantity'] : 0;
@@ -133,7 +133,7 @@ try {
                     $stmt->execute([$new_receipt_day, $item_id, $quantity, $price, $cast_id, $cast_back_price, $receipt_detail_id]);
                 } else {
                     // 新規明細の追加（11行未満の場合のみ）
-                    if (count($details) + $i < 11) {
+                    if (count($details) + $i < 50) {
                          $stmt = $pdo->prepare("INSERT INTO receipt_detail_tbl (receipt_id, item_id, quantity, price, cast_id, cast_back_price, receipt_day, shop_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                          $stmt->execute([$receipt_id, $item_id, $quantity, $price, $cast_id, $cast_back_price, $new_receipt_day, $shop_mst]);
                     }
@@ -165,8 +165,10 @@ try {
     disconnect($pdo);
 }
 
-// 伝票明細を11行に固定する
-$fixed_details = array_pad($details, 11, null);
+// 伝票明細を少なくとも11行確保する（既存がそれ以上ならその数、最大50まで） (修正: 表示は制限しないが初期表示として埋める)
+$current_count = count($details);
+$pad_size = max($current_count, 11);
+$fixed_details = array_pad($details, $pad_size, null);
 
 // YYYYMMDD形式からYYYY-MM-DD形式に変換
 // $receipt が null の場合に配列アクセスで警告が出ないようにガード
@@ -486,6 +488,10 @@ $is_new_customer_checked = $is_new_customer_flag === 1 ? 'checked' : '';
                     <?php endforeach; ?>
                 </div>
 
+                <div style="margin-top: 10px; text-align: left;">
+                    <button type="button" id="add-row-btn" style="padding: 5px 15px; cursor: pointer;">＋ 行を追加</button>
+                </div>
+
                 <div class="submit-btn">
                     <button type="submit" name="update" class="btn next-btn" id="update_btn">更新する</button>
                 </div>
@@ -508,7 +514,8 @@ $is_new_customer_checked = $is_new_customer_flag === 1 ? 'checked' : '';
                 }
 
                 document.addEventListener('DOMContentLoaded', function() {
-                    const totalRows = 11;
+                    const maxRowCount = 50;
+                    let currentRowCount = <?= count($fixed_details); ?>;
                     let currentCategory = 'all';
 
                     const applyCategoryFilter = (categoryId) => {
@@ -586,7 +593,7 @@ $is_new_customer_checked = $is_new_customer_flag === 1 ? 'checked' : '';
                     const quantityAllOneBtn = document.getElementById('quantity-1-btn');
                     if (quantityAllOneBtn) {
                         quantityAllOneBtn.addEventListener('click', function() {
-                            for (let i = 1; i <= totalRows; i++) {
+                            for (let i = 1; i <= currentRowCount; i++) {
                                 const itemSelect = document.getElementById('item_name' + i);
                                 const quantityInput = document.getElementById('suu' + i);
                                 if (itemSelect && itemSelect.value !== '') {
@@ -601,7 +608,7 @@ $is_new_customer_checked = $is_new_customer_flag === 1 ? 'checked' : '';
                         let errorExists = false;
                         let firstErrorElement = null;
 
-                        for (let i = 1; i <= totalRows; i++) {
+                        for (let i = 1; i <= currentRowCount; i++) {
                             const itemSelect = document.getElementById('item_name' + i);
                             const quantityInput = document.getElementById('suu' + i);
                             const castSelect = document.getElementById('cast_name' + i);
@@ -638,6 +645,146 @@ $is_new_customer_checked = $is_new_customer_flag === 1 ? 'checked' : '';
                     });
 
                     applyCategoryFilter(currentCategory);
+
+                    // 行追加ボタンの処理
+                    document.getElementById('add-row-btn').addEventListener('click', function() {
+                        if (currentRowCount >= maxRowCount) {
+                            alert('これ以上行を追加できません（最大' + maxRowCount + '行まで）');
+                            return;
+                        }
+                        
+                        currentRowCount++;
+                        const i = currentRowCount;
+                        const rowNumber = i; // 1-based index
+                        const index = i - 1; // 0-based index for array name
+                        
+                        // 行のHTMLを生成 (clone from first row)
+                        const firstRow = document.querySelector('.receipt-grid .item-row');
+                        const newRow = firstRow.cloneNode(true);
+                        
+                        // Selects
+                        const itemSelect = newRow.querySelector('.item-name-select');
+                        itemSelect.name = `details[${index}][item_id]`;
+                        itemSelect.id = 'item_name' + i;
+                        itemSelect.setAttribute('data-row', i);
+                        itemSelect.value = '';
+                        itemSelect.addEventListener('change', function() {
+                            const row = this.dataset.row;
+                            const selectedOption = this.options[this.selectedIndex];
+                            const price = selectedOption.getAttribute('data-price') || '';
+                            document.getElementById('price' + row).value = price;
+                            if (!this.value) {
+                                document.getElementById('suu' + row).value = '';
+                                document.getElementById('cast_name' + row).value = '';
+                            }
+                        });
+
+                        const castSelect = newRow.querySelector('.cast-name-select');
+                        castSelect.name = `details[${index}][cast_id]`;
+                        castSelect.id = 'cast_name' + i;
+                        castSelect.value = '';
+
+                        // Quantity
+                        const qtyInput = newRow.querySelector('.quantity-input');
+                        qtyInput.name = `details[${index}][quantity]`;
+                        qtyInput.id = 'suu' + i;
+                        qtyInput.value = '';
+                        
+                        // Hidden Price
+                        const priceInput = newRow.querySelector('input[type="hidden"][name$="[price]"]');
+                        priceInput.name = `details[${index}][price]`;
+                        priceInput.id = 'price' + i;
+                        priceInput.value = '';
+                        
+                        // Hidden Detail ID (Important: Must be empty for new row)
+                        const detailIdInput = newRow.querySelector('input[type="hidden"][name$="[receipt_detail_id]"]');
+                        if(detailIdInput) {
+                             detailIdInput.name = `details[${index}][receipt_detail_id]`;
+                             detailIdInput.value = '';
+                        }
+                        
+                        // Error Message
+                        const errorDiv = newRow.querySelector('.error-message');
+                        errorDiv.id = 'error-message-' + i;
+                        errorDiv.textContent = '';
+                        
+                         // Buttons
+                        const kampaiBtn = newRow.querySelector('.kampai-btn');
+                        kampaiBtn.setAttribute('data-row', i);
+                        kampaiBtn.addEventListener('click', function() {
+                            const row = this.getAttribute('data-row');
+                            const itemId = this.getAttribute('data-item-id');
+                            const itemSelect = document.getElementById('item_name' + row);
+                            itemSelect.value = itemId;
+                            const selectedOption = itemSelect.options[itemSelect.selectedIndex];
+                            const price = selectedOption.getAttribute('data-price') || '';
+                            document.getElementById('price' + row).value = price;
+                            document.getElementById('suu' + row).value = '';
+                            document.getElementById('cast_name' + row).value = '';
+                        });
+
+                        // Ensure copy buttons
+                        let actionDiv = newRow.querySelector('.item-action-buttons');
+                        if(!actionDiv.querySelector('.copy-item-btn')) {
+                             const copyItemBtn = document.createElement('button');
+                            copyItemBtn.type = 'button';
+                            copyItemBtn.className = 'copy-item-btn';
+                            copyItemBtn.setAttribute('data-row', i);
+                            copyItemBtn.textContent = '↑';
+                            copyItemBtn.addEventListener('click', function() {
+                                const currentRow = parseInt(this.getAttribute('data-row'), 10);
+                                const prevRow = currentRow - 1;
+                                const prevItem = document.getElementById('item_name' + prevRow).value;
+                                const prevPrice = document.getElementById('price' + prevRow).value;
+                                document.getElementById('item_name' + currentRow).value = prevItem;
+                                document.getElementById('price' + currentRow).value = prevPrice;
+                            });
+                            
+                            const copyCastBtn = document.createElement('button');
+                            copyCastBtn.type = 'button';
+                            copyCastBtn.className = 'copy-cast-btn';
+                            copyCastBtn.setAttribute('data-row', i);
+                            copyCastBtn.textContent = 'C';
+                            copyCastBtn.addEventListener('click', function() {
+                                const currentRow = parseInt(this.getAttribute('data-row'), 10);
+                                const prevRow = currentRow - 1;
+                                const prevCast = document.getElementById('cast_name' + prevRow).value;
+                                if (prevCast) {
+                                    document.getElementById('cast_name' + currentRow).value = prevCast;
+                                }
+                            });
+                             actionDiv.appendChild(copyItemBtn);
+                             actionDiv.appendChild(copyCastBtn);
+                        } else {
+                             const copyItemBtn = actionDiv.querySelector('.copy-item-btn');
+                             copyItemBtn.setAttribute('data-row', i);
+                             copyItemBtn.addEventListener('click', function() {
+                                const currentRow = parseInt(this.getAttribute('data-row'), 10);
+                                const prevRow = currentRow - 1;
+                                const prevItem = document.getElementById('item_name' + prevRow).value;
+                                const prevPrice = document.getElementById('price' + prevRow).value;
+                                document.getElementById('item_name' + currentRow).value = prevItem;
+                                document.getElementById('price' + currentRow).value = prevPrice;
+                            });
+                             const copyCastBtn = actionDiv.querySelector('.copy-cast-btn');
+                             copyCastBtn.setAttribute('data-row', i);
+                             copyCastBtn.addEventListener('click', function() {
+                                const currentRow = parseInt(this.getAttribute('data-row'), 10);
+                                const prevRow = currentRow - 1;
+                                const prevCast = document.getElementById('cast_name' + prevRow).value;
+                                if (prevCast) {
+                                    document.getElementById('cast_name' + currentRow).value = prevCast;
+                                }
+                            });
+                        }
+                        
+                        document.querySelector('.receipt-grid').appendChild(newRow);
+                        
+                        // Re-apply categories if needed? 
+                        // The newly cloned options might have style="display: none" if they were filtered.
+                        // We should ensure they observe current category.
+                        applyCategoryFilter(currentCategory);
+                    });
                 });
             </script>
         <?php endif; ?>
