@@ -454,7 +454,7 @@ if ($search_query !== '') {
                             <td><?= h($item['cost']) ?></td>
                             <td><?= h($item['tax_type_name']) ?></td>
                             <td><?= $cost_rate ?>%</td>
-                            <td><?= $cost_rate ?>%</td>
+
                             <td><?= number_format($profit) ?></td>
                             <td><?= ($item['del_flg'] == 1) ? '<span style="color:red;">非表示</span>' : '表示' ?></td>
                             <td class="action-buttons">
