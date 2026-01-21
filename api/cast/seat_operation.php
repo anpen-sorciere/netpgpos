@@ -91,14 +91,36 @@ try {
 
         case 'checkout':
             $session_id = $input['session_id'];
-            $input = json_decode(file_get_contents('php://input'), true);
             $payment_type = $input['payment_type'] ?? 1; // Default Cash
             $adjust_price = $input['adjust_price'] ?? 0;
             $staff_id = $input['staff_id'] ?? 0;
             $issuer_id = $input['issuer_id'] ?? 0;
             $is_new_customer = $input['is_new_customer'] ?? 0;
             
-            // ... (omitted) ...
+            // 1. Fetch Session
+            $stmt = $pdo->prepare("SELECT * FROM seat_sessions WHERE session_id = ?");
+            $stmt->execute([$session_id]);
+            $session = $stmt->fetch(PDO::FETCH_ASSOC);
+            if(!$session) throw new Exception('Session not found');
+
+            // 2. Fetch Orders
+            $stmt = $pdo->prepare("SELECT * FROM session_orders WHERE session_id = ?");
+            $stmt->execute([$session_id]);
+            $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // 3. Generate Receipt ID
+            $now = new DateTime();
+            $receipt_id = intval($now->format('ymdHis'));
+            
+            // Dates
+            $receipt_day = $now->format('Ymd');
+            $start = new DateTime($session['start_time']);
+            $in_date = $start->format('Ymd');
+            $in_time = $start->format('Hi');
+            $out_date = $now->format('Ymd');
+            $out_time = $now->format('Hi');
+            
+            $pdo->beginTransaction();
 
             // 4. Insert Receipt
             $ins = $pdo->prepare("INSERT INTO receipt_tbl (receipt_id, shop_id, sheet_no, receipt_day, in_date, in_time, out_date, out_time, customer_name, issuer_id, staff_id, payment_type, adjust_price, rep_id, is_new_customer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
