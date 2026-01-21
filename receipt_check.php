@@ -292,8 +292,8 @@ $final_total = $total_with_tax + $adjust_price;
                 <tr>
                     <td><?= htmlspecialchars($item['item_id'], ENT_QUOTES); ?></td>
                     <td><?= htmlspecialchars($item['item_name'], ENT_QUOTES); ?></td>
-                    <td><?= htmlspecialchars($item['cast_id'], ENT_QUOTES); ?></td>
-                    <td><?= htmlspecialchars($item['cast_name'], ENT_QUOTES); ?></td>
+                    <td><?= htmlspecialchars($item['cast_id'] ?? '', ENT_QUOTES); ?></td>
+                    <td><?= htmlspecialchars($item['cast_name'] ?? '', ENT_QUOTES); ?></td>
                     <td class="right-align"><?= number_format($item['price']); ?></td>
                     <td class="right-align"><?= number_format($item['quantity']); ?></td>
                     <td class="right-align"><?= number_format($item['subtotal']); ?></td>
