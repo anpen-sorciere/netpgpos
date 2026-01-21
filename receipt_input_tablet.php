@@ -532,6 +532,11 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                     <option value="5">5名以上</option>
                 </select>
 
+                <div style="margin-bottom:20px; display:flex; align-items:center;">
+                    <input type="checkbox" id="checkinIsNew" style="width:20px; height:20px;">
+                    <label for="checkinIsNew" style="font-size:1.1rem; margin-left:10px;">新規 (New Customer)</label>
+                </div>
+
                 <label style="display:block; margin-bottom:5px;">入店時間 (Check-in Time)</label>
                 <div style="display:flex; gap:10px; margin-bottom:15px;">
                     <input type="date" id="checkinDate" class="header-input" style="flex:1;">
@@ -588,6 +593,19 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                         <option value="<?= $c['cast_id'] ?>"><?= $c['cast_name'] ?></option>
                     <?php endforeach; ?>
                 </select>
+
+                <label style="display:block; margin-bottom:5px;">伝票起票者 (Issuer)</label>
+                <select id="checkoutIssuer" class="header-input" style="width:100%; margin-bottom:15px; padding:10px;">
+                    <option value="0">未指定</option>
+                    <?php foreach($casts as $c): ?>
+                        <option value="<?= $c['cast_id'] ?>"><?= $c['cast_name'] ?></option>
+                    <?php endforeach; ?>
+                </select>
+
+                <div style="margin-bottom:20px; display:flex; align-items:center;">
+                    <input type="checkbox" id="checkoutIsNew" style="width:20px; height:20px;">
+                    <label for="checkoutIsNew" style="font-size:1.1rem; margin-left:10px;">新規 (New Customer)</label>
+                </div>
 
                 <button onclick="executeCheckout()" style="padding:20px; background:#e67e22; color:white; border:none; border-radius:6px; font-size:1.2rem; display:flex; align-items:center; justify-content:center; gap:10px;">
                     <i class="fas fa-file-invoice-dollar"></i> お会計 (Checkout)
@@ -934,6 +952,10 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             
             // Store target session ID
             document.getElementById('sessionModal').dataset.sessionId = session.session_id;
+            
+            // Pre-fill New Customer checkbox
+            document.getElementById('checkoutIsNew').checked = (parseInt(session.is_new_customer) === 1);
+            
             document.getElementById('sessionModal').style.display = 'flex';
         } else {
             // Vacant -> Check-in
@@ -969,6 +991,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         if(!dateVal || !timeVal) { alert('入店時間を入力してください'); return; }
         
         const startTime = `${dateVal} ${timeVal}:00`;
+        const isNew = document.getElementById('checkinIsNew').checked ? 1 : 0;
         
         fetch('api/cast/seat_operation.php', {
             method: 'POST',
@@ -979,7 +1002,9 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 sheet_id: sheetId,
                 customer_name: name,
                 people_count: people,
-                start_time: startTime
+                start_time: startTime,
+                is_new_customer: isNew
+            })
             })
         })
         .then(res => res.json())
@@ -1081,7 +1106,8 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 payment_type: document.getElementById('checkoutPayment').value,
                 adjust_price: document.getElementById('checkoutAdjust').value,
                 staff_id: document.getElementById('checkoutStaff').value,
-                issuer_id: document.getElementById('checkoutIssuer').value
+                issuer_id: document.getElementById('checkoutIssuer').value,
+                is_new_customer: document.getElementById('checkoutIsNew').checked ? 1 : 0
             })
         })
         .then(res => res.json())
