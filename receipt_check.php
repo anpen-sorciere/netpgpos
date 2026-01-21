@@ -82,7 +82,7 @@ if (!empty($_POST['check'])) {
 
     // 伝票明細登録 (最大50行登録)
     $stmt_detail = $pdo->prepare("INSERT INTO receipt_detail_tbl (shop_id, receipt_id, receipt_day, item_id, quantity, price, cast_id, cast_back_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-    for ($i = 1; $i <= 50; $i++) {
+    for ($i = 1; $i <= 11; $i++) {
         // 全ての行に対して処理を実行
         $item_id = intval($_SESSION['join']["item_name$i"] ?? 0);
         $quantity = intval($_SESSION['join']["suu$i"] ?? 0);
@@ -144,7 +144,7 @@ $staff_name = $staff_data['cast_name'] ?? '未指定';
 
 $total_subtotal = 0;
 $items_to_display = [];
-for ($i = 1; $i <= 50; $i++) {
+for ($i = 1; $i <= 11; $i++) {
     $item_id = intval($_SESSION['join']["item_name$i"] ?? 0);
     $quantity = intval($_SESSION['join']["suu$i"] ?? 0);
     $price = intval($_SESSION['join']["price$i"] ?? 0);
