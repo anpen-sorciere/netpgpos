@@ -134,8 +134,8 @@ try {
                 } else {
                     // 新規明細の追加（11行未満の場合のみ）
                     if (count($details) + $i < 11) {
-                         $stmt = $pdo->prepare("INSERT INTO receipt_detail_tbl (receipt_id, item_id, quantity, price, cast_id, cast_back_price, receipt_day) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                         $stmt->execute([$receipt_id, $item_id, $quantity, $price, $cast_id, $cast_back_price, $new_receipt_day]);
+                         $stmt = $pdo->prepare("INSERT INTO receipt_detail_tbl (receipt_id, item_id, quantity, price, cast_id, cast_back_price, receipt_day, shop_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                         $stmt->execute([$receipt_id, $item_id, $quantity, $price, $cast_id, $cast_back_price, $new_receipt_day, $shop_mst]);
                     }
                 }
             }
