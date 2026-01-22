@@ -561,7 +561,17 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 <div style="background:#f0f8ff; padding:15px; border-radius:6px; margin-bottom:10px;">
                     <div id="sessionInfoName" style="font-weight:bold; font-size:1.2rem;">Guest Name</div>
                     <div id="sessionInfoTime" style="color:#666;">Started: 19:00 (45min)</div>
-                    <div id="sessionTotal" style="color:var(--accent-color); font-weight:bold; font-size:1.2rem; text-align:right;">Current Total: ¥0</div>
+                    
+                    <!-- Current Order List -->
+                    <div style="margin-top:10px; border-top:1px solid #ccc; padding-top:10px;">
+                        <div style="font-size:0.9rem; color:#555; margin-bottom:5px;">Check-in Orders:</div>
+                        <div id="sessionCurrentOrders" style="max-height:150px; overflow-y:auto; font-size:0.9rem; margin-bottom:5px;">
+                            <!-- Populated via JS -->
+                            <div style="color:#999; text-align:center;">Loading...</div>
+                        </div>
+                    </div>
+                    
+                    <div id="sessionTotal" style="color:var(--accent-color); font-weight:bold; font-size:1.2rem; text-align:right; border-top:2px solid #ddd; padding-top:5px;">Current Total: ¥0</div>
                 </div>
                 
                 <button onclick="startOrderForSession()" style="padding:20px; background:var(--confirm-color); color:white; border:none; border-radius:6px; font-size:1.2rem; display:flex; align-items:center; justify-content:center; gap:10px;">
@@ -995,6 +1005,9 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             document.getElementById('checkoutIsNew').checked = (parseInt(session.is_new_customer) === 1);
             
             document.getElementById('sessionModal').style.display = 'flex';
+            
+            // FETCH DETAIL
+            fetchSessionDetailsForView(session.session_id);
         } else {
             // Vacant -> Check-in
             document.getElementById('checkinSeatName').innerText = sheet.sheet_name;
@@ -1554,6 +1567,45 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             });
     
             form.submit();
+        }
+        
+        function fetchSessionDetailsForView(sessionId) {
+            const container = document.getElementById('sessionCurrentOrders');
+            container.innerHTML = '<div style="color:#999; text-align:center;">Loading...</div>';
+            
+            fetch('api/cast/seat_operation.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    action: 'get_session_details',
+                    shop_id: shopId,
+                    session_id: sessionId
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    if(!data.orders || data.orders.length === 0) {
+                        container.innerHTML = '<div style="text-align:center; color:#ccc;">No orders yet</div>';
+                        return;
+                    }
+                    let html = '<table style="width:100%; border-collapse:collapse;">';
+                    data.orders.forEach(o => {
+                       html += `<tr>
+                        <td style="padding:2px;">${o.item_name}</td>
+                        <td style="padding:2px; text-align:right;">x${o.quantity}</td>
+                        <td style="padding:2px; text-align:right;">¥${Number(o.price * o.quantity).toLocaleString()}</td>
+                       </tr>`; 
+                    });
+                    html += '</table>';
+                    container.innerHTML = html;
+                } else {
+                    container.innerText = 'Error loading details';
+                }
+            })
+            .catch(e => {
+                container.innerText = 'Conn Error';
+            });
         }
     
         function addHidden(form, name, value) {
