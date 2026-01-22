@@ -571,7 +571,8 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                         </div>
                     </div>
                     
-                    <div id="sessionTotal" style="color:var(--accent-color); font-weight:bold; font-size:1.2rem; text-align:right; border-top:2px solid #ddd; padding-top:5px;">Current Total: ¥0</div>
+                    
+                    <div id="sessionTotal" style="color:var(--accent-color); font-weight:bold; font-size:1.2rem; text-align:right; border-top:2px solid #ddd; padding-top:5px;"></div>
                 </div>
                 
                 <button onclick="startOrderForSession()" style="padding:20px; background:var(--confirm-color); color:white; border:none; border-radius:6px; font-size:1.2rem; display:flex; align-items:center; justify-content:center; gap:10px;">
@@ -1590,19 +1591,43 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                         return;
                     }
                     let html = '<table style="width:100%; border-collapse:collapse;">';
+                    let subTotal = 0;
                     data.orders.forEach(o => {
                        let castHtml = '';
                        if(o.cast_name && o.cast_name !== '') {
                            castHtml = `<span style="font-size:0.8rem; color:#888; margin-left:5px;">(${o.cast_name})</span>`;
                        }
+                       const rowPrice = o.price * o.quantity;
+                       subTotal += rowPrice;
+                       
                        html += `<tr>
                         <td style="padding:2px;">${o.item_name}</td>
                         <td style="padding:2px; text-align:right;">x${o.quantity}${castHtml}</td>
-                        <td style="padding:2px; text-align:right;">¥${Number(o.price * o.quantity).toLocaleString()}</td>
+                        <td style="padding:2px; text-align:right;">¥${Number(rowPrice).toLocaleString()}</td>
                        </tr>`; 
                     });
                     html += '</table>';
                     container.innerHTML = html;
+                    
+                    // Calc Tax and Total
+                    const tax = Math.floor(subTotal * 0.1);
+                    const total = subTotal + tax;
+                    
+                    const totalEl = document.getElementById('sessionTotal');
+                    totalEl.innerHTML = `
+                        <div style="display:flex; justify-content:space-between; font-size:1rem; color:#555;">
+                            <span>小計</span>
+                            <span>¥${subTotal.toLocaleString()}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:1rem; color:#555;">
+                            <span>消費税 (10%)</span>
+                            <span>¥${tax.toLocaleString()}</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:1.3rem; margin-top:5px; border-top:1px solid #ccc; padding-top:5px;">
+                            <span>合計</span>
+                            <span>¥${total.toLocaleString()}</span>
+                        </div>
+                    `;
                 } else {
                     container.innerText = 'Error loading details';
                 }
