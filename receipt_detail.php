@@ -100,43 +100,52 @@ try {
             $stmt = $pdo->prepare("UPDATE receipt_tbl SET customer_name = ?, sheet_no = ?, in_date = ?, in_time = ?, out_date = ?, out_time = ?, receipt_day = ?, issuer_id = ?, staff_id = ?, payment_type = ?, adjust_price = ?, is_new_customer = ? WHERE receipt_id = ?");
             $stmt->execute([$new_customer_name, $new_sheet_no, $new_in_date, $new_in_time, $new_out_date, $new_out_time, $new_receipt_day, $new_issuer_id, $new_staff_id, $new_payment_type, $new_adjust_price, $new_is_new_customer, $receipt_id]);
 
-            // 既存明細の更新または新規明細の追加
-            $submitted_details = $_POST['details'];
-            
-            for ($i = 0; $i < 50; $i++) {
-                $detail = $submitted_details[$i];
-                $item_id = isset($detail['item_id']) && $detail['item_id'] !== '' ? (int)$detail['item_id'] : 0;
-                $quantity = isset($detail['quantity']) && $detail['quantity'] !== '' ? (int)$detail['quantity'] : 0;
-                $cast_id = isset($detail['cast_id']) && $detail['cast_id'] !== '' ? (int)$detail['cast_id'] : 0;
-                $receipt_detail_id = $detail['receipt_detail_id'] ?? null;
-                
-                // item_idが空の場合は、値をリセット
-                if (empty($item_id)) {
-                    $item_id = 0;
-                    $quantity = 0;
+            $processed_count = 0;
+            if (isset($_POST['details']) && is_array($_POST['details'])) {
+                foreach ($_POST['details'] as $detail) {
+                    if ($processed_count >= 50) break; // Limit strict 50
+
+                    $item_id = isset($detail['item_id']) && $detail['item_id'] !== '' ? (int)$detail['item_id'] : 0;
+                    $quantity = isset($detail['quantity']) && $detail['quantity'] !== '' ? (int)$detail['quantity'] : 0;
+                    $cast_id = isset($detail['cast_id']) && $detail['cast_id'] !== '' ? (int)$detail['cast_id'] : 0;
+                    $receipt_detail_id = $detail['receipt_detail_id'] ?? null;
+                    
                     $price = 0;
-                    $cast_id = 0;
                     $cast_back_price = 0;
-                } else {
-                    $item_data = $items_indexed[$item_id] ?? null;
-                    $price = $item_data['price'] ?? 0;
-                    $cast_back_price = ($item_data['back_price'] ?? 0) * ($quantity ?? 0);
-                    // cast_idが空の場合に0を設定
-                    if (empty($cast_id)) {
+
+                    if ($item_id > 0) {
+                        $item_data = $items_indexed[$item_id] ?? null;
+                        $price = $item_data['price'] ?? 0;
+                        $cast_back_price = ($item_data['back_price'] ?? 0) * ($quantity ?? 0);
+                        if (empty($cast_id)) {
+                            $cast_id = 0;
+                        }
+                    } else {
+                        // item_id is 0/empty
+                        $item_id = 0;
+                        $quantity = 0;
                         $cast_id = 0;
                     }
-                }
-                
-                if (!empty($receipt_detail_id)) {
-                    // 既存明細の更新と伝票日付の更新
-                    $stmt = $pdo->prepare("UPDATE receipt_detail_tbl SET receipt_day = ?, item_id = ?, quantity = ?, price = ?, cast_id = ?, cast_back_price = ? WHERE receipt_detail_id = ?");
-                    $stmt->execute([$new_receipt_day, $item_id, $quantity, $price, $cast_id, $cast_back_price, $receipt_detail_id]);
-                } else {
-                    // 新規明細の追加（11行未満の場合のみ）
-                    if (count($details) + $i < 50) {
-                         $stmt = $pdo->prepare("INSERT INTO receipt_detail_tbl (receipt_id, item_id, quantity, price, cast_id, cast_back_price, receipt_day, shop_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-                         $stmt->execute([$receipt_id, $item_id, $quantity, $price, $cast_id, $cast_back_price, $new_receipt_day, $shop_mst]);
+                    
+                    if (!empty($receipt_detail_id)) {
+                        // 既存明細
+                        if ($item_id > 0) {
+                            // Update
+                            $stmt = $pdo->prepare("UPDATE receipt_detail_tbl SET receipt_day = ?, item_id = ?, quantity = ?, price = ?, cast_id = ?, cast_back_price = ? WHERE receipt_detail_id = ?");
+                            $stmt->execute([$new_receipt_day, $item_id, $quantity, $price, $cast_id, $cast_back_price, $receipt_detail_id]);
+                        } else {
+                            // Item cleared -> Delete row
+                            $stmt = $pdo->prepare("DELETE FROM receipt_detail_tbl WHERE receipt_detail_id = ?");
+                            $stmt->execute([$receipt_detail_id]);
+                        }
+                    } else {
+                        // 新規明細
+                        if ($item_id > 0) {
+                             $stmt = $pdo->prepare("INSERT INTO receipt_detail_tbl (receipt_id, item_id, quantity, price, cast_id, cast_back_price, receipt_day, shop_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                             $stmt->execute([$receipt_id, $item_id, $quantity, $price, $cast_id, $cast_back_price, $new_receipt_day, $shop_mst]);
+                        }
                     }
+                    $processed_count++;
                 }
             }
 
