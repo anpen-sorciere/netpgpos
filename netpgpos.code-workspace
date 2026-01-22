@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "../common"
+		},
+		{
+			"path": "../x-auto-post"
 		}
 	],
 	"settings": {
