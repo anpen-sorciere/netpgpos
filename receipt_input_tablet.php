@@ -1591,9 +1591,13 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                     }
                     let html = '<table style="width:100%; border-collapse:collapse;">';
                     data.orders.forEach(o => {
+                       let castHtml = '';
+                       if(o.cast_name && o.cast_name !== '') {
+                           castHtml = `<span style="font-size:0.8rem; color:#888; margin-left:5px;">(${o.cast_name})</span>`;
+                       }
                        html += `<tr>
                         <td style="padding:2px;">${o.item_name}</td>
-                        <td style="padding:2px; text-align:right;">x${o.quantity}</td>
+                        <td style="padding:2px; text-align:right;">x${o.quantity}${castHtml}</td>
                         <td style="padding:2px; text-align:right;">¥${Number(o.price * o.quantity).toLocaleString()}</td>
                        </tr>`; 
                     });
