@@ -33,16 +33,17 @@ try {
             $stmt->execute([$shop_id]);
             $sessions = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            // 各セッションの詳細オーダーも取得する場合
-            /*
-            foreach($sessions as &$sess) {
-                $oH = $pdo->prepare("SELECT * FROM session_orders WHERE session_id = ?");
-                $oH->execute([$sess['session_id']]);
-                $sess['orders'] = $oH->fetchAll(PDO::FETCH_ASSOC);
-            }
-            */
-            
             echo json_encode(['status' => 'success', 'sessions' => $sessions]);
+            break;
+
+        case 'get_session_details':
+            $session_id = $input['session_id'];
+            // Fetch session orders
+            $stmt = $pdo->prepare("SELECT * FROM session_orders WHERE session_id = ? ORDER BY created_at ASC");
+            $stmt->execute([$session_id]);
+            $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            echo json_encode(['status' => 'success', 'orders' => $orders]);
             break;
 
         case 'checkin':

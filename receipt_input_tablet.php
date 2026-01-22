@@ -609,6 +609,28 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
     </div>
     
     <!-- Seat Map Modal -->
+    <div class="modal-overlay" id="checkoutConfirmModal">
+        <div class="modal-content" style="max-width:600px;">
+            <div class="modal-header">
+                <span>お会計確認 (Checkout Confirmation)</span>
+                <span class="close-modal" onclick="closeModal('checkoutConfirmModal')">&times;</span>
+            </div>
+            <div class="modal-body" style="padding:20px;">
+                <div id="checkoutConfirmList" style="max-height:300px; overflow-y:auto; margin-bottom:20px; border:1px solid #ddd;">
+                    <!-- Items go here -->
+                </div>
+                <div style="text-align:right; font-size:1.5rem; font-weight:bold; margin-bottom:20px;">
+                    合計: <span id="checkoutConfirmTotal">¥0</span>
+                </div>
+                <div style="display:flex; gap:10px;">
+                    <button onclick="closeModal('checkoutConfirmModal')" style="flex:1; padding:15px; background:#aaa; color:white; border:none; border-radius:6px; font-weight:bold;">キャンセル</button>
+                    <button onclick="finalizeCheckout()" style="flex:1; padding:15px; background:#e67e22; color:white; border:none; border-radius:6px; font-weight:bold;">お会計実行</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Seat Map Modal -->
     <div class="modal-overlay" id="sheetModal">
         <div class="modal-content" style="max-width:900px;">
             <div class="modal-header">
@@ -1096,7 +1118,61 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
 
     function executeCheckout() {
         const sessionId = document.getElementById('sessionModal').dataset.sessionId;
-        if(!confirm('お会計を確定し、退店処理を行いますか？\n(後戻りできません)')) return;
+        // Don't confirm here immediately. Fetch details for confirmation modal.
+        
+        fetch('api/cast/seat_operation.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                action: 'get_session_details',
+                shop_id: shopId,
+                session_id: sessionId
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'success') {
+                showCheckoutConfirmation(data.orders);
+            } else {
+                alert('注文詳細の取得に失敗しました: ' + data.message);
+            }
+        })
+        .catch(e => alert('通信エラー: ' + e.message));
+    }
+
+    function showCheckoutConfirmation(orders) {
+        const container = document.getElementById('checkoutConfirmList');
+        let html = '<table style="width:100%; border-collapse:collapse;">';
+        html += '<tr style="background:#f0f0f0; border-bottom:1px solid #ccc;"><th style="padding:5px; text-align:left;">商品名</th><th style="padding:5px;">単価</th><th style="padding:5px;">数量</th><th style="padding:5px;">小計</th></tr>';
+        
+        let total = 0;
+        if(orders) {
+            orders.forEach(o => {
+                const sub = o.price * o.quantity;
+                total += sub;
+                html += `<tr style="border-bottom:1px solid #eee;">
+                    <td style="padding:8px;">${o.item_name}</td>
+                    <td style="padding:8px; text-align:right;">¥${Number(o.price).toLocaleString()}</td>
+                    <td style="padding:8px; text-align:center;">${o.quantity}</td>
+                    <td style="padding:8px; text-align:right;">¥${sub.toLocaleString()}</td>
+                </tr>`;
+            });
+        }
+        html += '</table>';
+
+        const adjust = parseInt(document.getElementById('checkoutAdjust').value || 0);
+        if(adjust !== 0) {
+            total += adjust;
+            html += `<div style="text-align:right; padding:10px; font-weight:bold; color:red;">調整額: ¥${adjust.toLocaleString()}</div>`;
+        }
+        
+        container.innerHTML = html;
+        document.getElementById('checkoutConfirmTotal').innerText = '¥' + total.toLocaleString();
+        document.getElementById('checkoutConfirmModal').style.display = 'flex';
+    }
+
+    function finalizeCheckout() {
+        const sessionId = document.getElementById('sessionModal').dataset.sessionId;
         
         fetch('api/cast/seat_operation.php', {
             method: 'POST',
@@ -1116,10 +1192,12 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         .then(data => {
             if(data.status === 'success') {
                 alert('お会計完了しました。');
+                closeModal('checkoutConfirmModal');
                 closeModal('sessionModal');
                 fetchSeatStatus();
             } else {
                 alert('Checkout Failed: ' + data.message);
+                // Keep modal open for retry? Or close?
             }
         })
         .catch(e => alert('Error: ' + e.message));
