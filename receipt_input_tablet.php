@@ -989,14 +989,16 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         selectSheet(sheet.sheet_id, sheet.sheet_name);
         
         const session = activeSessions[sheet.sheet_id];
+        document.getElementById('sessionModalTitle').innerText = `座席番号 (${sheet.sheet_name})`;
+        
         if(session) {
             // Unpack session info
-            document.getElementById('sessionInfoName').innerText = session.customer_name + ' (' + session.people_count + '名)';
+            document.getElementById('sessionInfoName').innerText = session.customer_name + ' 様 (' + session.people_count + '名)';
             // Calc time
             const start = new Date(session.start_time);
             const now = new Date();
             const diffMins = Math.floor((now - start) / 60000);
-            document.getElementById('sessionInfoTime').innerText = `Start: ${session.start_time.substring(11,16)} (${diffMins} min)`;
+            document.getElementById('sessionInfoTime').innerText = `入店時間: ${session.start_time.substring(11,16)} (${diffMins} min)`;
             document.getElementById('sessionTotal').innerText = `Current Orders: ¥${Number(session.current_order_total || 0).toLocaleString()}`;
             
             // Store target session ID
