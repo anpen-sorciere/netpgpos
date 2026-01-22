@@ -75,7 +75,7 @@ if(isset($_GET['utype'])) {
             
             <!-- 新機能 -->
             <li class="menu-item"><a href="api/admin_tools.php" class="menu-button" style="background-color: #6f42c1; color: white;">BASE関連ツール・管理メニュー</a></li>
-            <li class="menu-item"><a href="../x-auto-post/x_post_menu.php" class="menu-button" style="background-color: #000; color: white;"><i class="fab fa-x-twitter"></i> X投稿メニュー</a></li>
+            <li class="menu-item"><a href="../x-auto-post/x_post_menu.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button" style="background-color: #000; color: white;"><i class="fab fa-x-twitter"></i> X投稿メニュー</a></li>
         </ul>
     </div>
 </body>
