@@ -23,7 +23,16 @@ try {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
 
     $pdo->exec($sql);
-    echo "Table 'seat_sessions' created successfully.<br>";
+    echo "Table 'seat_sessions' created/verified.<br>";
+
+    // Migration: Check if is_new_customer exists
+    $stmt = $pdo->query("SHOW COLUMNS FROM seat_sessions LIKE 'is_new_customer'");
+    if ($stmt->rowCount() == 0) {
+        $pdo->exec("ALTER TABLE seat_sessions ADD COLUMN is_new_customer TINYINT(1) DEFAULT 0");
+        echo "Column 'is_new_customer' added.<br>";
+    } else {
+        echo "Column 'is_new_customer' already exists.<br>";
+    }
     
     // session_orders needs to be considered. 
     // Option B from plan: save directly to a session_orders table?
