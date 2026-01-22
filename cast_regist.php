@@ -421,7 +421,7 @@ if ($search_query !== '') {
         <table class="info-table">
             <thead>
                 <tr>
-                    <th>ID</th><th>キャスト名</th><th>キャストよみ</th><th>本名</th><th>よみがな</th><th>生年月日</th><th>住所</th><th>TEL1</th><th>TEL2</th><th>最寄駅</th><th>交通費</th><th>キャストタイプ</th><th>入店日</th><th>退店日</th><th>在籍状況</th><th>操作</th>
+                    <th>ID</th><th>キャスト名</th><th>キャストよみ</th><th>本名</th><th>よみがな</th><th>生年月日</th><th>住所</th><th>TEL1</th><th>TEL2</th><th>最寄駅</th><th>交通費</th><th>キャストタイプ</th><th>X(Twitter)</th><th>Instagram</th><th>TikTok</th><th>入店日</th><th>退店日</th><th>在籍状況</th><th>操作</th>
                 </tr>
             </thead>
             <tbody>
@@ -439,6 +439,9 @@ if ($search_query !== '') {
                         <td><?= htmlspecialchars($row['station']) ?></td>
                         <td><?= htmlspecialchars($row['tc']) ?></td>
                         <td><?= htmlspecialchars($cast_types[$row['cast_type']] ?? '') ?></td>
+                        <td><?= htmlspecialchars($row['social_x'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($row['social_instagram'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($row['social_tiktok'] ?? '') ?></td>
                         <td><?= htmlspecialchars($row['joinday'] ? date('Y/m/d', strtotime($row['joinday'])) : '') ?></td>
                         <td><?= htmlspecialchars($row['dropday'] ? date('Y/m/d', strtotime($row['dropday'])) : '') ?></td>
                         <td><?= ($row['drop_flg'] == 1) ? '退職済' : '在籍' ?></td>
