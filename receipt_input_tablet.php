@@ -630,6 +630,20 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         </div>
     </div>
     
+    <!-- Order Complete Modal -->
+    <div class="modal-overlay" id="orderCompleteModal">
+        <div class="modal-content" style="max-width:400px; text-align:center;">
+            <div class="modal-body" style="padding:30px;">
+                <i class="fas fa-check-circle" style="font-size:4rem; color:#2ecc71; margin-bottom:20px;"></i>
+                <h2 style="margin-top:0;">注文完了</h2>
+                <p>ご注文を承りました。</p>
+                <button onclick="completeOrderFlow()" style="width:100%; padding:15px; margin-top:20px; background:#3498db; color:white; border:none; border-radius:6px; font-weight:bold; font-size:1.2rem;">
+                    次の座席を選択 (Next)
+                </button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Seat Map Modal -->
     <div class="modal-overlay" id="sheetModal">
         <div class="modal-content" style="max-width:900px;">
@@ -639,7 +653,11 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                     <label style="font-size:0.9rem;">
                         <input type="checkbox" id="editModeToggle" onchange="toggleEditMode()"> レイアウト編集
                     </label>
-                    <span class="close-modal" onclick="closeModal('sheetModal')">&times;</span>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <label style="font-size:0.9rem;">
+                        <input type="checkbox" id="editModeToggle" onchange="toggleEditMode()"> レイアウト編集
+                    </label>
+                    <span class="close-modal" id="sheetModalCloseBtn" onclick="closeModal('sheetModal')" style="display:none;">&times;</span>
                 </div>
             </div>
             <div class="modal-body">
@@ -700,6 +718,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         // Auto open sheet modal if not selected
         window.addEventListener('load', () => {
              fetchSeatStatus();
+             openSheetModal(); // Default to map
              // Polling every 30s
              setInterval(fetchSeatStatus, 30000);
         });
@@ -1085,6 +1104,8 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         btn.disabled = true;
         btn.style.background = '#ccc';
         btn.onclick = null;
+        
+        openSheetModal(); // Return to map
     }
 
     function submitOrder() {
@@ -1106,9 +1127,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         .then(res => res.json())
         .then(data => {
             if(data.status === 'success') {
-                alert('注文を送信しました');
-                cancelOrderMode();
-                fetchSeatStatus(); // Update totals
+                showOrderComplete();
             } else {
                 alert('Order Failed: ' + data.message);
             }
@@ -1550,6 +1569,18 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             input.value = value;
             input.className = 'dynamic-item';
             form.appendChild(input);
+        }
+
+        // Order Complete Flow
+        function showOrderComplete() {
+            document.getElementById('orderCompleteModal').style.display = 'flex';
+        }
+
+        function completeOrderFlow() {
+            closeModal('orderCompleteModal');
+            cancelOrderMode();
+            fetchSeatStatus();
+            openSheetModal(); // Direct user to seat selection
         }
     </script>
     
