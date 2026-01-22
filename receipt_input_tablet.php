@@ -653,10 +653,6 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                     <label style="font-size:0.9rem;">
                         <input type="checkbox" id="editModeToggle" onchange="toggleEditMode()"> レイアウト編集
                     </label>
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <label style="font-size:0.9rem;">
-                        <input type="checkbox" id="editModeToggle" onchange="toggleEditMode()"> レイアウト編集
-                    </label>
                     <span class="close-modal" id="sheetModalCloseBtn" onclick="closeModal('sheetModal')" style="display:none;">&times;</span>
                 </div>
             </div>
@@ -695,9 +691,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                     <!-- Seats generated here -->
                 </div>
             </div>
-            <div class="modal-footer" style="padding:15px; background:#222; text-align:right;">
-                <button onclick="closeModal('sheetModal')" style="padding:10px 20px; border-radius:4px; border:none; background:#555; color:white;">閉じる</button>
-            </div>
+
         </div>
     </div>
     
