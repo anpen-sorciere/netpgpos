@@ -722,6 +722,11 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         let isNewItemCastSelection = false;
         const shopId = <?= $shop_info['id'] ?>;
         
+        let isEditMode = false;
+        let isNewItemCastSelection = false;
+        let isSelectingForNewOrder = false; // Flag for deferred selection
+        const shopId = <?= $shop_info['id'] ?>;
+        
         // Real-time State
         let activeSessions = {}; // sheet_id -> session object
         let workingSessionId = 0; // If set, we are ordering for this session
@@ -819,6 +824,22 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             document.getElementById('totalAmount').innerText = '¥' + total.toLocaleString();
             
             container.scrollTop = container.scrollHeight;
+            
+            // Enable button if items exist even if no session
+            if(workingSessionId === 0) {
+                const btn = document.getElementById('mainActionButton');
+                if(cart.length > 0) {
+                    btn.innerText = '座席を選択して注文';
+                    btn.disabled = false;
+                    btn.style.background = 'var(--confirm-color)'; // Green
+                    btn.onclick = handleMainAction;
+                } else {
+                    btn.innerText = '座席未選択';
+                    btn.disabled = true;
+                    btn.style.background = '#ccc';
+                    btn.onclick = null;
+                }
+            }
         }
     
         function updateQty(index, change) {
@@ -996,6 +1017,17 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         selectSheet(sheet.sheet_id, sheet.sheet_name);
         
         const session = activeSessions[sheet.sheet_id];
+        
+        // If selecting for new order (Deferred)
+        if(isSelectingForNewOrder) {
+            if(session) {
+                alert('注文データを持っているため、空席のみ選択可能です。\n(既存の座席に追加する場合は一度注文モードを解除してください)');
+                return;
+            }
+            // Vacant - proceed to checkin as usual, but keep cart
+            // Fallthrough to regular checkin logic below
+        }
+        
         document.getElementById('sessionModalTitle').innerText = `座席番号 (${sheet.sheet_name})`;
         
         if(session) {
@@ -1072,6 +1104,28 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             if(data.status === 'success') {
                 closeModal('checkinModal');
                 fetchSeatStatus(); // Refresh map
+                
+                // If deferred order exists
+                if(isSelectingForNewOrder) {
+                    isSelectingForNewOrder = false; // Reset flag
+                    if(data.session_id) {
+                        workingSessionId = data.session_id;
+                        // Determine session name for UI (Use input name)
+                        const sName = document.getElementById('checkinName').value || 'Guest';
+                        document.getElementById('workingSessionInfo').style.display = 'inline-block';
+                        document.getElementById('workingSessionName').innerText = sName;
+                        document.getElementById('cartStatus').innerText = '注文を入力中...';
+                        
+                        const btn = document.getElementById('mainActionButton');
+                        btn.innerText = '注文を確定する';
+                        btn.onclick = submitOrder;
+                        
+                        // Submit immediately
+                        submitOrder();
+                    } else {
+                        alert('Check-in success but Session ID missing. Please ensure API returns session_id.');
+                    }
+                }
             } else {
                 alert('Check-in Failed: ' + data.message);
             }
@@ -1123,6 +1177,18 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         btn.onclick = null;
         
         openSheetModal(); // Return to map
+    }
+
+    function handleMainAction() {
+        if(workingSessionId) {
+            submitOrder();
+        } else {
+            // Deferred Selection
+            if(cart.length === 0) return;
+            isSelectingForNewOrder = true;
+            openSheetModal();
+            alert('注文データを持ったまま座席を選択してください（空席のみ選択可能）');
+        }
     }
 
     function submitOrder() {
