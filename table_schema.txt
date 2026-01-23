@@ -1,0 +1,21 @@
+Array
+(
+    [Table] => seat_sessions
+    [Create Table] => CREATE TABLE `seat_sessions` (
+  `session_id` int(11) NOT NULL AUTO_INCREMENT,
+  `shop_id` int(11) NOT NULL,
+  `sheet_id` int(11) NOT NULL,
+  `customer_name` varchar(100) DEFAULT NULL,
+  `people_count` int(11) DEFAULT 1,
+  `start_time` datetime NOT NULL,
+  `end_time` datetime DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `is_new_customer` tinyint(1) DEFAULT 0,
+  PRIMARY KEY (`session_id`),
+  KEY `shop_id` (`shop_id`),
+  KEY `sheet_id` (`sheet_id`),
+  KEY `is_active` (`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+)

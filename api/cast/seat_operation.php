@@ -109,17 +109,28 @@ try {
             $stmt->execute([$session_id]);
             $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // 3. Generate Receipt ID
+            // 3. Generate Receipt ID and Times
             $now = new DateTime();
-            $receipt_id = intval($now->format('ymdHis'));
             
-            // Dates
-            $receipt_day = $now->format('Ymd');
+            // Check if custom time provided
+            if (!empty($input['checkout_time'])) {
+                // Input format YYYY-MM-DDTHH:mm
+                // Replace T with space
+                $customTimeStr = str_replace('T', ' ', $input['checkout_time']);
+                $calcTime = new DateTime($customTimeStr);
+            } else {
+                $calcTime = $now;
+            }
+
+            $receipt_id = intval($now->format('ymdHis')); // ID uses actual creation time to avoid collision? Or usage time? Usually ID is unique, so creation time is safer. Or use calcTime. Let's keep ID as creation time for uniqueness.
+            
+            // Dates for Record
+            $receipt_day = $calcTime->format('Ymd');
             $start = new DateTime($session['start_time']);
             $in_date = $start->format('Ymd');
             $in_time = $start->format('Hi');
-            $out_date = $now->format('Ymd');
-            $out_time = $now->format('Hi');
+            $out_date = $calcTime->format('Ymd');
+            $out_time = $calcTime->format('Hi');
             
             $pdo->beginTransaction();
 
