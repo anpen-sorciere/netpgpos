@@ -720,10 +720,6 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         let sheets = <?= json_encode($sheets) ?>;
         let isEditMode = false;
         let isNewItemCastSelection = false;
-        const shopId = <?= $shop_info['id'] ?>;
-        
-        let isEditMode = false;
-        let isNewItemCastSelection = false;
         let isSelectingForNewOrder = false; // Flag for deferred selection
         const shopId = <?= $shop_info['id'] ?>;
         
