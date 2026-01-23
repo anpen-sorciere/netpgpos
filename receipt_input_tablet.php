@@ -1171,7 +1171,19 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
 
     function showCheckoutConfirmation(orders) {
         const container = document.getElementById('checkoutConfirmList');
-        let html = '<table style="width:100%; border-collapse:collapse;">';
+        let html = '<div style="margin-bottom:15px; display:flex; align-items:center; justify-content:flex-end;">';
+        
+        // Default to current time or session end time if logic allows
+        const now = new Date();
+        // Format to YYYY-MM-DDTHH:mm
+        const pad = (n) => n.toString().padStart(2, '0');
+        const defaultTime = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+        
+        html += `<label style="margin-right:10px; font-weight:bold;">チェックアウト時間:</label>`;
+        html += `<input type="datetime-local" id="checkoutTimeInput" value="${defaultTime}" style="padding:5px; border:1px solid #ccc; border-radius:4px;">`;
+        html += '</div>';
+
+        html += '<table style="width:100%; border-collapse:collapse;">';
         html += '<tr style="background:#f0f0f0; border-bottom:1px solid #ccc;"><th style="padding:5px; text-align:left;">商品名</th><th style="padding:5px;">単価</th><th style="padding:5px;">数量</th><th style="padding:5px;">小計</th></tr>';
         
         let total = 0;
@@ -1255,7 +1267,8 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 adjust_price: document.getElementById('checkoutAdjust').value,
                 staff_id: document.getElementById('checkoutStaff').value,
                 issuer_id: document.getElementById('checkoutIssuer').value,
-                is_new_customer: document.getElementById('checkoutIsNew').checked ? 1 : 0
+                is_new_customer: document.getElementById('checkoutIsNew').checked ? 1 : 0,
+                checkout_time: document.getElementById('checkoutTimeInput') ? document.getElementById('checkoutTimeInput').value : null
             })
         })
         .then(res => res.json())

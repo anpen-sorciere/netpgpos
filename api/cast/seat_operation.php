@@ -166,8 +166,20 @@ try {
             }
 
             // 6. Close Session
-            $upd = $pdo->prepare("UPDATE seat_sessions SET is_active = 0, end_time = NOW() WHERE session_id = ?");
-            $upd->execute([$session_id]);
+            $endTime = 'NOW()';
+            $params = [$session_id];
+            
+            if (!empty($input['checkout_time'])) {
+                $endTime = '?';
+                $formattedTime = str_replace('T', ' ', $input['checkout_time']) . ':00'; // Append seconds
+                $params = array_merge([$formattedTime], $params);
+                $updSql = "UPDATE seat_sessions SET is_active = 0, end_time = ? WHERE session_id = ?";
+            } else {
+                $updSql = "UPDATE seat_sessions SET is_active = 0, end_time = NOW() WHERE session_id = ?";
+            }
+
+            $upd = $pdo->prepare($updSql);
+            $upd->execute($params);
             
             $pdo->commit();
             
