@@ -206,13 +206,20 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             /* Category Tabs */
             .category-tabs {
                 display: flex;
-                overflow-x: auto;
+                flex-wrap: wrap; /* Changed from overflow-x: auto */
                 background: #222;
                 padding: 10px;
-                gap: 10px;
+                gap: 5px; /* Reduced gap */
                 border-bottom: 1px solid var(--border-color);
             }
             .cat-btn {
+                background: #444; color: white; border: none;
+                padding: 8px 15px; /* Slightly smaller padding */
+                border-radius: 20px;
+                white-space: nowrap; cursor: pointer;
+                font-size: 0.95rem; transition: 0.2s;
+                flex: 0 0 auto; /* Allow wrap */
+            }
                 background: #444; color: white; border: none;
                 padding: 10px 20px; border-radius: 20px;
                 white-space: nowrap; cursor: pointer;
