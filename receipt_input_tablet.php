@@ -1234,14 +1234,10 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             </div>`;
         }
             
-        html += `<div style="display:flex; justify-content:space-between; font-size:1.2em; font-weight:bold; margin-top:5px; padding-top:5px; border-top:1px solid #eee;">
-                <span>総計 (Total):</span>
-                <span>¥${grandTotal.toLocaleString()}</span>
-            </div>
-        </div>`;
+        html += `</div>`;
         
         container.innerHTML = html;
-        document.getElementById('checkoutConfirmTotal').innerText = '¥' + total.toLocaleString();
+        document.getElementById('checkoutConfirmTotal').innerText = '¥' + grandTotal.toLocaleString();
         document.getElementById('checkoutConfirmModal').style.display = 'flex';
     }
 
