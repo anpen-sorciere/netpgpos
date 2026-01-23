@@ -166,6 +166,7 @@ try {
             }
 
             // 6. Close Session
+            $debugLog = "Input: " . print_r($input, true);
             $endTime = 'NOW()';
             $params = [$session_id];
             
@@ -174,9 +175,13 @@ try {
                 $formattedTime = str_replace('T', ' ', $input['checkout_time']) . ':00'; // Append seconds
                 $params = array_merge([$formattedTime], $params);
                 $updSql = "UPDATE seat_sessions SET is_active = 0, end_time = ? WHERE session_id = ?";
+                $debugLog .= "\nUsing Custom Time: $formattedTime";
             } else {
                 $updSql = "UPDATE seat_sessions SET is_active = 0, end_time = NOW() WHERE session_id = ?";
+                $debugLog .= "\nUsing NOW() - Input empty";
             }
+            
+            file_put_contents(__DIR__ . '/debug_checkout.txt', $debugLog . "\nSQL: $updSql\nParams: " . print_r($params, true) . "\n-----------------\n", FILE_APPEND);
 
             $upd = $pdo->prepare($updSql);
             $upd->execute($params);
