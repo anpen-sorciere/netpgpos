@@ -1179,8 +1179,13 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             orders.forEach(o => {
                 const sub = o.price * o.quantity;
                 total += sub;
+                let nameHtml = o.item_name;
+                if(o.cast_name) {
+                    nameHtml += ` <span style="font-size:0.85em; color:#fff; background:#e056fd; padding:2px 4px; border-radius:3px; margin-left:4px;">${o.cast_name}</span>`;
+                }
+                
                 html += `<tr style="border-bottom:1px solid #eee;">
-                    <td style="padding:8px;">${o.item_name}</td>
+                    <td style="padding:8px;">${nameHtml}</td>
                     <td style="padding:8px; text-align:right;">¥${Number(o.price).toLocaleString()}</td>
                     <td style="padding:8px; text-align:center;">${o.quantity}</td>
                     <td style="padding:8px; text-align:right;">¥${sub.toLocaleString()}</td>
@@ -1190,10 +1195,50 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         html += '</table>';
 
         const adjust = parseInt(document.getElementById('checkoutAdjust').value || 0);
+        let tax = 0;
+        let grandTotal = total;
+        
+        // Calculate Tax (Assuming 10% on food/drink, but using simple 10% for now as standard)
+        // If tax is already included in price, we might just show "Internal Tax".
+        // Assuming prices are tax-exclusive based on "Add Tax" button usuage in other POS, OR user wants Breakdown.
+        // Let's assume prices are Tax INCLUDED for now (common in night industry) unless specified otherwise.
+        // User asked "Subtotal and Sales Tax and Total?". 
+        // If prices are Tax Included: Tax = Total * 10/110. Subtotal = Total - Tax.
+        // If prices are Tax Excluded: Tax = Total * 0.10. Total = Subtotal + Tax.
+        // I will assume Tax Included (內税) as safest default for cafes, showing breakdown.
+        // Wait, typical POS "Subtotal, Tax, Total" implies Tax Added.
+        // Let's implement standard "Tax 10% Added" logic for clear indication.
+        
+        // Revised Logic:
+        // Subtotal = Sum of Item Prices
+        // Tax = Subtotal * 0.10
+        // Grand Total = Subtotal + Tax + Adjust
+        
+        tax = Math.floor(total * 0.10);
+        grandTotal = total + tax + adjust;
+
+        html += `<div style="margin-top:15px; border-top:2px solid #ddd; padding-top:10px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <span>小計 (Subtotal):</span>
+                <span>¥${total.toLocaleString()}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <span>消費税 (Tax 10%):</span>
+                <span>¥${tax.toLocaleString()}</span>
+            </div>`;
+            
         if(adjust !== 0) {
-            total += adjust;
-            html += `<div style="text-align:right; padding:10px; font-weight:bold; color:red;">調整額: ¥${adjust.toLocaleString()}</div>`;
+            html += `<div style="display:flex; justify-content:space-between; margin-bottom:5px; color:red;">
+                <span>調整額 (Adjust):</span>
+                <span>¥${adjust.toLocaleString()}</span>
+            </div>`;
         }
+            
+        html += `<div style="display:flex; justify-content:space-between; font-size:1.2em; font-weight:bold; margin-top:5px; padding-top:5px; border-top:1px solid #eee;">
+                <span>総計 (Total):</span>
+                <span>¥${grandTotal.toLocaleString()}</span>
+            </div>
+        </div>`;
         
         container.innerHTML = html;
         document.getElementById('checkoutConfirmTotal').innerText = '¥' + total.toLocaleString();

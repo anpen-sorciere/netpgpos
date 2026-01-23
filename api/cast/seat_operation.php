@@ -180,7 +180,14 @@ try {
              $stmt->execute([$session_id]);
              $session = $stmt->fetch(PDO::FETCH_ASSOC);
              
-             $ord = $pdo->prepare("SELECT * FROM session_orders WHERE session_id = ?");
+             // Get Orders with Cast Name
+             $ord = $pdo->prepare("
+                SELECT o.*, i.item_name, i.price, c.cast_name 
+                FROM session_orders o
+                LEFT JOIN item_mst i ON o.item_id = i.item_id
+                LEFT JOIN cast_mst c ON o.cast_id = c.cast_id
+                WHERE o.session_id = ?
+             ");
              $ord->execute([$session_id]);
              $orders = $ord->fetchAll(PDO::FETCH_ASSOC);
              
