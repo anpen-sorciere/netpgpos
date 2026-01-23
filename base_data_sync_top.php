@@ -159,7 +159,7 @@ if ($utype == 1024) {
         <?php
         // BASE API認証チェック
         try {
-            require_once 'api/base_api_client.php';
+            require_once __DIR__ . '/api/classes/base_api_client.php';
             $baseApi = new BaseApiClient();
 
             if ($baseApi->needsAuth()) {
