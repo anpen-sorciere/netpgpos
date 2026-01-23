@@ -121,7 +121,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 overflow: hidden;
             }
             .left-panel {
-                flex: 2;
+                flex: 1.5;
                 display: flex;
                 flex-direction: column;
                 border-right: 1px solid var(--border-color);
@@ -226,7 +226,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 overflow-y: auto;
                 padding: 15px;
                 display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
                 gap: 15px;
                 align-content: start;
             }
