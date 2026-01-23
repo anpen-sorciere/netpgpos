@@ -48,7 +48,7 @@ try {
 
         case 'checkin':
             $sheet_id = $input['sheet_id'];
-            $name = $input['customer_name'] ?? 'Guest';
+            $name = $input['customer_name'] ?? '';
             $people = $input['people_count'] ?? 1;
             
             // 入店時刻の指定があればそれを使用、なければ現在時刻

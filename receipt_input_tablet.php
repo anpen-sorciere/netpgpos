@@ -1041,7 +1041,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         const dateVal = document.getElementById('checkinDate').value;
         const timeVal = document.getElementById('checkinTime').value;
         
-        if(!name) { alert('お客様名を入力してください'); return; }
+        // if(!name) { alert('お客様名を入力してください'); return; }
         if(!dateVal || !timeVal) { alert('入店時間を入力してください'); return; }
         
         const startTime = `${dateVal} ${timeVal}:00`;
