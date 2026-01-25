@@ -737,8 +737,8 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         });
 
         function fetchSeatStatus() {
-            if(!shopId) return;
-            fetch('api/cast/seat_operation.php', {
+        if(!shopId) return Promise.resolve();
+        return fetch('api/cast/seat_operation.php', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ action: 'get_status', shop_id: shopId })
@@ -1117,10 +1117,14 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                     btn.onclick = submitOrder;
                     
                     // If deferred order exists or items in cart, submit immediately
-                    if(isSelectingForNewOrder || cart.length > 0) {
-                        isSelectingForNewOrder = false;
-                        submitOrder();
-                    }
+                if(isSelectingForNewOrder || cart.length > 0) {
+                    isSelectingForNewOrder = false;
+                    // Do not submit automatically.
+                    // Just stay in Order Mode with items in cart.
+                    // Ideally, we force a re-render of the cart/buttons to ensure they are green.
+                    renderCart(); 
+                    alert('お席を確定しました。注文内容を確認して「注文を確定する」ボタンを押してください。');
+                }
                 } else {
                     alert('Check-in success but Session ID missing.');
                 }
@@ -1189,13 +1193,13 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         }
     }
 
-    function submitOrder() {
+    function submitOrder(onSuccess = null) {
         if(!workingSessionId) return;
         if(cart.length === 0) { alert('商品が選択されていません'); return; }
         
         if(!confirm('注文を確定してよろしいですか？')) return;
         
-        fetch('api/cast/seat_operation.php', {
+        return fetch('api/cast/seat_operation.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
@@ -1208,7 +1212,11 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         .then(res => res.json())
         .then(data => {
             if(data.status === 'success') {
-                showOrderComplete();
+                if(onSuccess) {
+                    onSuccess();
+                } else {
+                    showOrderComplete();
+                }
             } else {
                 alert('Order Failed: ' + data.message);
             }
