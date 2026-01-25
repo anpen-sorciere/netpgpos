@@ -1,6 +1,6 @@
 <?php
-require_once '../../common/config.php';
-require_once '../../common/dbconnect.php';
+require_once '../../../common/config.php';
+require_once '../../../common/dbconnect.php';
 
 try {
     $pdo = connect();
