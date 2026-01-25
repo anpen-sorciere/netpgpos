@@ -13,10 +13,10 @@ try {
     $sql = "
         SELECT 
             boi.*, 
-            bo.first_name, bo.last_name, bo.status as order_status,
+            bo.customer_name, bo.status as order_status,
             cm.cast_name as assigned_cast_name
         FROM base_order_items boi
-        JOIN base_orders bo ON boi.order_id = bo.order_id
+        JOIN base_orders bo ON boi.base_order_id = bo.base_order_id
         LEFT JOIN cast_mst cm ON boi.cast_id = cm.cast_id
         WHERE boi.title LIKE :k1 OR boi.title LIKE :k2
         ORDER BY bo.ordered DESC
