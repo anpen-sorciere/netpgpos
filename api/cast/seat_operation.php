@@ -243,6 +243,24 @@ try {
             echo json_encode(['status' => 'success']);
             break;
 
+        case 'delete_session_order':
+            $order_id = $input['order_id'];
+            $session_id = $input['session_id'];
+            
+            // Log deletion
+            error_log("Deleting Session Order: ID={$order_id}, Session={$session_id}");
+            
+            // Delete only if session matches (security check)
+            $del = $pdo->prepare("DELETE FROM session_orders WHERE id = ? AND session_id = ?");
+            $del->execute([$order_id, $session_id]);
+            
+            if ($del->rowCount() > 0) {
+                echo json_encode(['status' => 'success']);
+            } else {
+                throw new Exception('Order item not found or already deleted');
+            }
+            break;
+
         default:
             throw new Exception('Unknown action');
     }

@@ -1832,7 +1832,12 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                        subTotal += rowPrice;
                        
                        html += `<tr>
-                        <td style="padding:2px;">${o.item_name}</td>
+                        <td style="padding:2px;">
+                            <button onclick="deleteSessionItem(${o.id}, '${o.item_name}')" style="background:#e74c3c; color:white; border:none; border-radius:4px; padding:2px 6px; margin-right:5px; font-size:0.8rem;">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            ${o.item_name}
+                        </td>
                         <td style="padding:2px; text-align:right;">x${o.quantity}${castHtml}</td>
                         <td style="padding:2px; text-align:right;">¥${Number(rowPrice).toLocaleString()}</td>
                        </tr>`; 
@@ -1888,6 +1893,33 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             fetchSeatStatus();
             openSheetModal(); // Direct user to seat selection
         }
+    function deleteSessionItem(orderId, itemName) {
+        if(!confirm(`「${itemName}」を削除しますか？\n（この操作は取り消せません）`)) return;
+        
+        const sessionId = document.getElementById('sessionModal').dataset.sessionId;
+        
+        fetch('api/cast/seat_operation.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                action: 'delete_session_order',
+                shop_id: shopId,
+                session_id: sessionId,
+                order_id: orderId
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'success') {
+                // Refresh the view
+                fetchSessionDetailsForView(sessionId);
+                fetchSeatStatus(); // Update map total if needed
+            } else {
+                alert('削除失敗: ' + data.message);
+            }
+        })
+        .catch(e => alert('通信エラー: ' + e.message));
+    }
     </script>
     
     </body>
