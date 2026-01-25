@@ -32,23 +32,30 @@ $error = [];
             <br>
             <input type="hidden" name="utype" value="<?= h($utype_all) ?>">
 
+<?php
+// Initial values from GET or default to Today
+$c_day = $_GET['c_day'] ?? date('Y-m-d');
+$ec_day = $_GET['ec_day'] ?? date('Y-m-d');
+$receipt_id = $_GET['receipt_id'] ?? '';
+$customer_name = $_GET['customer_name'] ?? '';
+?>
             <div class="control">
                 <label for="c_day">開始日付</label>
-                <input type="date" name="c_day" value="<?php echo date('Y-m-d'); ?>">
+                <input type="date" name="c_day" value="<?= h($c_day) ?>">
             </div>
             <div class="control">
                 <label for="ec_day">終了日付</label>
-                <input type="date" name="ec_day" value="<?php echo date('Y-m-d'); ?>">
+                <input type="date" name="ec_day" value="<?= h($ec_day) ?>">
             </div>
             
             <div class="control">
                 <label for="receipt_id">伝票番号 (完全一致)</label>
-                <input type="number" name="receipt_id" placeholder="例: 20240101001" style="padding:10px; width:100%; box-sizing:border-box;">
+                <input type="number" name="receipt_id" value="<?= h($receipt_id) ?>" placeholder="例: 20240101001" style="padding:10px; width:100%; box-sizing:border-box;">
             </div>
 
             <div class="control">
                 <label for="customer_name">顧客名 (部分一致)</label>
-                <input type="text" name="customer_name" placeholder="顧客名の一部を入力" style="padding:10px; width:100%; box-sizing:border-box;">
+                <input type="text" name="customer_name" value="<?= h($customer_name) ?>" placeholder="顧客名の一部を入力" style="padding:10px; width:100%; box-sizing:border-box;">
             </div>
             
             <br>

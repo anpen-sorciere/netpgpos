@@ -238,7 +238,18 @@ function format_ymd_disp($ymd) {
             </table>
         <?php endif; ?>
 
-        <a href="receipt_search.php?utype=<?= htmlspecialchars($utype) ?>" class="back-link">再検索</a>
+        <?php
+            // Build query string for re-search
+            $params = [
+                'utype' => $utype,
+                'c_day' => $start_date,
+                'ec_day' => $end_date,
+                'receipt_id' => $p_receipt_id,
+                'customer_name' => $p_customer_name
+            ];
+            $query_str = http_build_query($params);
+        ?>
+        <a href="receipt_search.php?<?= htmlspecialchars($query_str) ?>" class="back-link">再検索</a>
         <a href="index.php?utype=<?= htmlspecialchars($utype) ?>" class="back-link" style="margin-top:10px; font-size:1rem;">メニューに戻る</a>
     </div>
 </body>

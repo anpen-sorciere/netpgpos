@@ -1101,26 +1101,28 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 closeModal('checkinModal');
                 fetchSeatStatus(); // Refresh map
                 
-                // If deferred order exists
-                if(isSelectingForNewOrder) {
-                    isSelectingForNewOrder = false; // Reset flag
-                    if(data.session_id) {
-                        workingSessionId = data.session_id;
-                        // Determine session name for UI (Use input name)
-                        const sName = document.getElementById('checkinName').value || 'Guest';
-                        document.getElementById('workingSessionInfo').style.display = 'inline-block';
-                        document.getElementById('workingSessionName').innerText = sName;
-                        document.getElementById('cartStatus').innerText = '注文を入力中...';
-                        
-                        const btn = document.getElementById('mainActionButton');
-                        btn.innerText = '注文を確定する';
-                        btn.onclick = submitOrder;
-                        
-                        // Submit immediately
+                if(data.session_id) {
+                    // Always enter order mode for the newly checked-in session
+                    workingSessionId = data.session_id;
+                    const sName = document.getElementById('checkinName').value || 'Guest';
+                    
+                    document.getElementById('workingSessionInfo').style.display = 'inline-block';
+                    document.getElementById('workingSessionName').innerText = sName;
+                    document.getElementById('cartStatus').innerText = '注文を入力中...';
+                    
+                    const btn = document.getElementById('mainActionButton');
+                    btn.innerText = '注文を確定する';
+                    btn.disabled = false; // Enabled to allow clicking (validation inside)
+                    btn.style.background = 'var(--confirm-color)';
+                    btn.onclick = submitOrder;
+                    
+                    // If deferred order exists or items in cart, submit immediately
+                    if(isSelectingForNewOrder || cart.length > 0) {
+                        isSelectingForNewOrder = false;
                         submitOrder();
-                    } else {
-                        alert('Check-in success but Session ID missing. Please ensure API returns session_id.');
                     }
+                } else {
+                    alert('Check-in success but Session ID missing.');
                 }
             } else {
                 alert('Check-in Failed: ' + data.message);
