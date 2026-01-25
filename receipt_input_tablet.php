@@ -200,34 +200,28 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             /* Floating Labels for Occupied Seats */
             .seat-customer-label {
                 position: absolute;
-                top: -22px;
+                top: -15px; /* Slightly higher */
                 left: 50%;
                 transform: translateX(-50%);
-                background: rgba(0,0,0,0.8);
+                background: rgba(0,0,0,0.85); /* Darker */
                 color: #fff;
-                padding: 2px 6px;
-                border-radius: 4px;
-                font-size: 0.8rem;
+                padding: 4px 8px; /* Bigger touch target */
+                border-radius: 8px; /* More rounded */
+                font-size: 0.85rem;
                 white-space: nowrap;
-                z-index: 20;
-                pointer-events: none; /* Let clicks pass through to seat */
-                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                z-index: 50; /* Higher z-index */
+                pointer-events: none; 
+                box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+                line-height: 1.2;
+                text-align: center;
+                min-width: 60px;
             }
-            .seat-time-label { 
-                position: absolute;
-                bottom: -18px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: rgba(255,255,255,0.9);
-                color: #333;
-                padding: 1px 4px;
-                border-radius: 4px;
+            .seat-customer-label .time-sub {
+                display: block;
                 font-size: 0.75rem;
-                white-space: nowrap;
-                z-index: 20;
-                pointer-events: none;
-                border: 1px solid #ccc;
-                font-weight: bold;
+                color: #f1c40f; /* Yellow for time */
+                margin-top: 2px;
+                font-weight: normal;
             }
 
             /* Edit Mode Styles */
@@ -1045,16 +1039,27 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 // Content
                 let content = `<div class="seat-info-name">${sheet.sheet_name}</div>`;
                 if(isOccupied) { // Show details on all occupied seats
-                    // Calculate elapsed time
-                    const start = new Date(session.start_time);
-                    const now = new Date();
-                    const diffMins = Math.floor((now - start) / 60000);
-                    const hours = Math.floor(diffMins / 60);
-                    const mins = diffMins % 60;
-                    const timeStr = (hours > 0 ? hours + 'h' : '') + mins + 'm';
+                    // Calculate elapsed time (Fix for Safari NaN)
+                    // SQL format: "YYYY-MM-DD HH:MM:SS" -> "YYYY/MM/DD HH:MM:SS" works better across browsers
+                    let timeStr = '0m';
+                    try {
+                        const safeDateStr = session.start_time.replace(/-/g, '/');
+                        const start = new Date(safeDateStr);
+                        const now = new Date();
+                        const diffMins = Math.floor((now - start) / 60000);
+                        
+                        if(!isNaN(diffMins)) {
+                            const hours = Math.floor(diffMins / 60);
+                            const mins = diffMins % 60;
+                            timeStr = (hours > 0 ? hours + 'h' : '') + mins + 'm';
+                        }
+                    } catch(e) { console.error('Date parse error', e); }
                     
-                    content += `<div class="seat-customer-label">${session.customer_name}</div>`;
-                    content += `<div class="seat-time-label">${timeStr}</div>`;
+                    // Merged Label
+                    content += `<div class="seat-customer-label">
+                        ${session.customer_name}
+                        <span class="time-sub">${timeStr}</span>
+                    </div>`;
                 }
                 el.innerHTML = content;
                 
