@@ -42,12 +42,12 @@ try {
         $color = $item['cast_id'] > 0 ? '#eaffea' : '#ffeaea';
         echo "<tr style='background:{$color}'>";
         echo "<td>" . htmlspecialchars($item['order_date'] ?? 'N/A') . "</td>";
-        echo "<td>" . htmlspecialchars($item['base_order_id']) . "</td>";
-        echo "<td>" . htmlspecialchars($item['order_status']) . "</td>";
-        echo "<td>" . htmlspecialchars($item['product_name']) . "</td>";
-        echo "<td><b>" . htmlspecialchars($item['cast_id']) . "</b></td>";
-        echo "<td>" . htmlspecialchars($item['assigned_cast_name']) . "</td>";
-        echo "<td>" . htmlspecialchars($item['cast_handled']) . "</td>";
+        echo "<td>" . htmlspecialchars($item['base_order_id'] ?? '') . "</td>";
+        echo "<td>" . htmlspecialchars($item['order_status'] ?? '') . "</td>";
+        echo "<td>" . htmlspecialchars($item['product_name'] ?? '') . "</td>";
+        echo "<td><b>" . htmlspecialchars($item['cast_id'] ?? '') . "</b></td>";
+        echo "<td>" . htmlspecialchars($item['assigned_cast_name'] ?? '') . "</td>";
+        echo "<td>" . htmlspecialchars($item['cast_handled'] ?? '') . "</td>";
         echo "</tr>";
     }
     echo "</table>";
