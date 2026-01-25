@@ -193,8 +193,42 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             .seat-obj.vacant { background: #fff; }
             
             /* Seat Details on Map */
-            .seat-info-name { font-weight: bold; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 100%; }
-            .seat-info-time { font-size: 0.75rem; background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 4px; }
+            /* Seat Details on Map */
+            .seat-obj { overflow: visible !important; } /* Allow labels to stick out */
+            .seat-info-name { font-weight: bold; font-size: 0.9rem; line-height:1; }
+            
+            /* Floating Labels for Occupied Seats */
+            .seat-customer-label {
+                position: absolute;
+                top: -22px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(0,0,0,0.8);
+                color: #fff;
+                padding: 2px 6px;
+                border-radius: 4px;
+                font-size: 0.8rem;
+                white-space: nowrap;
+                z-index: 20;
+                pointer-events: none; /* Let clicks pass through to seat */
+                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            }
+            .seat-time-label { 
+                position: absolute;
+                bottom: -18px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(255,255,255,0.9);
+                color: #333;
+                padding: 1px 4px;
+                border-radius: 4px;
+                font-size: 0.75rem;
+                white-space: nowrap;
+                z-index: 20;
+                pointer-events: none;
+                border: 1px solid #ccc;
+                font-weight: bold;
+            }
 
             /* Edit Mode Styles */
             .seat-obj.editable { cursor: move; border-style: dashed; border-color: var(--warning-color); background: #fffbe6; }
@@ -1010,7 +1044,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 
                 // Content
                 let content = `<div class="seat-info-name">${sheet.sheet_name}</div>`;
-                if(isOccupied) { // Show details on all occupied seats, including tables
+                if(isOccupied) { // Show details on all occupied seats
                     // Calculate elapsed time
                     const start = new Date(session.start_time);
                     const now = new Date();
@@ -1019,8 +1053,8 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                     const mins = diffMins % 60;
                     const timeStr = (hours > 0 ? hours + 'h' : '') + mins + 'm';
                     
-                    content += `<div class="seat-info-name" style="font-size:0.7rem;">${session.customer_name}</div>`;
-                    content += `<div class="seat-info-time">${timeStr}</div>`;
+                    content += `<div class="seat-customer-label">${session.customer_name}</div>`;
+                    content += `<div class="seat-time-label">${timeStr}</div>`;
                 }
                 el.innerHTML = content;
                 
