@@ -62,7 +62,7 @@ class OrderSync {
                 item_surprise_date = VALUES(item_surprise_date),
                 shipping_method = VALUES(shipping_method),
                 cast_handled = CASE 
-                    WHEN VALUES(shipping_method) IS NOT NULL AND VALUES(shipping_method) != '' THEN 2 
+                    WHEN VALUES(shipping_method) IS NOT NULL AND VALUES(shipping_method) != '' AND VALUES(cast_id) IS NULL THEN 2 
                     ELSE cast_handled 
                 END
         ");
