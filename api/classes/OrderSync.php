@@ -7,16 +7,6 @@ class OrderSync {
      * 注文データ同期関数
      * Order MonitorやCronで使用される共通ロジック
      */
-    private static function log($msg) {
-        $log_file = __DIR__ . '/../cron/sync_log.txt';
-        $timestamp = date('Y-m-d H:i:s');
-        // Ensure directory exists
-        if(!file_exists(dirname($log_file))) {
-             @mkdir(dirname($log_file), 0777, true);
-        }
-        file_put_contents($log_file, "[{$timestamp}] [OrderSync] {$msg}\n", FILE_APPEND);
-    }
-
     public static function syncOrdersToDb($pdo, $orders, $manager = null, $shop_id = 1) {
         if (empty($orders)) return;
 
@@ -240,7 +230,6 @@ class OrderSync {
                         $extracted_name = trim($matches[1]);
                         if (!empty($extracted_name)) {
                             $item_cast_name = $extracted_name;
-                            self::log("Birthday Match: '{$title}' -> Extracted: '{$extracted_name}'");
                         }
                     }
                     
@@ -252,12 +241,8 @@ class OrderSync {
                             $cast_row = $stmtFindCast->fetch(PDO::FETCH_ASSOC);
                             if ($cast_row) {
                                 $cast_id = $cast_row['cast_id'];
-                                self::log("Cast Lookup: '{$item_cast_name}' -> Found ID: {$cast_id}");
-                            } else {
-                                self::log("Cast Lookup: '{$item_cast_name}' -> NOT FOUND");
                             }
                         } catch (Exception $e) {
-                             self::log("Cast Lookup Error: " . $e->getMessage());
                         }
                     }
 
