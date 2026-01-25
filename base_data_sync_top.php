@@ -159,16 +159,19 @@ if ($utype == 1024) {
         <?php
         // BASE API認証チェック
         try {
-            require_once __DIR__ . '/api/classes/base_api_client.php';
-            $baseApi = new BaseApiClient();
+            require_once __DIR__ . '/api/classes/base_practical_auto_manager.php';
+            $manager = new BasePracticalAutoManager(1);
+            $auth_status = $manager->getAuthStatus();
+            $is_authenticated = !empty($auth_status['read_orders']['authenticated']);
 
-            if ($baseApi->needsAuth()) {
+            if (!$is_authenticated) {
                 // 認証が必要な場合
                 echo '<div class="sync-section">';
                 echo '<h2><i class="fas fa-key"></i> BASE API認証</h2>';
                 echo '<p>BASE APIを使用するには認証が必要です。以下のボタンをクリックして認証を行ってください。</p>';
                 echo '<div class="control-buttons">';
-                echo '<a href="' . $baseApi->getAuthUrl() . '" class="btn btn-primary">';
+                // BasePracticalAutoManagerにはgetAuthUrlがある。
+                echo '<a href="' . $manager->getAuthUrl('read_orders', 'https://purplelion51.sakura.ne.jp/netpgpos/api/base_callback_debug.php') . '" class="btn btn-primary">';
                 echo '<i class="fas fa-sign-in-alt"></i> BASE API認証を開始';
                 echo '</a>';
                 echo '</div>';
