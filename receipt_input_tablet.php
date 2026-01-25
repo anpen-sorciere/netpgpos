@@ -1150,7 +1150,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                     btn.innerText = '注文を確定する';
                     btn.disabled = false; // Enabled to allow clicking (validation inside)
                     btn.style.background = 'var(--confirm-color)';
-                    btn.onclick = submitOrder;
+                    btn.onclick = () => submitOrder();
                     
                     // If deferred order exists or items in cart, submit immediately
                 if(isSelectingForNewOrder || cart.length > 0) {
@@ -1198,7 +1198,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         btn.innerText = '注文を確定する';
         btn.disabled = false;
         btn.style.background = 'var(--confirm-color)';
-        btn.onclick = submitOrder;
+        btn.onclick = () => submitOrder();
     }
     
     function cancelOrderMode() {
