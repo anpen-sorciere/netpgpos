@@ -59,7 +59,12 @@ class OrderSync {
                 cast_id = VALUES(cast_id),
                 customer_name_from_option = VALUES(customer_name_from_option),
                 item_surprise_date = VALUES(item_surprise_date),
-                shipping_method = VALUES(shipping_method)
+                item_surprise_date = VALUES(item_surprise_date),
+                shipping_method = VALUES(shipping_method),
+                cast_handled = CASE 
+                    WHEN VALUES(shipping_method) IS NOT NULL AND VALUES(shipping_method) != '' THEN 2 
+                    ELSE cast_handled 
+                END
         ");
         
         // キャスト名からcast_idを検索するための準備済みステートメント
