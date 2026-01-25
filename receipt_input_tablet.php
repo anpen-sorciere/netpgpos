@@ -1010,7 +1010,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 
                 // Content
                 let content = `<div class="seat-info-name">${sheet.sheet_name}</div>`;
-                if(isOccupied && sheet.type !== 'rect') { // Only show details on seats, not tables? Or both?
+                if(isOccupied) { // Show details on all occupied seats, including tables
                     // Calculate elapsed time
                     const start = new Date(session.start_time);
                     const now = new Date();
