@@ -230,6 +230,7 @@ class OrderSync {
                         $extracted_name = trim($matches[1]);
                         if (!empty($extracted_name)) {
                             $item_cast_name = $extracted_name;
+                            $debug_log("Birthday Match: '{$title}' -> Extracted: '{$extracted_name}'");
                         }
                     }
                     
@@ -241,8 +242,12 @@ class OrderSync {
                             $cast_row = $stmtFindCast->fetch(PDO::FETCH_ASSOC);
                             if ($cast_row) {
                                 $cast_id = $cast_row['cast_id'];
+                                $debug_log("Cast Lookup: '{$item_cast_name}' -> Found ID: {$cast_id}");
+                            } else {
+                                $debug_log("Cast Lookup: '{$item_cast_name}' -> NOT FOUND");
                             }
                         } catch (Exception $e) {
+                            $debug_log("Cast Lookup Error: " . $e->getMessage());
                         }
                     }
 
