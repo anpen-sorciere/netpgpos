@@ -54,7 +54,7 @@ try {
     
     // Also list all casts to check naming
     echo "<h2>All Casts</h2>";
-    $casts = $pdo->query("SELECT * FROM cast_mst WHERE cast_status = '在籍'")->fetchAll();
+    $casts = $pdo->query("SELECT * FROM cast_mst WHERE drop_flg = 0")->fetchAll();
     echo "<div style='display:flex; flex-wrap:wrap; gap:10px;'>";
     foreach($casts as $c) {
         echo "<div style='border:1px solid #ccc; padding:5px;'>ID:{$c['cast_id']} {$c['cast_name']}</div>";
