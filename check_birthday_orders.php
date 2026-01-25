@@ -1,8 +1,7 @@
 <?php
-// Mock for CLI
-$_SERVER['HTTP_HOST'] = 'localhost';
-require_once '../common/config.php';
 require_once '../common/dbconnect.php';
+require_once '../common/functions.php';
+
 
 try {
     $pdo = connect();
