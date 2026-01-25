@@ -18,8 +18,8 @@ try {
         FROM base_order_items boi
         JOIN base_orders bo ON boi.base_order_id = bo.base_order_id
         LEFT JOIN cast_mst cm ON boi.cast_id = cm.cast_id
-        WHERE boi.title LIKE :k1 OR boi.title LIKE :k2
-        ORDER BY bo.ordered DESC
+        WHERE boi.product_name LIKE :k1 OR boi.product_name LIKE :k2
+        ORDER BY bo.order_date DESC
         LIMIT 50
     ";
     
@@ -41,10 +41,10 @@ try {
     foreach($items as $item) {
         $color = $item['cast_id'] > 0 ? '#eaffea' : '#ffeaea';
         echo "<tr style='background:{$color}'>";
-        echo "<td>" . htmlspecialchars($item['ordered'] ?? 'N/A') . "</td>";
-        echo "<td>" . htmlspecialchars($item['order_id']) . "</td>";
+        echo "<td>" . htmlspecialchars($item['order_date'] ?? 'N/A') . "</td>";
+        echo "<td>" . htmlspecialchars($item['base_order_id']) . "</td>";
         echo "<td>" . htmlspecialchars($item['order_status']) . "</td>";
-        echo "<td>" . htmlspecialchars($item['title']) . "</td>";
+        echo "<td>" . htmlspecialchars($item['product_name']) . "</td>";
         echo "<td><b>" . htmlspecialchars($item['cast_id']) . "</b></td>";
         echo "<td>" . htmlspecialchars($item['assigned_cast_name']) . "</td>";
         echo "<td>" . htmlspecialchars($item['cast_handled']) . "</td>";
