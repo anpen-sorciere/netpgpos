@@ -109,6 +109,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 background-color: var(--bg-color);
                 color: var(--text-color);
                 height: 100vh;
+                height: 100dvh; /* Better for mobile */
                 overflow: hidden;
                 display: flex;
                 flex-direction: column;
@@ -794,6 +795,9 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         // --- Init ---
         // Auto open sheet modal if not selected
         window.addEventListener('load', () => {
+             // Force scroll to top on reload to prevent header hiding
+             window.scrollTo(0, 0);
+             
              fetchSeatStatus();
              openSheetModal(); // Default to map
              // Polling every 30s
