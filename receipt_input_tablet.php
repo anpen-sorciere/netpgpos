@@ -622,6 +622,10 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 <button onclick="executeCheckout()" style="padding:20px; background:#e67e22; color:white; border:none; border-radius:6px; font-size:1.2rem; display:flex; align-items:center; justify-content:center; gap:10px;">
                     <i class="fas fa-file-invoice-dollar"></i> お会計 (Checkout)
                 </button>
+                
+                <button onclick="showCancelConfirmation()" style="padding:10px; background:#e74c3c; color:white; border:none; border-radius:6px; font-size:1rem; margin-top:20px;">
+                    <i class="fas fa-trash-alt"></i> キャンセル (Cancel Session)
+                </button>
             </div>
         </div>
     </div>
@@ -662,10 +666,42 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         </div>
     </div>
     
+    <!-- Cancel Confirmation Modal [NEW] -->
+    <div class="modal-overlay" id="cancelConfirmModal">
+        <div class="modal-content" style="max-width:400px; border-top: 5px solid #e74c3c;">
+            <div class="modal-header" style="color:#e74c3c;">
+                <span><i class="fas fa-exclamation-triangle"></i> キャンセル確認</span>
+                <span class="close-modal" onclick="closeModal('cancelConfirmModal')">&times;</span>
+            </div>
+            <div class="modal-body" style="padding:20px;">
+                <p style="font-weight:bold; color:#333; margin-bottom:15px;">
+                    本当にこの座席のデータを消去してよろしいですか？
+                </p>
+                <p style="font-size:0.9rem; color:#666; margin-bottom:20px;">
+                    ※データはデータベースから無効化され、復元できなくなります。<br>
+                    ※お会計は実行されません。
+                </p>
+                
+                <div style="background:#fff0f0; padding:15px; border-radius:6px; border:1px solid #ffcccc; margin-bottom:20px;">
+                    <div style="display:flex; align-items:center;">
+                        <input type="checkbox" id="cancelConfirmCheck" onchange="toggleCancelExecuteBtn()" style="width:20px; height:20px; margin-right:10px;">
+                        <label for="cancelConfirmCheck" style="font-weight:bold; color:#d63031; cursor:pointer;">データを消去します</label>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:10px;">
+                    <button onclick="closeModal('cancelConfirmModal')" style="flex:1; padding:12px; background:#aaa; color:white; border:none; border-radius:6px;">戻る</button>
+                    <button id="btnExecuteCancel" onclick="executeCancelSession()" disabled style="flex:1; padding:12px; background:#e74c3c; color:white; border:none; border-radius:6px; font-weight:bold; opacity:0.5; cursor:not-allowed;">実行する</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- Seat Map Modal -->
     <div class="modal-overlay" id="sheetModal">
         <div class="modal-content" style="max-width:900px;">
             <div class="modal-header">
+
                 <span>Select Seat / Layout <span id="selectedSheetName" style="font-size:0.9rem; color:#666; margin-left:10px;">(未選択)</span></span>
                 <div style="display:flex; align-items:center; gap:10px;">
                     <label style="font-size:0.9rem;">
@@ -1365,6 +1401,66 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
         .catch(e => alert('Error: ' + e.message));
     }
     
+    // --- Cancel Session Logic ---
+    function showCancelConfirmation() {
+        document.getElementById('cancelConfirmCheck').checked = false;
+        toggleCancelExecuteBtn();
+        document.getElementById('cancelConfirmModal').style.display = 'flex';
+    }
+
+    function toggleCancelExecuteBtn() {
+        const checked = document.getElementById('cancelConfirmCheck').checked;
+        const btn = document.getElementById('btnExecuteCancel');
+        if(checked) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+        } else {
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+        }
+    }
+
+    function executeCancelSession() {
+        const sessionId = document.getElementById('sessionModal').dataset.sessionId;
+        if(!sessionId) return;
+
+        const btn = document.getElementById('btnExecuteCancel');
+        btn.disabled = true;
+        btn.innerText = '処理中...';
+
+        fetch('api/cast/seat_operation.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                action: 'cancel_session',
+                shop_id: shopId,
+                session_id: sessionId
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'success') {
+                alert('キャンセル処理が完了しました。\n座席は空席になります。');
+                closeModal('cancelConfirmModal');
+                closeModal('sessionModal');
+                fetchSeatStatus();
+            } else {
+                alert('キャンセル失敗: ' + data.message);
+                btn.disabled = false;
+                btn.innerText = '実行する';
+                toggleCancelExecuteBtn(); // Re-check state logic
+            }
+        })
+        .catch(e => {
+            alert('通信エラー: ' + e.message);
+            btn.disabled = false;
+            btn.innerText = '実行する';
+            toggleCancelExecuteBtn();
+        });
+    }
+
         function selectSheet(id, name) {
             selectedSheetId = id;
             document.getElementById('selectedSheetName').innerText = name;

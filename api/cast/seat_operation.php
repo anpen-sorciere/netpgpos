@@ -222,6 +222,27 @@ try {
              echo json_encode(['status' => 'success', 'session' => $session, 'orders' => $orders]);
              break;
 
+        case 'cancel_session':
+            $session_id = $input['session_id'];
+            
+            // Check session exists and is active
+            $stmt = $pdo->prepare("SELECT * FROM seat_sessions WHERE session_id = ? AND is_active = 1");
+            $stmt->execute([$session_id]);
+            $session = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if(!$session) throw new Exception('Active session not found');
+            
+            // Log cancellation (optional, but good for safety)
+            $logMsg = "Session Cancelled: ID={$session_id}, Sheet={$session['sheet_id']}, Customer={$session['customer_name']}";
+            error_log($logMsg);
+
+            // Deactivate session
+            $upd = $pdo->prepare("UPDATE seat_sessions SET is_active = 0, end_time = NOW() WHERE session_id = ?");
+            $upd->execute([$session_id]);
+            
+            echo json_encode(['status' => 'success']);
+            break;
+
         default:
             throw new Exception('Unknown action');
     }
