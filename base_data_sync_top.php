@@ -182,7 +182,7 @@ if ($utype == 1024) {
                 echo '<div class="feature-card">';
                 echo '<h3><i class="fas fa-shopping-cart"></i> 注文データ同期</h3>';
                 echo '<p>BASEから注文情報を取得し、売上データとして管理します。</p>';
-                echo '<a href="api/base_order_sync.php?utype=' . htmlspecialchars($utype) . '" class="btn btn-primary">同期実行</a>';
+                echo '<a href="api/cron/manual_sync_debug.php?utype=' . htmlspecialchars($utype) . '" class="btn btn-primary" target="_blank">同期実行</a>';
                 echo '</div>';
                 echo '<div class="feature-card">';
                 echo '<h3><i class="fas fa-chart-line"></i> 売上データ分析</h3>';
