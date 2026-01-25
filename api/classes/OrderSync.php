@@ -224,6 +224,15 @@ class OrderSync {
                         }
                     }
                     
+                    // 商品名からキャスト名を抽出 (生誕祭/お誕生日会)
+                    // 例: 【にこ生誕祭】 -> にこ
+                    if (preg_match('/【(.+?)(?:生誕祭|お誕生日会)】/u', $title, $matches)) {
+                        $extracted_name = trim($matches[1]);
+                        if (!empty($extracted_name)) {
+                            $item_cast_name = $extracted_name;
+                        }
+                    }
+                    
                     // キャスト名からcast_idを検索
                     $cast_id = null;
                     if ($item_cast_name) {
