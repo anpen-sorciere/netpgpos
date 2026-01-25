@@ -87,8 +87,8 @@ try {
                 $should_skip = false;
                 if ($db_row && $api_updated) {
                     $db_status = $db_row['status'] ?? '';
-                    // unpaidまたはorderedの場合は、タイムスタンプに関わらず更新
-                    if ($db_status === 'unpaid' || $db_status === 'ordered') {
+                    // unpaidまたはorderedまたはprocessingの場合は、タイムスタンプに関わらず更新
+                    if ($db_status === 'unpaid' || $db_status === 'ordered' || $db_status === 'processing' || $db_status === '対応中') {
                         $should_skip = false; // 強制的に更新
                     } elseif (strtotime($api_updated) <= strtotime($db_row['updated_at'])) {
                         $should_skip = true; // 更新なしなのでスキップ
