@@ -56,6 +56,13 @@ try {
     $size = filesize($file_path);
     $mime = $video['mime_type'] ?: 'video/mp4';
     $filename = $video['original_filename'] ?: 'video.mp4';
+    
+    // MOV/QuickTime形式の互換性対応
+    // 一部のブラウザ(Windows/Android)ではvideo/quicktimeを正しく処理できないため
+    // video/mp4として返す（MP4コンテナと互換性があるため多くの場合再生可能）
+    if ($mime === 'video/quicktime') {
+        $mime = 'video/mp4';
+    }
 
     // ダウンロードカウント加算 (非同期または単純加算)
     // Rangeリクエストのたびにカウントすると増えすぎるので、セッション制御等が必要だが
@@ -115,8 +122,9 @@ try {
         header("Content-Length: $size");
     }
     
-    // ダウンロードさせる
-    header("Content-Disposition: attachment; filename=\"$filename\"");
+    // インライン表示（ブラウザ内再生を優先）
+    // ダウンロードさせたい場合は attachment に戻す
+    header("Content-Disposition: inline; filename=\"$filename\"");
 
     // バッファ出力
     $buffer = 1024 * 8;
