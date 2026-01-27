@@ -110,6 +110,15 @@ try {
         if ($oldest_unfinished_date) {
             $cast['elapsed_days'] = (strtotime($today) - strtotime($oldest_unfinished_date)) / (60 * 60 * 24);
         }
+        
+        // PayPay未対応件数（認証済みだがhandled_flgがNULL）
+        $stmt_paypay = $pdo->prepare("
+            SELECT COUNT(*) as cnt FROM paypay_sales 
+            WHERE cast_id = ? AND handled_flg IS NULL
+        ");
+        $stmt_paypay->execute([$cast_id]);
+        $paypay_row = $stmt_paypay->fetch(PDO::FETCH_ASSOC);
+        $cast['paypay_pending_count'] = (int)($paypay_row['cnt'] ?? 0);
     }
     unset($cast); // 参照解除
 
@@ -130,6 +139,21 @@ try {
     // 定型文一覧取得
     $stmt_templates = $pdo->query("SELECT * FROM reply_message_templates ORDER BY display_order ASC");
     $templates = $stmt_templates->fetchAll(PDO::FETCH_ASSOC);
+    
+    // PayPay未認証（cast_idがNULL）の件数
+    $stmt_unclaimed = $pdo->query("SELECT COUNT(*) as cnt FROM paypay_sales WHERE cast_id IS NULL");
+    $unclaimed_paypay_count = (int)$stmt_unclaimed->fetch(PDO::FETCH_ASSOC)['cnt'];
+    
+    // PayPay未認証データ一覧
+    $stmt_unclaimed_list = $pdo->query("
+        SELECT ps.*, sm.shop_name 
+        FROM paypay_sales ps
+        LEFT JOIN shop_mst sm ON ps.shop_id = sm.shop_id
+        WHERE ps.cast_id IS NULL
+        ORDER BY ps.settled_at DESC
+        LIMIT 50
+    ");
+    $unclaimed_paypay_list = $stmt_unclaimed_list->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
     $error = "DB Error: " . $e->getMessage();
@@ -196,6 +220,7 @@ try {
                             <th class="text-center">キャスト対応待ち</th>
                             <th class="text-center">最も古い未対応</th>
                             <th class="text-center">放置日数</th>
+                            <th class="text-center">PayPay未対応</th>
                             <th class="text-center">最終ログイン</th>
                             <th class="text-center">アクション</th>
                         </tr>
@@ -265,6 +290,15 @@ try {
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-center">
+                                    <?php if ($cast['paypay_pending_count'] > 0): ?>
+                                        <span class="badge bg-info badge-count">
+                                            <?= $cast['paypay_pending_count'] ?> 件
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-center">
                                     <?php if ($cast['last_login_at']): ?>
                                         <?= date('m/d H:i', strtotime($cast['last_login_at'])) ?>
                                         <?php if (strtotime($cast['last_login_at']) < strtotime('-3 days')): ?>
@@ -293,6 +327,42 @@ try {
                 </table>
             </div>
         </div>
+        
+        <!-- PayPay未認証データセクション -->
+        <?php if ($unclaimed_paypay_count > 0): ?>
+        <div class="monitor-card mt-4">
+            <div class="header" style="background-color: #00bcd4;">
+                <h5 class="m-0"><i class="fas fa-mobile-alt"></i> PayPay未認証データ (<?= $unclaimed_paypay_count ?>件)</h5>
+            </div>
+            <div class="p-3">
+                <div class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle"></i> 管理者は全桁表示されています。キャスト側は下4桁のみ表示され、全桁入力で認証する必要があります。
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>取引番号</th>
+                                <th>決済日時</th>
+                                <th>金額</th>
+                                <th>店舗</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($unclaimed_paypay_list as $pp): ?>
+                            <tr>
+                                <td><code><?= htmlspecialchars($pp['transaction_id']) ?></code></td>
+                                <td><?= date('m/d H:i', strtotime($pp['settled_at'])) ?></td>
+                                <td>¥<?= number_format($pp['amount'] ?? 0) ?></td>
+                                <td><?= htmlspecialchars($pp['shop_name'] ?? '-') ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 
     <!-- 詳細モーダル -->
