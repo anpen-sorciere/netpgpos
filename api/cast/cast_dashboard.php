@@ -156,6 +156,18 @@ try {
     ");
     $templates = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
+    // PayPayデータ取得（cast_idがNULLまたは自分のcast_idでhandled_flgがNULL）
+    $stmt = $pdo->prepare("
+        SELECT ps.*, sm.shop_name 
+        FROM paypay_sales ps
+        LEFT JOIN shop_mst sm ON ps.shop_id = sm.shop_id
+        WHERE (ps.cast_id IS NULL OR (ps.cast_id = ? AND ps.handled_flg IS NULL))
+        ORDER BY ps.settled_at DESC
+        LIMIT 100
+    ");
+    $stmt->execute([$cast_id]);
+    $paypay_sales = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
 } catch (PDOException $e) {
     $error = "データ取得エラー: " . $e->getMessage();
 }
@@ -510,10 +522,109 @@ function getPaymentMethod($method) {
         <?php else: ?>
             <div class="empty-state">
                 <i class="fas fa-check-circle"></i>
-                <h4>対応すべき注文はありません</h4>
+                <h4>対応すべきBASE注文はありません</h4>
                 <p class="text-muted">
                     新しい注文が入ると、こちらに表示されます。<br>
                     <small>※対応済みの注文は自動的に非表示になります</small>
+                </p>
+            </div>
+        <?php endif; ?>
+
+        <!-- PayPayセクション -->
+        <h4 class="mt-5 mb-3" style="color: #e91e63; border-bottom: 2px solid #e91e63; padding-bottom: 10px;">
+            <i class="fas fa-mobile-alt"></i> PayPay売上
+        </h4>
+
+        <?php if (!empty($paypay_sales)): ?>
+            <?php
+                // 未認証（cast_id=NULL）と認証済み（自分のcast_id）を分ける
+                $unclaimed_sales = array_filter($paypay_sales, fn($s) => $s['cast_id'] === null);
+                $my_pending_sales = array_filter($paypay_sales, fn($s) => $s['cast_id'] == $cast_id && $s['handled_flg'] === null);
+            ?>
+
+            <?php if (!empty($unclaimed_sales)): ?>
+                <h5 class="text-secondary mb-3">
+                    <i class="fas fa-question-circle"></i> 認証待ち (<?= count($unclaimed_sales) ?>件)
+                </h5>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> 
+                    下4桁のみ表示されています。取引番号の全桁を入力して「認証」ボタンを押してください。
+                </div>
+
+                <?php foreach ($unclaimed_sales as $sale): ?>
+                    <div class="order-card" style="border-left-color: #00bcd4;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <span class="badge bg-info text-white">PayPay</span>
+                                <span class="ms-2"><?= htmlspecialchars($sale['shop_name'] ?? '店舗不明') ?></span>
+                            </div>
+                            <div class="order-amount">¥<?= number_format($sale['amount'] ?? 0) ?></div>
+                        </div>
+                        <div class="order-date mb-2">
+                            <i class="fas fa-calendar-alt"></i>
+                            <?= date('Y年m月d日 H:i', strtotime($sale['settled_at'])) ?>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="badge bg-secondary">取引番号(下4桁):</span>
+                            <strong style="font-family: monospace; font-size: 1.2em;">
+                                ****<?= substr($sale['transaction_id'], -4) ?>
+                            </strong>
+                        </div>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="verify_input_<?= $sale['id'] ?>" 
+                                   placeholder="取引番号を全桁入力" maxlength="20" 
+                                   style="font-family: monospace;">
+                            <button class="btn btn-primary" onclick="verifyPaypay(<?= $sale['id'] ?>)">
+                                <i class="fas fa-check"></i> 認証
+                            </button>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+
+            <?php if (!empty($my_pending_sales)): ?>
+                <h5 class="text-secondary mb-3 mt-4">
+                    <i class="fas fa-user-check"></i> あなたの未対応 (<?= count($my_pending_sales) ?>件)
+                </h5>
+
+                <?php foreach ($my_pending_sales as $sale): ?>
+                    <div class="order-card" style="border-left-color: #4caf50;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <span class="badge bg-success">PayPay (認証済)</span>
+                                <span class="ms-2"><?= htmlspecialchars($sale['shop_name'] ?? '店舗不明') ?></span>
+                            </div>
+                            <div class="order-amount">¥<?= number_format($sale['amount'] ?? 0) ?></div>
+                        </div>
+                        <div class="order-date mb-2">
+                            <i class="fas fa-calendar-alt"></i>
+                            <?= date('Y年m月d日 H:i', strtotime($sale['settled_at'])) ?>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <span class="badge bg-secondary">取引番号:</span>
+                            <strong style="font-family: monospace;">
+                                <?= htmlspecialchars($sale['transaction_id']) ?>
+                            </strong>
+                        </div>
+                        <button class="btn btn-success w-100" onclick="completePaypay(<?= $sale['id'] ?>)">
+                            <i class="fas fa-check-circle"></i> 対応完了
+                        </button>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+
+            <?php if (empty($unclaimed_sales) && empty($my_pending_sales)): ?>
+                <div class="empty-state">
+                    <i class="fas fa-check-circle"></i>
+                    <h4>対応すべきPayPay売上はありません</h4>
+                </div>
+            <?php endif; ?>
+
+        <?php else: ?>
+            <div class="empty-state">
+                <i class="fas fa-check-circle"></i>
+                <h4>対応すべきPayPay売上はありません</h4>
+            </div>
         <?php endif; ?>
     </div>
 
@@ -752,6 +863,63 @@ function getPaymentMethod($method) {
             btn.setAttribute('data-original-text', btn.innerHTML);
         });
     });
+
+    // PayPay認証
+    async function verifyPaypay(paypayId) {
+        const input = document.getElementById('verify_input_' + paypayId);
+        const transactionId = input.value.trim();
+        
+        if (!transactionId) {
+            alert('取引番号を入力してください');
+            return;
+        }
+        
+        try {
+            const response = await fetch('../ajax/verify_paypay.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    paypay_id: paypayId,
+                    transaction_id: transactionId
+                })
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                showAlert('success', '認証成功', result.message);
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                throw new Error(result.error || '認証に失敗しました');
+            }
+        } catch (error) {
+            showAlert('danger', 'エラー', error.message);
+        }
+    }
+
+    // PayPay対応完了
+    async function completePaypay(paypayId) {
+        if (!confirm('この取引を対応完了にしますか？')) {
+            return;
+        }
+        
+        try {
+            const response = await fetch('../ajax/complete_paypay.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paypay_id: paypayId })
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                showAlert('success', '対応完了', result.message);
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                throw new Error(result.error || '処理に失敗しました');
+            }
+        } catch (error) {
+            showAlert('danger', 'エラー', error.message);
+        }
+    }
     </script>
 </body>
 </html>
