@@ -91,6 +91,22 @@ try {
     if (!move_uploaded_file($file['tmp_name'], $save_path)) {
         throw new Exception('ファイルの保存に失敗しました');
     }
+    
+    // ★ファイル整合性チェック
+    $saved_size = filesize($save_path);
+    if ($saved_size === 0) {
+        @unlink($save_path);
+        throw new Exception('ファイルが空です。アップロードが中断された可能性があります。もう一度お試しください。');
+    }
+    if ($saved_size < 10000) { // 10KB未満は動画としてあり得ない
+        @unlink($save_path);
+        throw new Exception('ファイルが小さすぎます（' . $saved_size . 'バイト）。アップロードが中断された可能性があります。');
+    }
+    // 元ファイルサイズと比較（大幅に異なる場合は警告）
+    if ($file['size'] > 0 && $saved_size < $file['size'] * 0.9) {
+        @unlink($save_path);
+        throw new Exception('ファイルが不完全です（' . round($saved_size / $file['size'] * 100) . '%のみ保存）。通信環境を確認してもう一度お試しください。');
+    }
 
     // DB保存
     $pdo = connect(); // dbconnect.phpの関数

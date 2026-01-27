@@ -1,0 +1,14 @@
+# Apache設定上書き（さくらサーバー用）
+# 動画アップロード対応
+
+# PHPのアップロード制限を上書き
+php_value upload_max_filesize 100M
+php_value post_max_size 100M
+php_value max_execution_time 300
+php_value max_input_time 300
+php_value memory_limit 256M
+
+# タイムアウト対策
+<IfModule mod_reqtimeout.c>
+    RequestReadTimeout body=300
+</IfModule>
