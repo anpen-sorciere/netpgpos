@@ -1,4 +1,8 @@
 <?php
+// エラー表示を有効化（デバッグ用）
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 // paypay_sales テーブル作成スクリプト
 // ブラウザからアクセスして実行してください
 
