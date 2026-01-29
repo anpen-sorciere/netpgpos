@@ -5,7 +5,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-require_once __DIR__ . '/common/dbconnect.php';
+require_once __DIR__ . '/../common/dbconnect.php';
 
 echo "<h2>動画ファイル整合性チェック</h2>";
 
