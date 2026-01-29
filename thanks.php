@@ -98,13 +98,20 @@ try {
     }
 
     // 表示モード（HTMLページ）
-    $stream_url = "thanks.php?id=" . urlencode($uuid) . "&mode=stream";
-    $download_url = "thanks.php?id=" . urlencode($uuid) . "&mode=download";
+    // PHPを経由せず、直接ファイルへアクセスさせる（再生成功率が高い）
+    $stream_url = "storage/videos/" . $video['file_path'];
+    
+    // ダウンロードも直接リンク（download属性でファイル名指定）
+    $download_url = "storage/videos/" . $video['file_path'];
+    
     $filename = htmlspecialchars($video['original_filename']);
     $filesize_mb = round(filesize($file_path) / 1024 / 1024, 1);
     
-    // ダウンロードモード
+    // PHPによる配信ロジック（mode=download/stream）は、直接アクセスできない場合のバックアップとして残すが、
+    // 基本はHTML側で直接リンクを使用する。
+    
     if ($mode === 'download') {
+        // 強制ダウンロード用ヘッダー出力
         $size = filesize($file_path);
         $mime = $video['mime_type'] ?: 'video/mp4';
         header("Content-Type: $mime");
@@ -216,7 +223,7 @@ try {
             </video>
         </div>
         
-        <a href="<?= $download_url ?>" class="btn btn-primary">
+        <a href="<?= $download_url ?>" class="btn btn-primary" download="<?= $filename ?>">
             📥 ダウンロード
         </a>
         
