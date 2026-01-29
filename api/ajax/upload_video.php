@@ -147,7 +147,7 @@ try {
     // 例: https://purplelion51.sakura.ne.jp/thanks.php
     
     $url_base = "https://" . $_SERVER['HTTP_HOST'];
-    $video_url = $url_base . "/thanks.php?id=" . $uuid;
+    $video_url = $url_base . "/netpgpos/thanks.php?id=" . $uuid;
 
     echo json_encode([
         'success' => true,
