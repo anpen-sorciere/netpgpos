@@ -424,7 +424,7 @@ if ($search_query !== '') {
             </table>
             <div class="control-group">
                 <button type="submit" class="btn btn-primary">確認する</button>
-                <input value="前に戻る" onclick="history.back();" type="button" class="btn btn-secondary">
+                <a href="index.php<?= isset($_GET['utype']) ? '?utype=' . htmlspecialchars($_GET['utype']) : '' ?>" class="btn btn-secondary" style="text-decoration:none; display:inline-block;">メニューへ</a>
             </div>
         </form>
     </div>
