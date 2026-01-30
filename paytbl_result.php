@@ -10,11 +10,12 @@ require_once(__DIR__ . '/../common/functions.php');
 session_start();
 
 // セッションから必要な情報を取得
-$cast_id = $_SESSION['join']['cast_id'] ?? null;
-$in_ymd = $_SESSION['join']['in_ymd'] ?? null;
-$pay = $_SESSION['join']['pay'] ?? null;
+// セッションから必要な情報を取得
+$cast_id = $_SESSION['paytbl_input']['cast_id'] ?? null;
+$in_ymd = $_SESSION['paytbl_input']['in_ymd'] ?? null;
+$pay = $_SESSION['paytbl_input']['pay'] ?? null;
 $pay = ($pay !== null && $pay !== '') ? (int)$pay : 0; // nullの場合は0に設定
-$utype = $_SESSION['utype'] ?? null;
+$utype = $_GET['utype'] ?? $_SESSION['utype'] ?? 0;
 
 // キャスト名を取得するための処理
 $cast_name = "不明なキャスト";
@@ -56,6 +57,7 @@ if ($in_ymd) {
             box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
             display: inline-block;
             margin-top: 10px;
+            margin-right: 10px;
         }
         .control a:hover {
             background-color: #2980b9;
@@ -120,8 +122,8 @@ if ($in_ymd) {
             </p>
         </div>
         <div class="control">
-            <a href="paytbl_input.php">戻る</a>
-            <a href="index.php">メニューへ</a>
+            <a href="paytbl_input.php?utype=<?= htmlspecialchars($utype) ?>&cast_id=<?= htmlspecialchars($cast_id) ?>&in_ymd=<?= htmlspecialchars($in_ymd) ?>">続けて登録</a>
+            <a href="index.php?utype=<?= htmlspecialchars($utype) ?>">メニューへ</a>
         </div>
     </div>
 </body>

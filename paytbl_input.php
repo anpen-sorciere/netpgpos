@@ -208,7 +208,7 @@ $db = null;
 <body>
     <div class="container">
         <h1>時給登録</h1>
-        <form action="paytbl_input.php" method="POST" id="payForm">
+        <form action="paytbl_input.php?utype=<?php echo htmlspecialchars($utype); ?>" method="POST" id="payForm">
             <div class="control">
                 <label for="cast_id">キャスト</label>
                 <select name="cast_id" id="cast_id">
@@ -266,15 +266,16 @@ $db = null;
         document.addEventListener('DOMContentLoaded', function() {
             const castSelect = document.getElementById('cast_id');
             const ymdInput = document.getElementById('in_ymd');
+            const utype = "<?php echo htmlspecialchars($utype); ?>";
 
             // キャスト選択肢が変更されたらフォームを送信
             castSelect.addEventListener('change', function() {
-                window.location.href = `paytbl_input.php?cast_id=${this.value}&in_ymd=${ymdInput.value}`;
+                window.location.href = `paytbl_input.php?utype=${utype}&cast_id=${this.value}&in_ymd=${ymdInput.value}`;
             });
 
             // 登録年月が変更されたらフォームを送信
             ymdInput.addEventListener('change', function() {
-                window.location.href = `paytbl_input.php?cast_id=${castSelect.value}&in_ymd=${this.value}`;
+                window.location.href = `paytbl_input.php?utype=${utype}&cast_id=${castSelect.value}&in_ymd=${this.value}`;
             });
         });
     </script>
