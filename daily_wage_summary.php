@@ -260,6 +260,7 @@ if (!$show_form) {
                     <input type="hidden" name="utype" value="<?php echo htmlspecialchars($_SESSION['utype'] ?? ''); ?>">
                     <div class="control-buttons">
                         <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> 集計する</button>
+                        <a href="index.php?utype=<?php echo htmlspecialchars($_SESSION['utype'] ?? ''); ?>" class="btn btn-secondary" style="text-decoration:none; display:inline-block;"><i class="fas fa-home"></i> メニューへ</a>
                     </div>
                 </form>
             </section>
