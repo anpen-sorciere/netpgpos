@@ -56,6 +56,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $total_purchase_cost = 0; // 仕入れ原価合計
         $warning_items = [];      // 原価未登録(0円)の商品リスト [item_id => item_name]
+        $card_payment_count = 0;  // カード決済件数
+        $total_credit_fee = 0;    // カード決済手数料合計
 
         foreach ($receipts as $receipt) {
             $receipt_id = $receipt['receipt_id'];
