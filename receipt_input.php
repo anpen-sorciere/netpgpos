@@ -89,7 +89,8 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
 
     if (!empty($errors)) {
         $_SESSION['errors'] = $errors;
-        header('Location: receipt_error.php');
+        // 自分自身にリダイレクト
+        header('Location: receipt_input.php?utype=' . $utype);
         exit();
     }
     
@@ -142,6 +143,10 @@ try {
 } catch (PDOException $e) {
     error_log("Database error fetching items with back_price: " . $e->getMessage());
 }
+
+// エラーメッセージの取得とクリア
+$errors = $_SESSION['errors'] ?? [];
+unset($_SESSION['errors']);
 ?>
 <!DOCTYPE html>
 <html lang="ja">
@@ -253,6 +258,18 @@ try {
         <form action="" method="POST">
             <h1>伝票登録</h1>
             <p>次のフォームに必要事項をご記入ください。</p>
+            
+            <?php if (!empty($errors)): ?>
+                <div style="background-color: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; margin-bottom: 20px; border: 1px solid #f5c6cb;">
+                    <strong><i class="fas fa-exclamation-triangle"></i> 入力エラーがあります:</strong>
+                    <ul style="margin: 5px 0 0 20px; padding: 0;">
+                        <?php foreach ($errors as $field => $msg): ?>
+                            <li><?= htmlspecialchars($msg) ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
+
             <hr>
 
             <h2>伝票基本情報</h2>
