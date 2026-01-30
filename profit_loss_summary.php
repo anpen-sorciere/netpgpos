@@ -82,7 +82,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // 原価NULLチェック (警告用)
                 // item_mst側で NULL が許可されている場合、未入力は NULL となる
-                if (is_null($detail['cost'])) {
+                // item_id > 0 の場合のみチェックする (0は空行など)
+                if ($detail['item_id'] > 0 && is_null($detail['cost'])) {
                     // まだリストになければ追加
                     if (!isset($warning_items[$detail['item_id']])) {
                         $warning_items[$detail['item_id']] = $detail['item_name'] ?? '不明な商品';
