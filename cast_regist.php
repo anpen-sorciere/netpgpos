@@ -83,8 +83,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // データベースから既存のキャスト情報を取得
 $db = connect();
-// 在籍(0) -> 退職(1)、それぞれのグループ内でよみがな順
-$stmt = $db->prepare("SELECT * FROM cast_mst ORDER BY drop_flg ASC, cast_yomi ASC");
+// 在籍(0) -> 退職(1)、それぞれのグループ内でキャストタイプ順(0->1->2)、さらによみがな順
+$stmt = $db->prepare("SELECT * FROM cast_mst ORDER BY drop_flg ASC, cast_type ASC, cast_yomi ASC");
 $stmt->execute();
 $all_casts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $db = null;
