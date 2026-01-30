@@ -256,7 +256,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <section class="form-section">
-            <form action="" method="POST">
+            <form action="" method="POST" id="calcForm">
                 <div class="date-inputs">
                     <label>期間指定：</label>
                     <input type="date" name="c_day" value="<?= htmlspecialchars($start_date) ?>" required>
@@ -264,7 +264,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <input type="date" name="ec_day" value="<?= htmlspecialchars($end_date) ?>" required>
                 </div>
                 <div class="text-center" style="text-align:center;">
-                    <button type="submit" class="btn btn-primary" style="padding: 10px 30px; font-size:1.1em;">
+                    <button type="submit" class="btn btn-primary" id="calcBtn" style="padding: 10px 30px; font-size:1.1em;">
                         <i class="fas fa-calculator"></i> 集計する
                     </button>
                 </div>
@@ -311,5 +311,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </a>
         </div>
     </div>
+
+    <script>
+        document.getElementById('calcForm').addEventListener('submit', function() {
+            // カーソルをウェイトにする
+            document.body.style.cursor = 'wait';
+            
+            // ボタンをローディング状態にする
+            var btn = document.getElementById('calcBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 集計中...';
+            btn.style.opacity = '0.7';
+            btn.style.cursor = 'wait';
+        });
+    </script>
 </body>
 </html>
