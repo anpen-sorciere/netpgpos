@@ -98,6 +98,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $adjusted_amount = $subtotal_with_tax + $receipt['adjust_price'];
             
             $total_sales += $adjusted_amount;
+            
+            // カード決済手数料計算 (payment_type != 1)
+            // payment_type: 1=現金, それ以外=カード等とみなす
+            if ($receipt['payment_type'] != 1) {
+                $card_payment_count++;
+                // 5%の手数料 (切り捨て)
+                $fee = floor($adjusted_amount * 0.05);
+                $total_credit_fee += $fee;
+            }
         }
 
         // ---------------------------------------------------------
@@ -167,9 +176,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         // ---------------------------------------------------------
-        // 3. 損益計算 (売上 - (人件費 + 仕入れ原価))
+        // 3. 損益計算 (売上 - (人件費 + 仕入れ原価 + カード手数料))
         // ---------------------------------------------------------
-        $total_expenses = $total_personnel_cost + $total_purchase_cost;
+        $total_expenses = $total_personnel_cost + $total_purchase_cost + $total_credit_fee;
         $profit = $total_sales - $total_expenses;
         
         if ($total_sales > 0) {
@@ -319,11 +328,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         - <?= number_format($total_purchase_cost) ?>円
                     </span>
                 </div>
+
+                <div class="result-row">
+                    <span class="result-label">カード決済手数料 (5%) <span style="font-size:0.8em; font-weight:normal; margin-left:10px;">(<?= $card_payment_count ?>件)</span></span>
+                    <span class="result-value total-cost">
+                        - <?= number_format($total_credit_fee) ?>円
+                    </span>
+                </div>
                 
                 <div class="result-row" style="background-color: #f8f9fa; margin-top: 10px; border-radius: 5px; padding: 20px;">
                     <span class="result-label" style="font-size: 1.3em;">
                         損益 (利益)<br>
-                        <small style="font-size:0.6em; font-weight:normal; color:#666;">※ 売上 - (人件費 + 仕入原価)</small>
+                        <small style="font-size:0.6em; font-weight:normal; color:#666;">※ 売上 - (人件費 + 仕入原価 + カード手数料)</small>
                     </span>
                     <span class="result-value <?= ($profit >= 0) ? 'profit-plus' : 'profit-minus' ?>" style="font-size: 2em;">
                         <?= number_format($profit) ?>円
