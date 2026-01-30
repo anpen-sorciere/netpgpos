@@ -174,9 +174,9 @@ try {
     disconnect($pdo);
 }
 
-// 伝票明細を少なくとも11行確保する（既存がそれ以上ならその数、最大50まで） (修正: 表示は制限しないが初期表示として埋める)
+// 伝票明細の表示数を調整（既存データ数、なければ1行）
 $current_count = count($details);
-$pad_size = max($current_count, 11);
+$pad_size = max($current_count, 1);
 $fixed_details = array_pad($details, $pad_size, null);
 
 // YYYYMMDD形式からYYYY-MM-DD形式に変換
