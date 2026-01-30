@@ -230,6 +230,24 @@ if (!$show_form) {
             color: #d32f2f !important;
         }
     }
+    .total-summary {
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+        text-align: right;
+        font-size: 1.5em;
+        font-weight: bold;
+        padding: 1rem;
+        border: 2px solid #007bff;
+        border-radius: 8px;
+        background-color: #eaf5ff;
+    }
+    @media print {
+        .total-summary {
+            border: 2px solid #333;
+            background-color: #fff;
+            color: #d32f2f;
+        }
+    }
     </style>
 </head>
 <body>
@@ -284,6 +302,9 @@ if (!$show_form) {
             </div>
             <?php if ($cast_id == '0'): ?>
                 <section class="table-section">
+                    <div class="total-summary">
+                        全キャスト合計総計: <?php echo number_format($total_all_casts_wages); ?>円
+                    </div>
                     <h2>キャスト別 日当サマリー</h2>
                     <table class="summary-table">
                         <thead>
@@ -324,6 +345,9 @@ if (!$show_form) {
                 </section>
             <?php else: ?>
                 <section class="table-section">
+                    <div class="total-summary">
+                        日当合計: <?php echo number_format($total_all_casts_wages); ?>円
+                    </div>
                     <h2>キャスト情報</h2>
                     <table class="detail-table">
                         <tbody>
