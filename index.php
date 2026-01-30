@@ -54,6 +54,7 @@ if(isset($_GET['utype'])) {
             <li class="menu-item"><a href="summary.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">集計確認</a></li>
             <li class="menu-item"><a href="receipt_search.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">過去伝票確認</a></li>
             <li class="menu-item"><a href="daily_wage_summary.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">日当確認</a></li>
+            <li class="menu-item"><a href="profit_loss_summary.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">損益確認</a></li>
             <li class="menu-item"><a href="staff_sales_summary.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">担当売り上げ確認</a></li>
             <li class="menu-item"><a href="monthly_wage_summary.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">キャスト月データ確認</a></li>
             <li class="menu-item"><a href="timecard_list.php?utype=<?= htmlspecialchars($utype) ?>" class="menu-button">月別出勤簿一覧</a></li>
