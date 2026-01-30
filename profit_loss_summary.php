@@ -80,8 +80,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $cost_per_item = (int)($detail['cost'] ?? 0);
                 $total_purchase_cost += $cost_per_item * $detail['quantity'];
                 
-                // 原価0円チェック (警告用)
-                if ($cost_per_item == 0) {
+                // 原価NULLチェック (警告用)
+                // item_mst側で NULL が許可されている場合、未入力は NULL となる
+                if (is_null($detail['cost'])) {
                     // まだリストになければ追加
                     if (!isset($warning_items[$detail['item_id']])) {
                         $warning_items[$detail['item_id']] = $detail['item_name'] ?? '不明な商品';
@@ -338,12 +339,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php if (!empty($warning_items)): ?>
                     <div style="background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 15px; margin-top: 20px; border-radius: 5px;">
                         <strong><i class="fas fa-exclamation-triangle"></i> 仕入れ原価が未入力の商品があります</strong>
-                        <p style="margin: 5px 0;">以下の商品は原価が0円で計算されています。正確な損益計算のために原価を設定してください。</p>
-                        <ul style="margin-top: 10px; padding-left: 20px;">
+                        <p style="margin: 5px 0;">以下の商品は原価が未設定です。正確な損益計算のために原価を設定するか、0円の場合は「0円で確定」を押してください。<br><small>※「0円で確定」を押すとリストから消えますが、損益計算への反映は再集計が必要です。</small></p>
+                        <ul style="margin-top: 10px; padding-left: 0; list-style: none;">
                             <?php foreach ($warning_items as $w_item_id => $w_item_name): ?>
-                                <li style="margin-bottom: 5px;">
-                                    <?= htmlspecialchars($w_item_name) ?> 
-                                    <a href="item_mst.php?edit_id=<?= $w_item_id ?>&utype=<?= htmlspecialchars($utype) ?>" target="_blank" class="btn btn-secondary" style="padding: 2px 8px; font-size: 0.8em; margin-left: 10px; text-decoration: none;">
+                                <li id="warning-item-<?= $w_item_id ?>" style="margin-bottom: 8px; display:flex; align-items:center; border-bottom:1px solid #eee; padding-bottom:5px;">
+                                    <span style="flex-grow:1; font-weight:bold;">
+                                        <?= htmlspecialchars($w_item_name) ?>
+                                    </span>
+                                    <button type="button" class="btn" style="background-color:#17a2b8; color:white; font-size:0.8em; padding:4px 8px; margin-right:5px; border:none; border-radius:3px; cursor:pointer;" onclick="setCostZero(<?= $w_item_id ?>)">
+                                        <i class="fas fa-check"></i> 0円で確定
+                                    </button>
+                                    <a href="item_mst.php?edit_id=<?= $w_item_id ?>&utype=<?= htmlspecialchars($utype) ?>" target="_blank" class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.8em; margin-left: 5px; text-decoration: none;">
                                         <i class="fas fa-edit"></i> 編集
                                     </a>
                                 </li>
@@ -373,6 +379,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             btn.style.opacity = '0.7';
             btn.style.cursor = 'wait';
         });
+
+        function setCostZero(itemId) {
+            if (!confirm('この商品の原価は0円で間違いないですか？\n（飲み放題のチャージやサービス料など）')) return;
+
+            // ボタンを無効化
+            const row = document.getElementById('warning-item-' + itemId);
+            const btn = row.querySelector('button');
+            if (btn) btn.disabled = true;
+
+            fetch('api/update_cost_zero.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ item_id: itemId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if (row) {
+                        row.style.transition = 'opacity 0.5s';
+                        row.style.opacity = '0';
+                        setTimeout(() => row.remove(), 500);
+                    }
+                } else {
+                    alert('更新に失敗しました: ' + (data.message || 'Unknown error'));
+                    if (btn) btn.disabled = false;
+                }
+            })
+            .catch(err => {
+                alert('通信エラー: ' + err);
+                if (btn) btn.disabled = false;
+            });
+        }
     </script>
 </body>
 </html>

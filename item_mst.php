@@ -97,13 +97,19 @@ if (!empty($_POST)) {
             // 空文字列を0に変換（MySQL 8系の厳格モード対応）
             $price = $_POST['price'] ?? 0;
             $back_price = $_POST['back_price'] ?? 0;
-            $cost = $_POST['cost'] ?? 0;
+            $cost = $_POST['cost'] ?? null;
             if ($price === '' || $price === null) $price = 0;
             if ($back_price === '' || $back_price === null) $back_price = 0;
-            if ($cost === '' || $cost === null) $cost = 0;
+            
+            // costは空文字ならNULL、それ以外は数値
+            if ($cost === '' || $cost === null) {
+                $cost = null;
+            } else {
+                $cost = intval($cost);
+            }
+            
             $price = intval($price);
             $back_price = intval($back_price);
-            $cost = intval($cost);
             
             $stmt = $pdo->prepare("INSERT INTO item_mst (item_name, item_yomi, category, price, back_price, cost, tax_type_id, del_flg) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
@@ -123,13 +129,19 @@ if (!empty($_POST)) {
             // 空文字列を0に変換（MySQL 8系の厳格モード対応）
             $price = $_POST['price'] ?? 0;
             $back_price = $_POST['back_price'] ?? 0;
-            $cost = $_POST['cost'] ?? 0;
+            $cost = $_POST['cost'] ?? null;
             if ($price === '' || $price === null) $price = 0;
             if ($back_price === '' || $back_price === null) $back_price = 0;
-            if ($cost === '' || $cost === null) $cost = 0;
+            
+            // costは空文字ならNULL、それ以外は数値
+            if ($cost === '' || $cost === null) {
+                $cost = null;
+            } else {
+                $cost = intval($cost);
+            }
+            
             $price = intval($price);
             $back_price = intval($back_price);
-            $cost = intval($cost);
             
             $stmt = $pdo->prepare("UPDATE item_mst SET item_name=?, item_yomi=?, category=?, price=?, back_price=?, cost=?, tax_type_id=?, del_flg=? WHERE item_id=?");
             $stmt->execute([
