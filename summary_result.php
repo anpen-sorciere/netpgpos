@@ -38,11 +38,30 @@ try {
         $cast_list[$cast['cast_id']] = $cast['cast_name'];
     }
 
-    // 検索条件をPOSTから取得
-    // データがない場合は現在の日付を使用
-    $start_date = $_POST['c_day'] ?? date('Y-m-d');
-    $end_date = $_POST['ec_day'] ?? date('Y-m-d');
-    $payment_type = $_POST['p_type'] ?? '0'; // '0'は「全部」を意味する
+    // 検索条件の取得とセッション保存・復元
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // POSTされた場合は条件を取得してセッションに保存
+        $start_date = $_POST['c_day'] ?? date('Y-m-d');
+        $end_date = $_POST['ec_day'] ?? date('Y-m-d');
+        $payment_type = $_POST['p_type'] ?? '0'; // '0'は「全部」を意味する
+        
+        $_SESSION['summary_search'] = [
+            'c_day' => $start_date,
+            'ec_day' => $end_date,
+            'p_type' => $payment_type
+        ];
+    } else {
+        // GETアクセスの場合はセッションから復元、なければデフォルト
+        if (isset($_SESSION['summary_search'])) {
+            $start_date = $_SESSION['summary_search']['c_day'];
+            $end_date = $_SESSION['summary_search']['ec_day'];
+            $payment_type = $_SESSION['summary_search']['p_type'];
+        } else {
+            $start_date = date('Y-m-d');
+            $end_date = date('Y-m-d');
+            $payment_type = '0';
+        }
+    }
 
     // 日付をY-m-dからYYYYMMDD形式に変換してデータベース検索に使用
     $start_ymd = str_replace('-', '', $start_date);
