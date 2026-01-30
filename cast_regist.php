@@ -83,10 +83,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // データベースから既存のキャスト情報を取得
 $db = connect();
-$stmt = $db->prepare("SELECT * FROM cast_mst ORDER BY cast_type, cast_yomi");
+// 在籍(0) -> 退職(1)、それぞれのグループ内でよみがな順
+$stmt = $db->prepare("SELECT * FROM cast_mst ORDER BY drop_flg ASC, cast_yomi ASC");
 $stmt->execute();
 $all_casts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $db = null;
+
+// 在籍キャストと退職キャストに振り分け
+$active_casts = [];
+$retired_casts = [];
+foreach ($all_casts as $cast) {
+    if ($cast['drop_flg'] == 1) {
+        $retired_casts[] = $cast;
+    } else {
+        $active_casts[] = $cast;
+    }
+}
 
 // フォームの入力値を保持
 $post = $_SESSION['cast_regist'] ?? [];
@@ -418,6 +430,7 @@ if ($search_query !== '') {
     </div>
 
     <div class="info-table-container">
+        <h3 style="padding: 10px; border-left: 5px solid #3498db; background: #f0f8ff;">在籍キャスト (<?= count($active_casts) ?>名)</h3>
         <table class="info-table">
             <thead>
                 <tr>
@@ -425,31 +438,71 @@ if ($search_query !== '') {
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($all_casts as $row): ?>
-                    <tr>
-                        <td><?= htmlspecialchars($row['cast_id']) ?></td>
-                        <td><?= htmlspecialchars($row['cast_name']) ?></td>
-                        <td><?= htmlspecialchars($row['cast_yomi']) ?></td>
-                        <td><?= htmlspecialchars($row['real_name']) ?></td>
-                        <td><?= htmlspecialchars($row['yomigana']) ?></td>
-                        <td><?= htmlspecialchars($row['birthday'] ? date('Y/m/d', strtotime($row['birthday'])) : '') ?></td>
-                        <td><?= htmlspecialchars($row['address']) ?></td>
-                        <td><?= htmlspecialchars($row['tel1']) ?></td>
-                        <td><?= htmlspecialchars($row['tel2']) ?></td>
-                        <td><?= htmlspecialchars($row['station']) ?></td>
-                        <td><?= htmlspecialchars($row['tc']) ?></td>
-                        <td><?= htmlspecialchars($cast_types[$row['cast_type']] ?? '') ?></td>
-                        <td><?= htmlspecialchars($row['social_x'] ?? '') ?></td>
-                        <td><?= htmlspecialchars($row['social_instagram'] ?? '') ?></td>
-                        <td><?= htmlspecialchars($row['social_tiktok'] ?? '') ?></td>
-                        <td><?= htmlspecialchars($row['joinday'] ? date('Y/m/d', strtotime($row['joinday'])) : '') ?></td>
-                        <td><?= htmlspecialchars($row['dropday'] ? date('Y/m/d', strtotime($row['dropday'])) : '') ?></td>
-                        <td><?= ($row['drop_flg'] == 1) ? '退職済' : '在籍' ?></td>
-                        <td><a href="?cast_id=<?= htmlspecialchars($row['cast_id']) ?>">編集</a></td>
-                    </tr>
-                <?php endforeach; ?>
+                <?php if (empty($active_casts)): ?>
+                    <tr><td colspan="19">在籍中のキャストはいません。</td></tr>
+                <?php else: ?>
+                    <?php foreach ($active_casts as $row): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($row['cast_id']) ?></td>
+                            <td><?= htmlspecialchars($row['cast_name']) ?></td>
+                            <td><?= htmlspecialchars($row['cast_yomi']) ?></td>
+                            <td><?= htmlspecialchars($row['real_name']) ?></td>
+                            <td><?= htmlspecialchars($row['yomigana']) ?></td>
+                            <td><?= htmlspecialchars($row['birthday'] ? date('Y/m/d', strtotime($row['birthday'])) : '') ?></td>
+                            <td><?= htmlspecialchars($row['address']) ?></td>
+                            <td><?= htmlspecialchars($row['tel1']) ?></td>
+                            <td><?= htmlspecialchars($row['tel2']) ?></td>
+                            <td><?= htmlspecialchars($row['station']) ?></td>
+                            <td><?= htmlspecialchars($row['tc']) ?></td>
+                            <td><?= htmlspecialchars($cast_types[$row['cast_type']] ?? '') ?></td>
+                            <td><?= htmlspecialchars($row['social_x'] ?? '') ?></td>
+                            <td><?= htmlspecialchars($row['social_instagram'] ?? '') ?></td>
+                            <td><?= htmlspecialchars($row['social_tiktok'] ?? '') ?></td>
+                            <td><?= htmlspecialchars($row['joinday'] ? date('Y/m/d', strtotime($row['joinday'])) : '') ?></td>
+                            <td><?= htmlspecialchars($row['dropday'] ? date('Y/m/d', strtotime($row['dropday'])) : '') ?></td>
+                            <td>在籍</td>
+                            <td><a href="?cast_id=<?= htmlspecialchars($row['cast_id']) ?><?= isset($_GET['utype']) ? '&utype=' . htmlspecialchars($_GET['utype']) : '' ?>">編集</a></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </tbody>
         </table>
+
+        <?php if (!empty($retired_casts)): ?>
+            <h3 style="margin-top: 40px; padding: 10px; border-left: 5px solid #95a5a6; background: #ecf0f1; color: #555;">退職済みキャスト (<?= count($retired_casts) ?>名)</h3>
+            <table class="info-table" style="color: #666;">
+                <thead>
+                    <tr style="background-color: #e0e0e0;">
+                        <th>ID</th><th>キャスト名</th><th>キャストよみ</th><th>本名</th><th>よみがな</th><th>生年月日</th><th>住所</th><th>TEL1</th><th>TEL2</th><th>最寄駅</th><th>交通費</th><th>キャストタイプ</th><th>X(Twitter)</th><th>Instagram</th><th>TikTok</th><th>入店日</th><th>退店日</th><th>在籍状況</th><th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($retired_casts as $row): ?>
+                        <tr style="background-color: #f9f9f9;">
+                            <td><?= htmlspecialchars($row['cast_id']) ?></td>
+                            <td><?= htmlspecialchars($row['cast_name']) ?></td>
+                            <td><?= htmlspecialchars($row['cast_yomi']) ?></td>
+                            <td><?= htmlspecialchars($row['real_name']) ?></td>
+                            <td><?= htmlspecialchars($row['yomigana']) ?></td>
+                            <td><?= htmlspecialchars($row['birthday'] ? date('Y/m/d', strtotime($row['birthday'])) : '') ?></td>
+                            <td><?= htmlspecialchars($row['address']) ?></td>
+                            <td><?= htmlspecialchars($row['tel1']) ?></td>
+                            <td><?= htmlspecialchars($row['tel2']) ?></td>
+                            <td><?= htmlspecialchars($row['station']) ?></td>
+                            <td><?= htmlspecialchars($row['tc']) ?></td>
+                            <td><?= htmlspecialchars($cast_types[$row['cast_type']] ?? '') ?></td>
+                            <td><?= htmlspecialchars($row['social_x'] ?? '') ?></td>
+                            <td><?= htmlspecialchars($row['social_instagram'] ?? '') ?></td>
+                            <td><?= htmlspecialchars($row['social_tiktok'] ?? '') ?></td>
+                            <td><?= htmlspecialchars($row['joinday'] ? date('Y/m/d', strtotime($row['joinday'])) : '') ?></td>
+                            <td><?= htmlspecialchars($row['dropday'] ? date('Y/m/d', strtotime($row['dropday'])) : '') ?></td>
+                            <td>退職済</td>
+                            <td><a href="?cast_id=<?= htmlspecialchars($row['cast_id']) ?><?= isset($_GET['utype']) ? '&utype=' . htmlspecialchars($_GET['utype']) : '' ?>">編集</a></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
     </div>
 
     <div id="searchModal" class="search-modal<?= $show_search_modal ? ' show' : '' ?>">
