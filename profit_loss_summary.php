@@ -47,29 +47,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo = connect();
 
         // ---------------------------------------------------------
-        // 1. 売上集計 (Total Sales)
-        // summary_result.php のロジックに基づく
+        // 1. 売上集計 (Total Sales) & 仕入れ原価集計 (Purchase Cost)
         // ---------------------------------------------------------
         $sql_receipts = "SELECT * FROM receipt_tbl WHERE shop_id = ? AND receipt_day BETWEEN ? AND ?";
         $stmt_receipts = $pdo->prepare($sql_receipts);
         $stmt_receipts->execute([$shop_id, $start_ymd, $end_ymd]);
         $receipts = $stmt_receipts->fetchAll(PDO::FETCH_ASSOC);
 
+        $total_purchase_cost = 0; // 仕入れ原価合計
+        $warning_items = [];      // 原価未登録(0円)の商品リスト [item_id => item_name]
+
         foreach ($receipts as $receipt) {
             $receipt_id = $receipt['receipt_id'];
             
-            // 明細取得
-            $sql_details = "SELECT * FROM receipt_detail_tbl WHERE receipt_id = ?";
+            // 明細取得 (item_mstも結合して原価を取得)
+            $sql_details = "
+                SELECT rd.*, im.cost, im.item_name
+                FROM receipt_detail_tbl rd
+                LEFT JOIN item_mst im ON rd.item_id = im.item_id
+                WHERE rd.receipt_id = ?
+            ";
             $stmt_details = $pdo->prepare($sql_details);
             $stmt_details->execute([$receipt_id]);
             $details = $stmt_details->fetchAll(PDO::FETCH_ASSOC);
             
             $subtotal_without_tax = 0;
             foreach ($details as $detail) {
+                // 売上加算
                 $subtotal_without_tax += $detail['price'] * $detail['quantity'];
+                
+                // 仕入れ原価加算
+                $cost_per_item = (int)($detail['cost'] ?? 0);
+                $total_purchase_cost += $cost_per_item * $detail['quantity'];
+                
+                // 原価0円チェック (警告用)
+                if ($cost_per_item == 0) {
+                    // まだリストになければ追加
+                    if (!isset($warning_items[$detail['item_id']])) {
+                        $warning_items[$detail['item_id']] = $detail['item_name'] ?? '不明な商品';
+                    }
+                }
             }
             
-            // 消費税処理 (functions.php get_tax_rate() 使用)
+            // 消費税処理
             $tax_rate = get_tax_rate(); 
             $tax_amount = floor($subtotal_without_tax * $tax_rate);
             $subtotal_with_tax = $subtotal_without_tax + $tax_amount;
@@ -145,11 +165,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         // ---------------------------------------------------------
-        // 3. 損益計算
+        // 3. 損益計算 (売上 - (人件費 + 仕入れ原価))
         // ---------------------------------------------------------
-        $profit = $total_sales - $total_personnel_cost;
+        $total_expenses = $total_personnel_cost + $total_purchase_cost;
+        $profit = $total_sales - $total_expenses;
+        
         if ($total_sales > 0) {
-            $cost_ratio = ($total_personnel_cost / $total_sales) * 100;
+            $cost_ratio = ($total_expenses / $total_sales) * 100;
         }
 
     } catch (Exception $e) {
@@ -288,20 +310,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         - <?= number_format($total_personnel_cost) ?>円
                     </span>
                 </div>
+
+                <div class="result-row">
+                    <span class="result-label">仕入れ原価合計</span>
+                    <span class="result-value total-cost">
+                        - <?= number_format($total_purchase_cost) ?>円
+                    </span>
+                </div>
                 
                 <div class="result-row" style="background-color: #f8f9fa; margin-top: 10px; border-radius: 5px; padding: 20px;">
-                    <span class="result-label" style="font-size: 1.3em;">損益 (利益)</span>
+                    <span class="result-label" style="font-size: 1.3em;">
+                        損益 (利益)<br>
+                        <small style="font-size:0.6em; font-weight:normal; color:#666;">※ 売上 - (人件費 + 仕入原価)</small>
+                    </span>
                     <span class="result-value <?= ($profit >= 0) ? 'profit-plus' : 'profit-minus' ?>" style="font-size: 2em;">
                         <?= number_format($profit) ?>円
                     </span>
                 </div>
 
                 <div class="result-row">
-                    <span class="result-label">人件費率</span>
+                    <span class="result-label">費用対売上比率 (人件費+原価)</span>
                     <span class="result-value">
                         <?= number_format($cost_ratio, 1) ?>%
                     </span>
                 </div>
+
+                <?php if (!empty($warning_items)): ?>
+                    <div style="background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 15px; margin-top: 20px; border-radius: 5px;">
+                        <strong><i class="fas fa-exclamation-triangle"></i> 仕入れ原価が未入力の商品があります</strong>
+                        <p style="margin: 5px 0;">以下の商品は原価が0円で計算されています。正確な損益計算のために原価を設定してください。</p>
+                        <ul style="margin-top: 10px; padding-left: 20px;">
+                            <?php foreach ($warning_items as $w_item_id => $w_item_name): ?>
+                                <li style="margin-bottom: 5px;">
+                                    <?= htmlspecialchars($w_item_name) ?> 
+                                    <a href="item_mst.php?edit_id=<?= $w_item_id ?>&utype=<?= htmlspecialchars($utype) ?>" target="_blank" class="btn btn-secondary" style="padding: 2px 8px; font-size: 0.8em; margin-left: 10px; text-decoration: none;">
+                                        <i class="fas fa-edit"></i> 編集
+                                    </a>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php endif; ?>
             </section>
         <?php endif; ?>
 
