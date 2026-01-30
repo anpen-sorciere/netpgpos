@@ -299,7 +299,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 <div class="result-row">
                     <span class="result-label">売上合計</span>
-                    <span class="result-value total-sales">
+                    <span class="result-value total-sales" style="font-size: 1.6em;">
                         <?= number_format($total_sales) ?>円
                     </span>
                 </div>
