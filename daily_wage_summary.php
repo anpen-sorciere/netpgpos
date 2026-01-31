@@ -345,9 +345,7 @@ if (!$show_form) {
                 </section>
             <?php else: ?>
                 <section class="table-section">
-                    <div class="total-summary">
-                        日当合計: <?php echo number_format($total_all_casts_wages); ?>円
-                    </div>
+                    <!-- 上部の日当合計表示は下部と重複するため削除 -->
                     <h2>キャスト情報</h2>
                     <table class="detail-table">
                         <tbody>

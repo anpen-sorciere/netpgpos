@@ -261,6 +261,38 @@ try {
             }
             break;
 
+        case 'update_session_staff':
+            $session_id = $input['session_id'];
+            $staff_id = $input['staff_id'] ?? null;
+            $issuer_id = $input['issuer_id'] ?? null;
+            
+            $sql = "UPDATE seat_sessions SET ";
+            $params = [];
+            $updates = [];
+            
+            if ($staff_id !== null) {
+                $updates[] = "staff_id = ?";
+                $params[] = $staff_id;
+            }
+            if ($issuer_id !== null) {
+                $updates[] = "issuer_id = ?";
+                $params[] = $issuer_id;
+            }
+            
+            if (empty($updates)) {
+                echo json_encode(['status' => 'success', 'message' => 'No changes']);
+                break;
+            }
+            
+            $sql .= implode(", ", $updates) . " WHERE session_id = ?";
+            $params[] = $session_id;
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            
+            echo json_encode(['status' => 'success']);
+            break;
+
         default:
             throw new Exception('Unknown action');
     }

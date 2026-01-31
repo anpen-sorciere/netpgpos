@@ -626,7 +626,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 <input type="number" id="checkoutAdjust" class="header-input" style="width:100%; margin-bottom:15px; padding:10px;" value="0">
 
                 <label style="display:block; margin-bottom:5px;">担当キャスト (Staff)</label>
-                <select id="checkoutStaff" class="header-input" style="width:100%; margin-bottom:15px; padding:10px;">
+                <select id="checkoutStaff" class="header-input" style="width:100%; margin-bottom:15px; padding:10px;" onchange="updateSessionStaff('staff', this.value)">
                     <option value="0">未指定</option>
                     <?php foreach($casts as $c): ?>
                         <option value="<?= $c['cast_id'] ?>"><?= $c['cast_name'] ?></option>
@@ -634,7 +634,7 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
                 </select>
 
                 <label style="display:block; margin-bottom:5px;">伝票起票者 (Issuer)</label>
-                <select id="checkoutIssuer" class="header-input" style="width:100%; margin-bottom:15px; padding:10px;">
+                <select id="checkoutIssuer" class="header-input" style="width:100%; margin-bottom:15px; padding:10px;" onchange="updateSessionStaff('issuer', this.value)">
                     <option value="0">未指定</option>
                     <?php foreach($casts as $c): ?>
                         <option value="<?= $c['cast_id'] ?>"><?= $c['cast_name'] ?></option>
@@ -1121,6 +1121,11 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             // Pre-fill New Customer checkbox
             document.getElementById('checkoutIsNew').checked = (parseInt(session.is_new_customer) === 1);
             
+            // Reset Checkout Fields (Fix: previous values persisting)
+            document.getElementById('checkoutStaff').value = '0';
+            document.getElementById('checkoutIssuer').value = '0';
+            document.getElementById('checkoutAdjust').value = '0';
+
             document.getElementById('sessionModal').style.display = 'flex';
             
             // FETCH DETAIL
@@ -1860,6 +1865,12 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             .then(res => res.json())
             .then(data => {
                 if(data.status === 'success') {
+                    // Update Checkout Form with persisted staff info
+                    if(data.session) {
+                        if(data.session.staff_id) document.getElementById('checkoutStaff').value = data.session.staff_id;
+                        if(data.session.issuer_id) document.getElementById('checkoutIssuer').value = data.session.issuer_id;
+                    }
+
                     if(!data.orders || data.orders.length === 0) {
                         container.innerHTML = '<div style="text-align:center; color:#ccc;">No orders yet</div>';
                         return;
@@ -1936,6 +1947,34 @@ if(!empty($_POST) && !isset($_POST['is_back'])){
             fetchSeatStatus();
             openSheetModal(); // Direct user to seat selection
         }
+
+        function updateSessionStaff(type, value) {
+            const sessionId = document.getElementById('sessionModal') ? document.getElementById('sessionModal').dataset.sessionId : 0;
+            if(!sessionId) return;
+            
+            const payload = {
+                action: 'update_session_staff',
+                shop_id: shopId,
+                session_id: sessionId
+            };
+            
+            if(type === 'staff') payload.staff_id = value;
+            if(type === 'issuer') payload.issuer_id = value;
+            
+            fetch('api/cast/seat_operation.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status !== 'success') {
+                    console.error('Update Staff Error', data);
+                }
+            })
+            .catch(e => console.error('Update Staff Conn Error', e));
+        }
+
     function deleteSessionItem(orderId, itemName) {
         if(!confirm(`「${itemName}」を削除しますか？\n（この操作は取り消せません）`)) return;
         
